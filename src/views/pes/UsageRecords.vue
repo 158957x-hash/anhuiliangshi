@@ -2,9 +2,9 @@
   <div class="page-container">
     <div class="panel">
       <div class="panel-title">
-        <span class="title-text">使用记录（E8 · C-13）</span>
+        <span class="title-text">使用记录</span>
         <div class="title-extra">
-          <el-button v-if="canAgent" type="primary" icon="EditPen" @click="openAgent">省级代录</el-button>
+          <el-button v-if="isCounty" type="primary" icon="EditPen" @click="openAgent">代录入</el-button>
           <el-button icon="Refresh" @click="load">刷新</el-button>
         </div>
       </div>
@@ -34,7 +34,7 @@
         <el-table-column label="批次" width="110" align="center">
           <template #default="{ row }">
             <template v-if="row.batchId">{{ row.batchId }}</template>
-            <el-tooltip v-else content="购买批次未关联，追溯断点（C-12：灰显不中断）" placement="top">
+            <el-tooltip v-else content="购买批次未关联，追溯断点" placement="top">
               <el-tag size="small" type="info" effect="plain" disable-transitions>断点</el-tag>
             </el-tooltip>
           </template>
@@ -48,16 +48,24 @@
             <el-tag size="small" :type="row.dataSource === '皖企通' ? 'success' : 'primary'" effect="plain" disable-transitions>{{ row.dataSource }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="核验状态" width="105" align="center">
+          <template #default="{ row }">
+            <StatusTag :dict="PES_CHECK_STATUS" :value="row.status" />
+          </template>
+        </el-table-column>
+        <el-table-column v-if="isCounty" label="操作" fixed="right" width="90">
+          <template #default="{ row }">
+            <el-button v-if="row.status === 'pending'" link type="warning" @click="openCheck(row)">核验</el-button>
+            <span v-else style="color: var(--ah-text-secondary)">已核验</span>
+          </template>
+        </el-table-column>
       </el-table>
-      <div class="corner-note">
-        C-13：使用记录由使用主体经皖企通上报，省级代录为兜底通道（design_proposal，正式以移动端为主）。
-      </div>
     </div>
 
-    <!-- 省级代录 -->
-    <el-dialog v-model="agentVisible" title="省级代录使用记录（兜底通道）" width="560px" :close-on-click-modal="false">
+    <!-- 县级代录 -->
+    <el-dialog v-model="agentVisible" title="代录使用记录（兜底通道）" width="560px" :close-on-click-modal="false">
       <el-alert type="info" :closable="false" show-icon style="margin-bottom: 12px"
-        title="常规路径为使用主体经皖企通上报；省级代录仅用于线下补救场景（design_proposal）。" />
+        title="常规路径为使用主体经皖企通上报；县级代录仅用于线下补救场景。" />
       <el-form ref="agentFormRef" :model="agentForm" :rules="agentRules" label-width="100px">
         <el-form-item label="使用主体" prop="subjectId">
           <el-select v-model="agentForm.subjectId" filterable style="width: 100%">
@@ -90,18 +98,37 @@
         <el-button type="primary" :loading="saving" @click="saveAgent">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 县级核验 -->
+    <AuditDialog
+      v-model="auditVisible"
+      title="使用记录核验（县级）"
+      :actions="CHECK_ACTIONS"
+      default-action="pass"
+      reject-reason-required
+      tip="核验通过后记录只读；核验不通过须填写原因，通知上报主体核实更正。"
+      placeholder="核验不通过时必填，如：用药日期与购买记录不符"
+      @confirm="doCheck"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onActivated, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import { fetchUsages, addUsage, fetchBatches, fetchProducts } from '@/api/pes'
-import { PES_SUBJECTS, PES_PRODUCT_MAP } from '@/mock/pes/data'
+import { fetchUsages, addUsage, fetchBatches, fetchProducts, checkPesRecord } from '@/api/pes'
+import { PES_SUBJECTS, PES_PRODUCT_MAP, PES_CHECK_STATUS } from '@/mock/pes/data'
+import StatusTag from '@/components/common/StatusTag.vue'
+import AuditDialog from '@/components/common/AuditDialog.vue'
+
+const CHECK_ACTIONS = [
+  { value: 'pass', label: '核验通过' },
+  { value: 'reject', label: '核验不通过' }
+]
 
 const userStore = useUserStore()
-const canAgent = computed(() => userStore.role?.canAgent || userStore.role?.regionCode === '340000')
+const isCounty = computed(() => userStore.role?.code === 'county')
 
 const filters = reactive({ subjectId: '', crop: '' })
 const dateRange = ref(null)
@@ -111,6 +138,8 @@ const products = ref([])
 const agentVisible = ref(false)
 const agentFormRef = ref()
 const saving = ref(false)
+const auditVisible = ref(false)
+const auditRow = ref(null)
 const agentForm = reactive({ subjectId: '', usageDate: '', crop: '', pestTarget: '', productId: '', batchId: '', productName: '', dosage: 1, areaMu: 0 })
 const agentRules = {
   subjectId: [{ required: true, message: '请选择使用主体', trigger: 'change' }],
@@ -154,17 +183,35 @@ const saveAgent = () => {
         dosage: agentForm.dosage, areaMu: agentForm.areaMu,
         breakPoint: !agentForm.batchId, remark: agentForm.batchId ? '' : '代录未关联批次，追溯断点'
       })
-      ElMessage.success('使用记录已代录保存')
+      ElMessage.success('使用记录已代录提交，状态：待核验（由县级核验）')
       agentVisible.value = false
       await load()
     } finally { saving.value = false }
   })
 }
 
+// 县级核验（统一核验流程）
+const openCheck = (row) => { auditRow.value = row; auditVisible.value = true }
+const doCheck = async ({ action, opinion }) => {
+  const res = await checkPesRecord('usage', auditRow.value.id, {
+    action,
+    opinion,
+    checker: `${userStore.role?.name || ''}（${userStore.role?.unit || ''}）`
+  })
+  if (res.success) {
+    ElMessage.success(action === 'pass' ? '核验通过' : '已核验不通过，须通知上报主体核实更正')
+  } else {
+    ElMessage.error(res.msg)
+  }
+  await load()
+}
+
 onMounted(async () => {
   [batches.value, products.value] = await Promise.all([fetchBatches(), fetchProducts()])
   await load()
 })
+// KeepAlive 二次进入时按当前角色刷新数据范围
+onActivated(load)
 </script>
 
 <style lang="scss" scoped>

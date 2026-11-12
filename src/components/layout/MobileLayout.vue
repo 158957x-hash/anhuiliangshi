@@ -42,6 +42,8 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  /* 建立 containing block：让壳内 fixed 定位的弹窗（el-dialog 等）相对手机壳而不是浏览器视口（用户反馈 2026-11-12） */
+  transform: translateZ(0);
 }
 
 .phone-content {

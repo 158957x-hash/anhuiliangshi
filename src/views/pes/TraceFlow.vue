@@ -2,7 +2,7 @@
   <div class="page-container">
     <div class="panel">
       <div class="panel-title">
-        <span class="title-text">流向追溯（C-12 断点灰显不中断）</span>
+        <span class="title-text">流向追溯</span>
         <div class="title-extra">
           <el-select v-model="batchId" filterable placeholder="请选择批次" style="width: 300px" @change="loadTrace">
             <el-option v-for="b in batches" :key="b.id" :label="`${b.id} · ${b.batchNo} · ${productName(b.productId)}`" :value="b.id" />
@@ -41,13 +41,13 @@
         </div>
         <div class="legend">
           <span class="lg-item"><span class="lg-dot ok"></span>正常节点</span>
-          <span class="lg-item"><span class="lg-dot dim"></span>断点/信息缺失（C-12 灰显不中断）</span>
+          <span class="lg-item"><span class="lg-dot dim"></span>断点/信息缺失</span>
           <span class="lg-item">点击节点查看明细与留痕</span>
         </div>
 
         <el-divider />
 
-        <h4 style="margin: 4px 0 10px">批次流水明细（E6）</h4>
+        <h4 style="margin: 4px 0 10px">批次流水明细</h4>
         <el-table :data="trace.links" border size="small">
           <el-table-column prop="date" label="日期" width="110" />
           <el-table-column label="类型" width="100" align="center">
@@ -128,7 +128,7 @@ const buildChain = () => {
     const toNode = lk.to ? PES_SUBJECT_MAP[lk.to] : null
     push({
       name: toNode?.name || lk.realName || '购买方信息缺失',
-      sub: toNode ? (KIND_NAME[toNode.type] || '') + (lk.qty ? ` · ${lk.qty}吨` : '') : 'C-12 信息缺失',
+      sub: toNode ? (KIND_NAME[toNode.type] || '') + (lk.qty ? ` · ${lk.qty}吨` : '') : '信息缺失',
       kind: toNode?.type || 'unknown', icon: ICONS[toNode?.type || 'unknown'],
       broken: !toNode || lk.breakPoint,
       detail: toNode

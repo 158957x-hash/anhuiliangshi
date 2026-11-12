@@ -6,7 +6,7 @@
       type="warning"
       show-icon
       :closable="false"
-      title="主体信息未确认（C-11）：确认主体信息前不可新增/提交生产台账"
+      title="主体信息未确认：确认主体信息前不可新增生产台账"
       style="margin-bottom: 12px"
     >
       <el-button size="small" type="primary" link @click="$router.push('/pes/confirm')">去确认</el-button>
@@ -14,9 +14,10 @@
 
     <div class="panel">
       <div class="panel-title">
-        <span class="title-text">生产台账（E5 · C-05 周期 / C-06 审核 / C-09 审核前可改）</span>
+        <span class="title-text">生产台账</span>
         <div class="title-extra">
-          <el-button v-if="isProducer && producerConfirmed" type="primary" icon="Plus" @click="openCreate">新增台账</el-button>
+          <el-button v-if="(isProducer && producerConfirmed) || isCounty" type="primary" icon="Plus" @click="openCreate">新增台账</el-button>
+          <el-button v-if="(isProducer && producerConfirmed) || isCounty" icon="Upload" @click="openImport">批量导入</el-button>
           <el-button icon="Refresh" @click="load">刷新</el-button>
         </div>
       </div>
@@ -29,9 +30,9 @@
             <el-radio-button value="year">年</el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="状态">
+        <el-form-item label="核验状态">
           <el-select v-model="filters.status" clearable placeholder="全部" style="width: 140px" @change="load">
-            <el-option v-for="(v, k) in PES_LEDGER_STATUS" :key="k" :label="v.name" :value="k" />
+            <el-option v-for="(v, k) in PES_CHECK_STATUS" :key="k" :label="v.name" :value="k" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -47,28 +48,24 @@
         <el-table-column label="销量" width="90" align="right"><template #default="{ row }">{{ row.salesQty }}</template></el-table-column>
         <el-table-column label="销售额（万元）" width="130" align="right"><template #default="{ row }">{{ row.salesAmount }}</template></el-table-column>
         <el-table-column label="库存" width="90" align="right"><template #default="{ row }">{{ row.inventoryQty }}</template></el-table-column>
-        <el-table-column label="状态" width="100" align="center">
+        <el-table-column label="核验状态" width="110" align="center">
           <template #default="{ row }">
-            <StatusTag :dict="PES_LEDGER_STATUS" :value="row.status" />
+            <StatusTag :dict="PES_CHECK_STATUS" :value="row.status" />
           </template>
         </el-table-column>
         <el-table-column label="提交时间" width="160"><template #default="{ row }">{{ row.submitTime || '—' }}</template></el-table-column>
         <el-table-column label="操作" fixed="right" width="200">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDetail(row)">详情</el-button>
-            <el-button v-if="canSubmit(row)" link type="success" @click="doSubmit(row)">提交</el-button>
-            <el-button v-if="canEdit(row)" link @click="openEdit(row)">修改</el-button>
-            <el-button v-if="canAudit(row)" link type="warning" @click="openAudit(row)">审核</el-button>
-            <el-button v-if="row.status === 'approved'" link type="danger" @click="openReversal(row)">冲正申请</el-button>
+            <el-button v-if="isProducer && row.status !== 'passed'" link @click="openEdit(row)">{{ row.status === 'rejected' ? '修改重报' : '修改' }}</el-button>
+            <el-button v-if="isCounty && row.status === 'pending'" link type="warning" @click="openCheck(row)">核验</el-button>
           </template>
         </el-table-column>
       </el-table>
-      <el-alert type="info" :closable="false" show-icon style="margin-top: 12px"
-        title="C-06：台账须监管审核后生效；C-09：审核前可修改，已审核只读、可通过冲正申请调整（冲正流程为设计建议，待客户确认）。" />
     </div>
 
     <!-- 新增/修改台账 -->
-    <el-dialog v-model="editVisible" :title="editForm.id ? '修改台账（审核前可改 · C-09）' : '新增生产台账'" width="620px" :close-on-click-modal="false">
+    <el-dialog v-model="editVisible" :title="editForm.id ? (editWasRejected ? '修改重报（核验不通过后重新提交）' : '修改台账（待核验中）') : '新增生产台账（提交即进入待核验）'" width="620px" :close-on-click-modal="false">
       <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-width="110px">
         <el-form-item label="周期类型" prop="periodType">
           <el-radio-group v-model="editForm.periodType">
@@ -96,19 +93,17 @@
       </template>
     </el-dialog>
 
-    <!-- 审核对话框 -->
-    <AuditDialog
-      v-model="auditVisible"
-      title="生产台账审核（C-06）"
-      :actions="[{ value: 'pass', label: '审核通过' }, { value: 'return', label: '退回' }]"
-      default-action="pass"
-      tip="审核通过与退回均写入审核留痕；退回后企业可修改重新提交。"
-      placeholder="请填写审核意见（退回必填）"
-      @confirm="doAudit"
+    <!-- 批量导入 -->
+    <ImportDialog
+      ref="importRef"
+      title="生产台账批量导入"
+      :columns="importColumns"
+      :do-import="runImport"
+      @success="load"
     />
 
     <!-- 详情抽屉 -->
-    <el-drawer v-model="detailVisible" title="台账详情与审核留痕" size="480px">
+    <el-drawer v-model="detailVisible" title="台账详情与流转留痕" size="480px">
       <template v-if="current">
         <el-descriptions :column="1" border>
           <el-descriptions-item label="台账编号">{{ current.id }}</el-descriptions-item>
@@ -117,33 +112,54 @@
           <el-descriptions-item label="产品/批次">{{ current.productName }} / {{ current.batchId }}</el-descriptions-item>
           <el-descriptions-item label="产量/销量/库存">{{ current.produceQty }} / {{ current.salesQty }} / {{ current.inventoryQty }} 吨</el-descriptions-item>
           <el-descriptions-item label="销售额">{{ current.salesAmount }} 万元</el-descriptions-item>
+          <el-descriptions-item label="备注">{{ current.remark || '—' }}</el-descriptions-item>
           <el-descriptions-item label="版本">v{{ current.version }}</el-descriptions-item>
+          <el-descriptions-item label="核验状态"><StatusTag :dict="PES_CHECK_STATUS" :value="current.status" /></el-descriptions-item>
+          <el-descriptions-item label="核验人">{{ current.checker || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="核验时间">{{ current.checkTime || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="核验意见">{{ current.checkOpinion || '—' }}</el-descriptions-item>
         </el-descriptions>
         <h4 class="drawer-sub-title">流转留痕</h4>
         <FlowSteps :steps="currentSteps" />
       </template>
     </el-drawer>
+
+    <!-- 县级核验 -->
+    <AuditDialog
+      v-model="auditVisible"
+      title="生产台账核验（县级）"
+      :actions="CHECK_ACTIONS"
+      default-action="pass"
+      reject-reason-required
+      tip="核验通过后台账只读；核验不通过须填写原因，企业可修改后重新提交。"
+      placeholder="核验不通过时必填，如：销售量与经营流水不一致"
+      @confirm="doCheck"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onActivated, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import {
-  fetchProduceLedgers, addProduceLedger, submitLedger, auditLedger,
-  fetchBatches, fetchConfirms
+  fetchProduceLedgers, addProduceLedger, updateProduceLedger, checkPesRecord,
+  importProduceLedgers, fetchBatches, fetchConfirms
 } from '@/api/pes'
-import { PES_LEDGER_STATUS, PES_PRODUCT_MAP } from '@/mock/pes/data'
+import { PES_CHECK_STATUS, PES_PRODUCT_MAP } from '@/mock/pes/data'
 import StatusTag from '@/components/common/StatusTag.vue'
 import FlowSteps from '@/components/common/FlowSteps.vue'
+import ImportDialog from '@/components/common/ImportDialog.vue'
 import AuditDialog from '@/components/common/AuditDialog.vue'
+
+const CHECK_ACTIONS = [
+  { value: 'pass', label: '核验通过' },
+  { value: 'reject', label: '核验不通过' }
+]
 
 const userStore = useUserStore()
 const isProducer = computed(() => userStore.role?.code === 'pes_producer')
-const canAudit = (row) => ['province', 'city', 'county'].includes(userStore.role?.code) && row.status === 'submitted'
-const canSubmit = (row) => isProducer.value && ['draft', 'returned'].includes(row.status)
-const canEdit = (row) => isProducer.value && ['draft', 'returned'].includes(row.status)
+const isCounty = computed(() => userStore.role?.code === 'county')
 
 const filters = reactive({ periodType: 'month', status: '' })
 const rows = ref([])
@@ -154,8 +170,10 @@ const editFormRef = ref()
 const saving = ref(false)
 const detailVisible = ref(false)
 const current = ref(null)
+const importRef = ref()
 const auditVisible = ref(false)
-const auditTarget = ref(null)
+const auditRow = ref(null)
+const editWasRejected = ref(false)
 const editForm = reactive({ id: '', periodType: 'month', period: '', batchId: '', productId: '', productName: '', produceQty: 0, salesQty: 0, salesAmount: 0, inventoryQty: 0 })
 const editRules = {
   period: [{ required: true, message: '请填写周期', trigger: 'blur' }],
@@ -163,15 +181,25 @@ const editRules = {
 }
 const periodPlaceholder = computed(() => ({ day: '如 2026-11-11', month: '如 2026-11', year: '如 2026' }[editForm.periodType]))
 
+const importColumns = [
+  { key: 'periodType', label: '周期类型', required: true, hint: 'day=日 / month=月 / year=年', example: 'month' },
+  { key: 'period', label: '周期', required: true, hint: '日报如 2026-11-11，月报如 2026-11，年报如 2026', example: '2026-11' },
+  { key: 'batchNo', label: '批次号', required: true, hint: '产品包装上的生产批次号', example: 'HG20260301A' },
+  { key: 'produceQty', label: '产量', required: true, hint: '吨，≥0', example: '100' },
+  { key: 'salesQty', label: '销量', required: true, hint: '吨，≥0', example: '60' },
+  { key: 'salesAmount', label: '销售额', required: true, hint: '万元，≥0', example: '180' },
+  { key: 'inventoryQty', label: '库存', required: true, hint: '吨，≥0', example: '40' }
+]
+const runImport = (rowsIn) =>
+  importProduceLedgers(rowsIn.map((r) => ({ ...r, subjectId: userStore.role?.subjectId, subjectName: userStore.role?.unit })))
+
 const currentSteps = computed(() => {
   if (!current.value) return []
   const s = [{ time: '', action: '台账创建', user: current.value.subjectName, extra: `版本 v1 · ${current.value.periodType === 'day' ? '日报' : current.value.periodType === 'month' ? '月报' : '年报'}` }]
-  if (current.value.submitTime) s.push({ time: current.value.submitTime, action: '提交审核', user: current.value.subjectName })
-  if (current.value.auditTime) s.push({
-    time: current.value.auditTime, action: current.value.status === 'approved' ? '审核通过' : '审核退回',
-    user: current.value.auditor, opinion: current.value.auditOpinion, type: current.value.status === 'approved' ? 'success' : 'warning'
-  })
-  if (current.value.version > 1 && current.value.status !== 'approved') s.push({ time: '', action: `修改重报（当前 v${current.value.version}）`, user: current.value.subjectName })
+  if (current.value.submitTime) s.push({ time: current.value.submitTime, action: '提交（进入待核验）', user: current.value.subjectName, type: 'success' })
+  if (current.value.version > 1) s.push({ time: '', action: `修改重报（当前 v${current.value.version}）`, user: current.value.subjectName })
+  if (current.value.status === 'passed' && current.value.checkTime) s.push({ time: current.value.checkTime, action: '县级核验通过', user: current.value.checker, type: 'success' })
+  if (current.value.status === 'rejected' && current.value.checkTime) s.push({ time: current.value.checkTime, action: `县级核验不通过：${current.value.checkOpinion || '无意见'}`, user: current.value.checker, type: 'danger' })
   return s
 })
 
@@ -188,6 +216,7 @@ const openCreate = () => {
   editVisible.value = true
 }
 const openEdit = (row) => {
+  editWasRejected.value = row.status === 'rejected'
   Object.assign(editForm, {
     id: row.id, periodType: row.periodType, period: row.period, batchId: row.batchId,
     productId: row.productId, productName: row.productName, produceQty: row.produceQty,
@@ -209,12 +238,8 @@ const saveLedger = () => {
     saving.value = true
     try {
       if (editForm.id) {
-        const rec = rows.value.find((r) => r.id === editForm.id)
-        if (rec) {
-          Object.assign(rec, { ...editForm })
-          rec.version += 1
-        }
-        ElMessage.success('台账已修改（审核前可改，C-09）')
+        const res = await updateProduceLedger(editForm.id, { ...editForm })
+        res.success ? ElMessage.success('台账已修改并重新提交，进入待核验') : ElMessage.error(res.msg)
       } else {
         await addProduceLedger({
           subjectId: userStore.role?.subjectId, subjectName: userStore.role?.unit,
@@ -223,7 +248,7 @@ const saveLedger = () => {
           produceQty: editForm.produceQty, salesQty: editForm.salesQty,
           salesAmount: editForm.salesAmount, inventoryQty: editForm.inventoryQty
         })
-        ElMessage.success('台账已保存为草稿')
+        ElMessage.success('台账已提交，状态：待核验（由县级核验）')
       }
       editVisible.value = false
       await load()
@@ -231,32 +256,31 @@ const saveLedger = () => {
   })
 }
 
-const doSubmit = async (row) => {
-  const res = await submitLedger(row.id)
-  res.success ? ElMessage.success('已提交待监管审核') : ElMessage.error(res.msg)
+// 县级核验（统一核验流程：核验一次，通过/不通过）
+const openCheck = (row) => { auditRow.value = row; auditVisible.value = true }
+const doCheck = async ({ action, opinion }) => {
+  const res = await checkPesRecord('produce', auditRow.value.id, {
+    action,
+    opinion,
+    checker: `${userStore.role?.name || ''}（${userStore.role?.unit || ''}）`
+  })
+  if (res.success) {
+    ElMessage.success(action === 'pass' ? '核验通过' : '已核验不通过，企业可修改后重新提交')
+  } else {
+    ElMessage.error(res.msg)
+  }
   await load()
 }
 
-const openAudit = (row) => { auditTarget.value = row; auditVisible.value = true }
-const doAudit = async ({ action, opinion }) => {
-  if (action === 'return' && !opinion) { ElMessage.warning('退回必须填写审核意见'); return }
-  const res = await auditLedger(auditTarget.value.id, { action, opinion, auditor: `${userStore.role?.name}（${userStore.role?.unit}）` })
-  res.success ? ElMessage.success(action === 'pass' ? '审核通过' : '已退回企业补正') : ElMessage.error(res.msg)
-  await load()
-}
-
-const openReversal = (row) => {
-  current.value = row
-  detailVisible.value = true
-  ElMessage.info('冲正申请为设计建议（C-09）：正式流程待客户确认，此处仅演示入口')
-}
-
+const openImport = () => importRef.value?.open()
 const openDetail = (row) => { current.value = row; detailVisible.value = true }
 
 onMounted(async () => {
   batches.value = await fetchBatches()
   await load()
 })
+// KeepAlive 二次进入时刷新确认状态与台账列表
+onActivated(load)
 </script>
 
 <style lang="scss" scoped>

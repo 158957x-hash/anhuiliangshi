@@ -2,19 +2,17 @@
   <div class="page-container">
     <div class="panel">
       <div class="panel-title">
-        <span class="title-text">统计报表（E14 · 指标口径待 C-25）</span>
+        <span class="title-text">统计报表</span>
         <div class="title-extra">
           <el-select v-model="cityFilter" clearable placeholder="全省（下钻选择地市）" style="width: 220px; margin-right: 10px">
             <el-option v-for="c in cityOptions" :key="c.code" :label="c.name" :value="c.code" />
           </el-select>
           <el-radio-group v-model="period" size="small">
             <el-radio-button value="month">月度</el-radio-button>
-            <el-radio-button value="year">年度（重采样演示）</el-radio-button>
+            <el-radio-button value="year">年度</el-radio-button>
           </el-radio-group>
         </div>
       </div>
-      <el-alert type="info" :closable="false" show-icon style="margin-bottom: 14px"
-        title="指标口径待客户确认（C-25）：产量/销量/出口口径、统计周期（月/年聚合规则）以客户确认结果为准，年度数据由月度重采样生成（design_proposal）。" />
 
       <div class="stat-row">
         <StatCard label="期间产量合计（吨）" :value="totalOutput" icon="Box" color="#0f5eb5" />
@@ -29,7 +27,7 @@
           <BaseChart :option="trendOption" height="300px" />
         </div>
         <div class="chart-cell">
-          <h4>{{ cityFilter ? cityName + ' ' : '' }}主体类型分布（E1）</h4>
+          <h4>{{ cityFilter ? cityName + ' ' : '' }}主体类型分布</h4>
           <BaseChart :option="subjectPieOption" height="300px" />
         </div>
         <div class="chart-cell">

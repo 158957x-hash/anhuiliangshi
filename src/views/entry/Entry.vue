@@ -36,7 +36,7 @@
     </div>
 
     <!-- C-11 企业主体确认引导：未确认主体进入工作台时弹出 -->
-    <el-dialog v-model="guideVisible" title="主体信息确认提醒（C-11）" width="480px" :close-on-click-modal="false">
+    <el-dialog v-model="guideVisible" title="主体信息确认提醒" width="480px" :close-on-click-modal="false">
       <el-alert type="warning" show-icon :closable="false"
         title="您所在的主体信息尚未确认" style="margin-bottom: 14px" />
       <el-descriptions :column="1" border size="small">

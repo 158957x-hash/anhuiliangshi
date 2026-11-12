@@ -79,7 +79,6 @@ const routes = [
           { path: 'stats', name: 'FsrStats', component: () => import('@/views/fsr/ReviewStats.vue'), meta: { title: '长势对比库', roles: ['province', 'city'] } },
           { path: 'events', name: 'FsrEvents', component: () => import('@/views/fsr/EventCenter.vue'), meta: { title: '变化图斑库' } },
           { path: 'task', name: 'FsrTask', component: () => import('@/views/fsr/TaskDispatch.vue'), meta: { title: '任务流程库' } },
-          { path: 'handle', name: 'FsrHandle', component: () => import('@/views/fsr/HandleWorkbench.vue'), meta: { title: '现场核查整改库', roles: ['city', 'province'] } },
           { path: 'indoor', name: 'FsrIndoor', component: () => import('@/views/fsr/IndoorCheck.vue'), meta: { title: '内业智能核查（安全环境演示）', roles: ['province'] } },
           { path: 'reports', name: 'FsrReports', component: () => import('@/views/fsr/ReportCenter.vue'), meta: { title: '事件简报与排名', roles: ['province', 'city'] } },
           { path: 'config', name: 'FsrConfig', component: () => import('@/views/fsr/BizConfig.vue'), meta: { title: '业务配置', roles: ['province'] } }
@@ -102,7 +101,15 @@ const routes = [
           { path: 'stats', name: 'PesStats', component: () => import('@/views/pes/Stats.vue'), meta: { title: '统计报表', roles: ['province', 'city', 'county'] } },
           { path: 'cockpit', name: 'PesCockpit', component: () => import('@/views/pes/Cockpit.vue'), meta: { title: '3D监管驾驶舱', roles: ['province', 'city', 'county'] } },
           { path: 'public', name: 'PesPublic', component: () => import('@/views/pes/PublicService.vue'), meta: { title: '公众服务' } },
-          { path: 'mobile', name: 'PesMobile', component: () => import('@/views/pes/MobileDemo.vue'), meta: { title: '皖企通移动端演示' } }
+          { path: 'publish', name: 'PesPublish', component: () => import('@/views/pes/ContentPublish.vue'), meta: { title: '内容发布', roles: ['province'] } },
+          {
+            path: 'mobile',
+            component: () => import('@/components/layout/MobileLayout.vue'),
+            meta: { title: '皖企通移动端演示' },
+            children: [
+              { path: '', name: 'PesMobile', component: () => import('@/views/mobile/WanqitongPesticide.vue'), meta: { title: '皖企通 · 农药服务' } }
+            ]
+          }
         ]
       },
 
@@ -122,7 +129,7 @@ const routes = [
       { path: 'wzt-disaster', name: 'MobileWztDisaster', component: () => import('@/views/mobile/WanzhengtongDisaster.vue'), meta: { title: '皖政通·灾情上报', roles: ['county'] } },
       { path: 'wzt-silage', name: 'MobileWztSilage', component: () => import('@/views/mobile/WanzhengtongSilage.vue'), meta: { title: '皖政通·青贮饲料管理', roles: ['county'] } },
       { path: 'wzt-safety', name: 'MobileWztSafety', component: () => import('@/views/mobile/WanzhengtongSafety.vue'), meta: { title: '皖政通·粮食安全综合监管', roles: ['county'] } },
-      { path: 'wzt-food-safety', name: 'MobileWztFoodSafety', component: () => import('@/views/mobile/WanzhengtongFoodSafety.vue'), meta: { title: '皖政通·粮食安全综合监管', roles: ['county', 'province'] } },
+      { path: 'wzt-food-safety', name: 'MobileWztFoodSafety', component: () => import('@/views/mobile/WanzhengtongFoodSafety.vue'), meta: { title: '皖政通·粮食安全综合监管', roles: ['county', 'city', 'province'] } },
       { path: 'gpm', name: 'MobileGpm', component: () => import('@/views/mobile/GpmMobileHome.vue'), meta: { title: '粮食计划管理' } },
       { path: 'wqt-silage', name: 'MobileWqtSilage', component: () => import('@/views/mobile/WanqitongSilage.vue'), meta: { title: '皖企通·青贮饲料管理', roles: ['grower', 'storage_subject'] } },
       { path: 'plans', name: 'MobilePlans', component: () => import('@/views/mobile/PlanList.vue'), meta: { title: '计划列表', roles: ['grower', 'storage_subject'] } },

@@ -3,7 +3,6 @@
     <div class="cp-header">
       <div class="cp-time">{{ nowText }}</div>
       <h2>安徽省农药数字监督管理 · 3D 监管驾驶舱</h2>
-      <div class="cp-note">原型级伪3D（CSS 透视实现），正式版以三维引擎实现（design_proposal）</div>
     </div>
 
     <div class="cp-body">
@@ -37,7 +36,7 @@
           <BaseChart :option="trendOption" height="200px" dark />
         </div>
         <div class="cp-card">
-          <h3>追溯断点率（C-12）</h3>
+          <h3>追溯断点率</h3>
           <div class="gauge-wrap">
             <BaseChart :option="gaugeOption" height="170px" dark />
             <div class="gauge-tip">断点链路灰显不中断，移交属地核查</div>
@@ -71,7 +70,7 @@
           <BaseChart :option="recycleOption" height="200px" dark />
         </div>
         <div class="cp-card">
-          <h3>接口上报动态（E12）</h3>
+          <h3>接口上报动态</h3>
           <div class="api-list">
             <div v-for="log in apiLogs" :key="log.id" class="api-item">
               <div class="api-row">
@@ -151,8 +150,8 @@ const cityStats = computed(() => {
 
 const marqueeItems = computed(() => [
   `追溯断点 ${flows.filter((f) => f.breakPoint).length} 条已移交属地核查`,
-  `回收待核验 ${PES_RECYCLES.filter((r) => r.status === '待核验').length} 单`,
-  `主体未确认 ${['PES-S-0012', 'PES-S-0006', 'SUB-0007'].length} 家（C-11 阻断上报）`,
+  `回收待核验 ${PES_RECYCLES.filter((r) => r.status === 'pending').length} 单`,
+  `主体未确认 3 家，阻断上报`,
   `接口失败明细 ${PES_API_LOGS[0]?.failed || 0} 条待处理`
 ])
 

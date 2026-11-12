@@ -2,14 +2,12 @@
   <div class="page-container">
     <div class="panel">
       <div class="panel-title">
-        <span class="title-text">产品与批次库（E3/E4 · 标书 2.1/2.2）</span>
+        <span class="title-text">产品与批次库</span>
         <div class="title-extra">
           <el-button v-if="isProvince" type="primary" icon="Plus" @click="openCreate">新增产品</el-button>
           <el-button icon="Refresh" @click="load">刷新</el-button>
         </div>
       </div>
-      <el-alert type="info" :closable="false" show-icon style="margin-bottom: 12px"
-        title="限用药标识的权威来源与判定责任待客户确认（Q-PES-07）：演示数据中限用标记仅作展示样例，不作为系统强制校验。" />
 
       <el-form inline class="filter-bar">
         <el-form-item label="关键词">

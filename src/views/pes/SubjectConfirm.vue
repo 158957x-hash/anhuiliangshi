@@ -2,13 +2,13 @@
   <div class="page-container">
     <!-- 企业视角：本主体确认卡 -->
     <div v-if="isEnterprise" class="panel">
-      <div class="panel-title"><span class="title-text">本主体信息确认（E2 · C-11）</span></div>
+      <div class="panel-title"><span class="title-text">本主体信息确认</span></div>
       <el-alert
         v-if="!confirmed"
         type="warning"
         show-icon
         :closable="false"
-        title="主体信息尚未确认：确认前无法上报生产/经营台账（C-11 阻断）"
+        title="主体信息尚未确认：确认前无法上报生产/经营台账"
         style="margin-bottom: 14px"
       />
       <el-descriptions :column="2" border>
@@ -53,8 +53,6 @@
         </el-table-column>
         <el-table-column prop="remark" label="备注" min-width="200" show-overflow-tooltip />
       </el-table>
-      <el-alert type="info" :closable="false" show-icon style="margin-top: 12px"
-        title="规则 C-11：主体档案由省级维护；企业须先确认主体信息方可上报台账。未确认企业以阻断条提示。" />
     </div>
   </div>
 </template>

@@ -61,7 +61,7 @@
     <!-- 知识库 -->
     <div class="panel">
       <div class="panel-title">
-        <span class="title-text">农药知识库（C-03 纳入验收）</span>
+        <span class="title-text">农药知识库</span>
         <div class="title-extra">
           <el-input v-model="kbKeyword" clearable placeholder="搜索标题/内容" style="width: 220px" />
         </div>

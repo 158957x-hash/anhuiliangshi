@@ -6,12 +6,20 @@ import { INDOOR_BATCHES } from '@/mock/fsr/indoor'
 import { GROWTH_RECORDS } from '@/mock/fsr/growth'
 import { EVENT_REPORTS, CITY_RANK } from '@/mock/fsr/reports'
 import { BIZ_CONFIG } from '@/mock/fsr/config'
+import { CHECKERS } from '@/mock/common/checkers'
+import { PLOTS } from '@/mock/geo/plot-gen'
 
 const filterByRole = (list, role) => {
   if (!role) return []
-  if (role.subjectId) return list.filter((i) => i.subjectId === role.subjectId)
-  if (role.regionCode === '340000') return list
-  return list.filter((i) => String(i.regionCode || '').startsWith(String(role.regionCode || '').slice(0, 6)))
+  let result
+  if (role.subjectId) result = list.filter((i) => i.subjectId === role.subjectId)
+  else if (role.regionCode === '340000') result = list
+  else result = list.filter((i) => String(i.regionCode || '').startsWith(String(role.regionCode || '').slice(0, 6)))
+  // 状态可见性（用户确认 2026-11-12）：待研判（to_review）仅省级可见；待派发（pending）仅省/市桌面任务库可见，县级及以下不显示
+  if (role.code === 'province') return result
+  result = result.filter((e) => e.status !== 'to_review')
+  if (role.code === 'city') return result
+  return result.filter((e) => e.status !== 'pending')
 }
 
 const nowText = () => {
@@ -72,17 +80,28 @@ export const submitPatrolReport = (payload) =>
     return { success: true, id, code: id.replace('EVT-', 'FSR-') }
   }, 600)
 
-// 派发任务：pending → checking
-export const dispatchTask = (eventId, { assignee, deadlineDays, requirement }) =>
+// 属地核查人员目录（派发时按事件区域自动匹配，人工确认/改派）
+export const fetchCheckers = (regionCode) =>
+  mockRequest(() => {
+    // 事件可能携带镇级区划码（如 341222104），按前缀匹配属地人员（县级/镇级目录）
+    const rc = String(regionCode || '')
+    return CHECKERS.filter((c) => rc.startsWith(String(c.regionCode)))
+  }, 300)
+
+// 派发任务：pending → checking（系统按属地自动匹配责任人，人工确认；核查截止为日期，默认按配置时限推算）
+export const dispatchTask = (eventId, { checkerId, checkerName, checkerUnit, checkDeadline, requirement }) =>
   mockRequest(() => {
     const ev = FSR_EVENTS.find((e) => e.id === eventId)
     if (!ev || ev.status !== 'pending') return { success: false, message: '仅待派发事件允许下发' }
+    if (!checkerId || !checkerName || !checkerUnit) return { success: false, message: '请从属地人员目录选择核查责任人' }
+    if (!checkDeadline) return { success: false, message: '请选择核查截止日期' }
+    const today = new Date().toISOString().slice(0, 10)
+    if (checkDeadline < today) return { success: false, message: '核查截止日期不能早于今天' }
     const dispatchedAt = nowText()
-    const deadline = new Date(Date.now() + deadlineDays * 86400000).toISOString().slice(0, 10)
-    ev.status = 'checking'; ev.assignee = assignee; ev.checkResponsiblePerson = assignee; ev.checkResponsibleUnit = assignee
-    ev.dispatchedAt = dispatchedAt; ev.checkDeadline = deadline; ev.deadline = deadline; ev.taskId = `TSK-2026-${String(taskSeq++).padStart(4, '0')}`
+    ev.status = 'checking'; ev.assignee = checkerName; ev.checkResponsiblePerson = checkerName; ev.checkResponsibleUnit = checkerUnit
+    ev.dispatchedAt = dispatchedAt; ev.checkDeadline = checkDeadline; ev.deadline = checkDeadline; ev.taskId = `TSK-2026-${String(taskSeq++).padStart(4, '0')}`
     ev.dispatchRequirement = requirement || ''
-    ev.trail.push({ time: dispatchedAt, action: '任务已派发', user: '派发人（演示）', extra: `责任单位：${assignee}，时限${deadlineDays}天${requirement ? '，要求：' + requirement : ''}，任务编号${ev.taskId}` })
+    ev.trail.push({ time: dispatchedAt, action: '任务已派发', user: '派发人（演示）', extra: `系统按属地自动匹配，人工确认。责任人：${checkerName}（${checkerUnit}），核查截止：${checkDeadline}${requirement ? '，要求：' + requirement : ''}，任务编号${ev.taskId}` })
     return { success: true, taskId: ev.taskId }
   }, 600)
 
@@ -90,7 +109,8 @@ export const dispatchTask = (eventId, { assignee, deadlineDays, requirement }) =
 export const submitCheckReport = (eventId, report) =>
   mockRequest(() => {
     const ev = FSR_EVENTS.find((e) => e.id === eventId)
-    if (!ev || !['checking', 'recheck'].includes(ev.status)) return { success: false, message: '当前状态不允许现场核查上报' }
+    // 核查上报仅限"待核查"环节；"需复查"为市/省复核整改情况的环节（用户纠偏 2026-11-12，防 recheck→reported 状态倒流）
+    if (!ev || ev.status !== 'checking') return { success: false, message: '当前状态不允许现场核查上报' }
     if (!report.conclusion || !report.desc || !report.longitude || !report.latitude) return { success: false, message: '核查结论、情况描述和现场定位不能为空' }
     const checkedAt = nowText()
     ev.status = 'reported'; ev.checkedAt = checkedAt; ev.reportedAt = checkedAt
@@ -265,6 +285,9 @@ export const createSnapshotEvent = (payload, role) =>
       subjectName: role.unit,
       foundTime: time.slice(0, 10),
       desc: payload.desc,
+      location: payload.location || '未定位',
+      // 举报证据随事件留存（"我的上报"详情查看）；与核查证据 checkReport 分离
+      reportAttachments: payload.attachments || [],
       reporterType: payload.reporterType || 'anonymous',
       reporterName: payload.reporterType === 'realname' ? payload.reporterName : '',
       reporterPhone: payload.reporterType === 'realname' ? payload.reporterPhone : '',
@@ -276,22 +299,27 @@ export const createSnapshotEvent = (payload, role) =>
     return { success: true, id, code: id.replace('EVT-', 'FSR-') }
   }, 600)
 
-// 数字围栏联动新增事件
-export const createFenceEvent = (payload) =>
+// ===== 省级研判：确认随手拍线索归属地块 =====
+// 口径（用户确认 2026-11-12）：公众端可不选地块，以拍照定位坐标落图；归属地块由省级按坐标与地块范围套合研判确认
+export const assignSnapshotPlot = (eventId, plotId, role) =>
   mockRequest(() => {
-    const id = `EVT-2026-${String(FSR_EVENTS.length + 1).padStart(4, '0')}`
-    const time = nowText()
-    FSR_EVENTS.unshift({
-      id, code: id.replace('EVT-', 'FSR-'), type: 'weibeian', source: 'fence', risk: 'high',
-      regionCode: payload.regionCode || '341222', regionName: payload.regionName || '太和县',
-      spot: { plotId: null, geometry: { type: 'Polygon', coordinates: [payload.ring] }, center: payload.center, areaMu: payload.areaMu || 200 },
-      subjectId: null, subjectName: '待核实',
-      foundTime: time.slice(0, 10), desc: payload.desc || '数字围栏校验发现疑似未备案收割行为',
-      status: 'pending', deadline: null, taskId: null,
-      trail: [{ time, action: '数字围栏联动发现', user: '系统（青贮一张图坐标校验）' }]
-    })
-    return { success: true, id }
-  }, 600)
+    if (role?.code !== 'province') return { success: false, message: '仅省级可执行研判确认' }
+    const e = FSR_EVENTS.find((x) => x.id === eventId)
+    if (!e) return { success: false, message: '事件不存在' }
+    if (e.source !== 'snapshot') return { success: false, message: '仅随手拍线索需要研判确认归属地块' }
+    if (!plotId) return { success: false, message: '请选择归属地块' }
+    const plot = PLOTS.find((p) => p.id === plotId)
+    if (!plot) return { success: false, message: '地块不存在' }
+    e.spot = e.spot || {}
+    e.spot.plotId = plot.id
+    if (plot.areaMu) e.spot.areaMu = plot.areaMu
+    // 未关联时以拍照定位坐标为图斑中心；确认地块后中心以地块中心为准（演示口径）
+    if (!e.spot.center && plot.center) e.spot.center = plot.center
+    if (!e.subjectId && plot.subjectId) { e.subjectId = plot.subjectId; e.subjectName = plot.subjectName || e.subjectName }
+    e.trail = e.trail || []
+    e.trail.push({ time: nowText(), action: `省级研判：确认归属地块 ${plot.name}（${plot.areaMu}亩）`, user: role?.name || '省级研判员', extra: '依据拍照定位坐标与地块范围套合研判' })
+    return { success: true }
+  }, 500)
 
 // ===== 长势对比库（独立记录，不再由事件派生）=====
 export const fetchGrowthRecords = (role, filters = {}) =>
@@ -328,11 +356,11 @@ export const pushGrowthWarning = (growthId) =>
     const code = id.replace('EVT-', 'FSR-')
     const time = nowText()
     FSR_EVENTS.unshift({
-      id, code, type: 'zhangshi', source: 'growth_warning', risk: 'medium',
+      id, code, type: 'zhangshi', source: 'remote', risk: 'medium',
       regionCode: g.regionCode, regionName: g.regionName,
       spot: { plotId: null, geometry: null, center: g.center || null, areaMu: g.areaMu || 0 },
       subjectId: null, subjectName: '待核实',
-      foundTime: time.slice(0, 10), desc: `苗情异常预警推送：${g.regionName} ${g.cropName}长势偏弱（${g.monitorPeriod}），${g.measure || '需现场核实'}`,
+      foundTime: time.slice(0, 10), desc: `苗情异常预警推送（遥感影像长势反演）：${g.regionName} ${g.cropName}长势偏弱（${g.monitorPeriod}），${g.measure || '需现场核实'}`,
       status: 'to_review', deadline: null, taskId: null, growthId: g.id,
       trail: [{ time, action: '长势异常预警推送', user: '研判人（演示）', extra: `来源长势记录 ${g.id}` }]
     })
@@ -411,7 +439,8 @@ export const fetchCityRank = (period, metric) =>
   mockRequest(() => ({
     period, metric,
     statVersion: '演示口径 v1.0（待业务确认）',
-    rows: (CITY_RANK[metric] || []).map((r) => ({ ...r }))
+    // CITY_RANK[metric] 结构为 { rows: [...] }，取 rows 再 map（修复 map is not a function，用户截图反馈 2026-11-12）
+    rows: (CITY_RANK[metric]?.rows || []).map((r) => ({ ...r }))
   }))
 
 // ===== 业务配置 =====

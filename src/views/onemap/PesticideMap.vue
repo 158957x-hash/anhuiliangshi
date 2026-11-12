@@ -107,7 +107,7 @@ const layers = reactive([
   { id: 'operate', name: '经营网点', color: '#e8b93c', visible: true },
   { id: 'use', name: '使用主体', color: '#4fd0c6', visible: true },
   { id: 'recycle', name: '回收处理主体', color: '#7e57c2', visible: true },
-  { id: 'warning', name: '异常预警（C-08/C-12）', color: '#ff7a45', visible: true }
+  { id: 'warning', name: '异常预警', color: '#ff7a45', visible: true }
 ])
 
 // 异常主体：断点流水流出方（C-12）+ 负库存主体（C-08 待核查，M-05 口径）
@@ -125,14 +125,14 @@ const warningSubjectIds = computed(() => {
 
 const warningReasons = (sid) => {
   const reasons = []
-  if (PES_FLOWS.some((f) => f.from === sid && f.breakPoint)) reasons.push('存在追溯断点流出（C-12）')
+  if (PES_FLOWS.some((f) => f.from === sid && f.breakPoint)) reasons.push('存在追溯断点流出')
   const bal = {}
   PES_FLOWS.filter((f) => f.batchId).forEach((f) => {
     if (['produce', 'purchase', 'sale', 'buy', 'return'].includes(f.type) && f.to === sid) bal[f.batchId] = (bal[f.batchId] || 0) + f.qty
     if (['sale', 'buy'].includes(f.type) && f.from === sid) bal[f.batchId] = (bal[f.batchId] || 0) - f.qty
   })
   const neg = Object.values(bal).filter((v) => v < 0).length
-  if (neg) reasons.push(`${neg} 个批次库存为负，待核查（C-08）`)
+  if (neg) reasons.push(`${neg} 个批次库存为负，待核查`)
   return reasons
 }
 

@@ -1,6 +1,7 @@
 // 粮食安全监管 Mock：图斑与事件（七状态机全状态覆盖）
 import { PLOTS, GROW_SUBJECTS } from '@/mock/geo/plot-gen'
 import { circlePolygon, offsetPoint } from '@/map/geoUtils'
+import { EVIDENCE_IMAGES, fillEvidenceUrls } from '@/mock/common/evidenceImages'
 
 // ===== 事件（25 条，覆盖全部状态）=====
 // status: pending 待派发 / checking 待核查 / reported 已上报 / reviewing 待审核 / audited 已审核（整改中） / recheck 需复查 / closed 已结案
@@ -59,13 +60,13 @@ const buildEvents = () => {
 
   // --- 待核查（已派发任务，3条）---
   events.push({
-    id: 'EVT-2026-0011', code: 'FSR-2026-0011', type: 'baomai', source: 'fence', risk: 'high',
+    id: 'EVT-2026-0011', code: 'FSR-2026-0011', type: 'baomai', source: 'drone', risk: 'high',
     regionCode: '341222', regionName: '太和县', spot: mkSpotFromPlot(taihePlots[8] || taihePlots[1], 'baomai', 'high'),
     subjectId: taihePlots[8]?.subjectId || 'SUB-0003', subjectName: '太和县宏发农业发展有限公司',
-    foundTime: '2026-09-25', desc: '数字围栏校验发现：未备案地块疑似青贮收割行为，联动生成本事件',
+    foundTime: '2026-09-25', desc: '无人机巡查识别：未备案地块疑似青贮收割行为，航线比对后生成本事件',
     status: 'checking', deadline: '2026-10-02', assignee: '旧县镇人民政府（核查员：赵磊）', taskId: 'TSK-2026-0011',
     trail: [
-      { time: '2026-09-25 14:30', action: '数字围栏联动发现', user: '系统（青贮一张图坐标校验）' },
+      { time: '2026-09-25 14:30', action: '无人机巡查识别', user: '系统（航线影像比对）' },
       { time: '2026-09-26 09:15', action: '任务已派发', user: '王芳（太和县农业农村局）', extra: '责任单位：旧县镇人民政府，时限7天，任务编号TSK-2026-0011' }
     ]
   })
@@ -279,7 +280,7 @@ const buildEvents = () => {
       // 随手拍已结案样例：补结案编号/意见与举报人（供"我的上报"处置结果查看与评分评价演示，可研 5.5.3.9.3）
       ...(c.source === 'snapshot' ? { closeNo: 'FSR-JA-2026-0017', closeOpinion: '经查实，涉事收储点已依法查处，场地恢复原状', reporterName: '陈勇（演示公众身份）' } : {}),
       trail: [
-        { time: `${c.found} 09:00`, action: '事件接入', user: c.source === 'remote' ? '系统（遥感）' : c.source === 'grid' ? '网格员' : c.source === 'snapshot' ? '公众（随手拍）' : c.source === 'growth_warning' ? '系统（苗情预警）' : '地方平台' },
+        { time: `${c.found} 09:00`, action: '事件接入', user: c.source === 'remote' ? '系统（遥感影像比对）' : c.source === 'drone' ? '系统（无人机航线比对）' : c.source === 'grid' ? '网格员' : c.source === 'snapshot' ? '公众（随手拍）' : '地方平台' },
         { time: `${c.found} 15:00`, action: '任务已派发', user: '市级农业农村局' },
         { time: '2026-07-02 14:00', action: '现场核查完成并上报', user: '属地核查员（皖政通）', extra: '核查结论：' + (i === 2 ? '不属实（轮作休耕）' : '属实') },
         { time: '2026-07-04 09:00', action: '市级审核', user: '市级农业农村局', opinion: i === 2 ? '核查充分，事件不属实，予以销案' : '事实清楚，限期整改' },
@@ -292,7 +293,25 @@ const buildEvents = () => {
   return events
 }
 
-export const FSR_EVENTS = buildEvents()
+// 演示证据补图片 URL（缩略图/预览用；真实系统为采集原片）
+const builtEvents = buildEvents()
+builtEvents.forEach((e, ei) => {
+  fillEvidenceUrls(e.checkReport?.attachments, ei)
+  fillEvidenceUrls(e.rectifyNote?.attachments, 0, EVIDENCE_IMAGES.rectified)
+  // 预置随手拍样例补举报证据（用户反馈 2026-11-12：详情里照片缺失；新提交的事件由 createSnapshotEvent 存 reportAttachments）
+  if (e.source === 'snapshot' && !(e.reportAttachments || []).length) {
+    e.reportAttachments = [
+      { name: 'SNAP_' + e.code.slice(-4) + '_01.jpg', type: 'photo', time: e.foundTime + ' 10:00', location: e.location || e.regionName, watermark: '已加水印（时间+位置）', url: EVIDENCE_IMAGES.pond },
+      { name: 'SNAP_' + e.code.slice(-4) + '_02.jpg', type: 'photo', time: e.foundTime + ' 10:02', location: e.location || e.regionName, watermark: '已加水印（时间+位置）', url: EVIDENCE_IMAGES.wheatField }
+    ]
+  }
+  // 随手拍线索以拍照定位坐标为图斑中心点（确定性偏移保证演示可复现；用户确认 2026-11-12：无需关联地块即可获取经纬度落图）
+  if (e.source === 'snapshot' && !(e.spot?.center?.length)) {
+    e.spot = e.spot || {}
+    e.spot.center = [Number((115.58 + ei * 0.006).toFixed(6)), Number((33.18 + ei * 0.004).toFixed(6))]
+  }
+})
+export const FSR_EVENTS = builtEvents
 export const EVENT_MAP = Object.fromEntries(FSR_EVENTS.map((e) => [e.id, e]))
 
 // 事件图斑 GeoJSON（按状态着色由视图层处理）

@@ -22,15 +22,19 @@
         </template>
         <el-form-item label="问题类型"><el-select v-model="form.type" style="width:100%"><el-option v-for="item in issueTypes" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item label="发生地点"><el-cascader v-model="form.region" :options="regionOptions" style="width:100%" /></el-form-item>
-        <el-form-item label="关联地块"><el-select v-model="form.plotId" clearable style="width:100%" placeholder="可选，便于管理部门定位"><el-option v-for="plot in subjectPlots" :key="plot.id" :label="`${plot.name}（${plot.areaMu}亩）`" :value="plot.id" /></el-select></el-form-item>
-        <el-form-item label="现场定位"><div class="location"><el-input v-model="form.location" /><el-button @click="locate">重新定位</el-button></div></el-form-item>
+        <el-form-item label="关联地块（可不选）">
+          <el-select v-model="form.plotId" clearable filterable style="width:100%" placeholder="可不选：由管理部门研判确认归属地块">
+            <el-option v-for="plot in nearbyPlots" :key="plot.id" :label="`${plot.name}（${plot.areaMu}亩 · 距您约${plot.distance}米）`" :value="plot.id" />
+            <el-option v-for="plot in localPlots" :key="plot.id" :label="`${plot.name}（${plot.areaMu}亩）`" :value="plot.id" />
+          </el-select>
+          <p class="id-tip">公众可不选地块：定位后自动识别附近地块供参考；未选择时线索由省级在图上研判归属地块</p>
+        </el-form-item>
+        <el-form-item label="现场定位"><div class="location"><el-input v-model="form.location" /><el-button @click="locate">重新定位</el-button></div><p class="id-tip" v-if="form.gps">拍照定位坐标：{{ form.gps.join(', ') }}（随线索上报，用于后台落图与地块套合研判，无需知道地块）</p></el-form-item>
         <el-form-item label="问题描述"><el-input v-model="form.description" type="textarea" :rows="4" maxlength="180" show-word-limit placeholder="请描述病虫害、干旱、洪涝等情况和影响范围" /></el-form-item>
         <el-form-item label="现场证据（拍照/录像）">
-          <div class="evidence-actions"><el-button size="small" @click="addEvidence('photo')">模拟拍照</el-button><el-button size="small" @click="addEvidence('video')">模拟录像</el-button></div>
+          <div class="evidence-actions"><el-button size="small" @click="addEvidence('photo')">拍照</el-button><el-button size="small" @click="addEvidence('video')">录像</el-button></div>
           <div v-for="(item, idx) in form.attachments" :key="item.name" class="evidence-row">
-            <el-tag size="small" :type="item.type === 'photo' ? 'success' : 'warning'">{{ item.type === 'photo' ? '照片' : '视频' }}</el-tag>
-            <span class="ev-name">{{ item.name }}</span>
-            <el-button link type="primary" size="small" @click="viewEvidence(item)">查看</el-button>
+            <EvidenceThumbs :items="[item]" :size="56" />
             <el-button link type="danger" size="small" @click="removeEvidence(idx)">删除</el-button>
           </div>
           <p v-if="form.attachments.length" class="upload-state">上传状态：已上传</p>
@@ -40,7 +44,7 @@
       <div class="actions"><el-button :disabled="submitting" @click="saveDraft">暂存草稿</el-button><el-button type="primary" :loading="submitting" @click="submit">提交农情直报</el-button></div>
     </div>
     <div v-show="tab === 'list'" class="list-card"><div class="list-title"><b>我的上报记录</b><span class="record-count">共 {{ reports.length }} 条</span></div><p class="list-tip">提交后线索进入省粮食安全综合监管系统统一研判流转，可在此跟踪处理状态（对应可研“我的上传”模块）</p><div v-for="item in reports" :key="item.id" class="report-item"><div class="report-top"><span>{{ item.time }}</span></div><b>{{ item.type }}</b><p>{{ item.regionName }} · {{ item.description }}</p><div class="report-bottom"><span>编号 {{ item.code || item.id }}</span><el-button link type="primary" @click="viewReport(item)">查看上报详情</el-button></div></div><el-empty v-if="!reports.length" description="暂无记录" /></div>
-    <el-dialog v-model="detailVisible" title="农情直报详情" width="480px"><template v-if="activeReport"><el-descriptions :column="1" border><el-descriptions-item label="问题类型">{{ activeReport.type }}</el-descriptions-item><el-descriptions-item label="所在地区">{{ activeReport.regionName }}</el-descriptions-item><el-descriptions-item label="问题描述">{{ activeReport.description || '暂无描述' }}</el-descriptions-item><el-descriptions-item label="举报身份">{{ activeReport.reporterType === 'realname' ? `实名（${activeReport.reporterName || '—'} · ${maskPhone(activeReport.reporterPhone)}）` : '匿名' }}</el-descriptions-item><el-descriptions-item label="当前状态">{{ progress?.statusName || activeReport.statusName }}</el-descriptions-item></el-descriptions>
+    <el-dialog v-model="detailVisible" title="农情直报详情" width="92%" class="scroll-dialog" align-center><template v-if="activeReport"><el-descriptions :column="1" border><el-descriptions-item label="问题类型">{{ activeReport.type }}</el-descriptions-item><el-descriptions-item label="所在地区">{{ activeReport.regionName }}</el-descriptions-item><el-descriptions-item label="关联地块">{{ plotText(activeReport) }}</el-descriptions-item><el-descriptions-item label="现场定位">{{ activeReport.location || '—' }}</el-descriptions-item><el-descriptions-item label="问题描述">{{ activeReport.description || '暂无描述' }}</el-descriptions-item><el-descriptions-item :label="`现场证据（${reportEvidence(activeReport).length} 项）`"><EvidenceThumbs v-if="reportEvidence(activeReport).length" :items="reportEvidence(activeReport)" :size="56" /><span v-else>未上传照片/视频</span></el-descriptions-item><el-descriptions-item label="举报身份">{{ activeReport.reporterType === 'realname' ? `实名（${activeReport.reporterName || '—'} · ${maskPhone(activeReport.reporterPhone)}）` : '匿名' }}</el-descriptions-item><el-descriptions-item label="上报时间">{{ activeReport.time || activeReport.foundTime || '—' }}</el-descriptions-item><el-descriptions-item label="当前状态">{{ progress?.statusName || activeReport.statusName }}</el-descriptions-item></el-descriptions>
       <div v-if="progress?.success" class="snap-progress">
         <b>处置进度</b>
         <div class="progress-line">
@@ -64,19 +68,7 @@
         </div>
       </div>
     </template></el-dialog>
-    <el-dialog v-model="evidenceVisible" title="现场证据详情" width="420px">
-      <template v-if="activeEvidence">
-        <el-descriptions :column="1" border size="small">
-          <el-descriptions-item label="文件名">{{ activeEvidence.name }}</el-descriptions-item>
-          <el-descriptions-item label="类型">{{ activeEvidence.type === 'photo' ? '照片' : '视频' }}</el-descriptions-item>
-          <el-descriptions-item label="采集时间">{{ activeEvidence.time }}</el-descriptions-item>
-          <el-descriptions-item label="采集位置">{{ activeEvidence.location }}</el-descriptions-item>
-          <el-descriptions-item label="水印状态">{{ activeEvidence.watermark }}</el-descriptions-item>
-        </el-descriptions>
-        <p class="watermark-tip">原型为模拟证据元数据，不含真实影像文件（演示数据）</p>
-      </template>
-    </el-dialog>
-    <el-dialog v-model="receiptVisible" title="提交回执" width="420px">
+    <el-dialog v-model="receiptVisible" title="提交回执" width="86%" class="scroll-dialog" align-center>
       <template v-if="receipt">
         <div class="receipt-box">
           <b>事件编号：{{ receipt.code || receipt.id }}</b>
@@ -97,19 +89,22 @@ import { useUserStore } from '@/stores/user'
 import { createSnapshotEvent, fetchMySnapReports, fetchSnapProgress, rateEvent } from '@/api/fsr'
 import { PLOTS } from '@/mock/geo/plot-gen'
 import { EVENT_STATUS, EVENT_TYPES } from '@/mock/common/dict'
+import { EVIDENCE_IMAGES } from '@/mock/common/evidenceImages'
+import EvidenceThumbs from '@/components/common/EvidenceThumbs.vue'
 
 const userStore = useUserStore()
 // 事件类型锁定粮食安全事件字典（与变化图斑库同源，可研"随手拍=粮食监管专项"口径，自查修复 2026-11-12）
 const issueTypes = EVENT_TYPES.map(t => ({ label: t.name, value: t.code }))
 const regionOptions = [{ value: '阜阳市', label: '阜阳市', children: [{ value: '太和县', label: '太和县', children: [{ value: '旧县镇', label: '旧县镇' }, { value: '大新镇', label: '大新镇' }] }] }]
 const subjectPlots = computed(() => PLOTS.filter(item => item.subjectId === userStore.role?.subjectId))
-// 举报身份：默认匿名（匿名/实名两种方式并存，用户已确认）
-const form = reactive({ type: 'huimai', region: ['阜阳市', '太和县', '旧县镇'], plotId: '', location: '安徽省太和县（定位待更新）', description: '', attachments: [], reporterType: 'anonymous', reporterName: '', reporterPhone: '' })
+const nearbyPlots = ref([])
+// 地块定位口径（用户确认 2026-11-12）：公众未必知道系统地块、也未必站在地块内——地块改为可不选；
+// 定位后按 GPS 自动推荐"附近地块"供参考（真实实现：拍照坐标与地块中心求距离），未选择时由省级研判归属
+const localPlots = computed(() => PLOTS.filter(item => String(item.regionCode || '').startsWith('341222') && !nearbyPlots.value.some((n) => n.id === item.id)))
+const form = reactive({ type: 'huimai', region: ['阜阳市', '太和县', '旧县镇'], plotId: '', location: '安徽省太和县（定位待更新）', gps: null, description: '', attachments: [], reporterType: 'anonymous', reporterName: '', reporterPhone: '' })
 const reports = ref([])
 const detailVisible = ref(false)
 const activeReport = ref(null)
-const evidenceVisible = ref(false)
-const activeEvidence = ref(null)
 const receiptVisible = ref(false)
 const receipt = ref(null)
 const submitting = ref(false)
@@ -120,20 +115,30 @@ const progress = ref(null)
 const rateForm = reactive({ score: 0, comment: '' })
 const rateSubmitting = ref(false)
 
-const locate = () => { form.location = '安徽省太和县旧县镇（定位已更新）'; ElMessage.success('定位已更新') }
+const locate = () => {
+  form.location = '安徽省太和县旧县镇（GPS定位已更新）'
+  // 拍照定位坐标随线索上报（用户确认 2026-11-12：无需知道地块即可获取经纬度落图）；演示为太和县范围模拟值
+  form.gps = [Number((115.58 + Math.random() * 0.12).toFixed(6)), Number((33.18 + Math.random() * 0.1).toFixed(6))]
+  // 演示：按当前位置自动推荐附近地块（真实实现：GPS 坐标与地块中心求距离取最近 N 块）
+  const pool = PLOTS.filter((p) => String(p.regionCode || '').startsWith('341222'))
+  nearbyPlots.value = (pool.length ? pool : PLOTS).slice(0, 2).map((p, i) => ({ ...p, distance: 180 + i * 260 }))
+  ElMessage.success(nearbyPlots.value.length ? '定位已更新，已识别附近地块供参考' : '定位已更新')
+}
 // 联系电话展示脱敏：138****5678
 const maskPhone = (phone) => (phone && phone.length === 11 ? `${phone.slice(0, 3)}****${phone.slice(7)}` : phone)
+// 详情字段补齐（用户反馈 2026-11-12）：证据=新提交的举报证据，兼容预置样例（证据在核查上报里）；地块=关联地块名称
+const reportEvidence = (item) => item?.reportAttachments || item?.checkReport?.attachments || []
+const plotText = (item) => { const pid = item?.spot?.plotId || item?.plotId; const plot = pid ? PLOTS.find((p) => p.id === pid) : null; return plot ? `${plot.name}（${plot.areaMu}亩）` : '未选择（由省级研判确认归属地块）' }
 const fmtStamp = () => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}` }
 // 模拟拍照/录像：生成附件元数据（名称/类型/采集时间/采集位置/水印）
 const addEvidence = (type) => {
   if (form.attachments.length >= 9) return ElMessage.warning('现场证据最多9项')
   const isPhoto = type === 'photo'
-  form.attachments.push({ name: isPhoto ? `IMG_${fmtStamp()}.jpg` : `VID_${fmtStamp()}.mp4`, type, time: new Date().toLocaleString('zh-CN'), location: form.location || '未定位', watermark: '已加水印（时间+位置）' })
+  form.attachments.push({ name: isPhoto ? `IMG_${fmtStamp()}.jpg` : `VID_${fmtStamp()}.mp4`, type, time: new Date().toLocaleString('zh-CN'), location: form.location || '未定位', watermark: '已加水印（时间+位置）', url: isPhoto ? EVIDENCE_IMAGES.wheatField : EVIDENCE_IMAGES.videoCover })
   ElMessage.success(isPhoto ? '照片已添加，自动添加时间+位置水印' : '视频已添加，自动添加时间+位置水印')
 }
 const removeEvidence = (idx) => { form.attachments.splice(idx, 1) }
-const viewEvidence = (item) => { activeEvidence.value = item; evidenceVisible.value = true }
-const saveDraft = () => { localStorage.setItem('wanqitong-snapshot-draft', JSON.stringify({ ...form, attachments: form.attachments.map(({ name, type, time, location, watermark }) => ({ name, type, time, location, watermark })) })); ElMessage.success('已暂存农情直报草稿') }
+const saveDraft = () => { localStorage.setItem('wanqitong-snapshot-draft', JSON.stringify({ ...form, attachments: form.attachments.map((a) => ({ ...a })) })); ElMessage.success('已暂存农情直报草稿') }
 const submit = async () => {
   if (!form.description.trim()) return ElMessage.warning('请填写问题描述')
   if (form.reporterType === 'realname') {
@@ -148,11 +153,13 @@ const submit = async () => {
       regionCode: userStore.role?.regionCode,
       regionName: userStore.regionName,
       plotId: form.plotId,
+      location: form.location,
+      center: form.gps,
       desc: form.description,
       reporterType: form.reporterType,
       reporterName: form.reporterType === 'realname' ? form.reporterName.trim() : '',
       reporterPhone: form.reporterType === 'realname' ? form.reporterPhone.trim() : '',
-      attachments: form.attachments.map(({ name, type, time, location, watermark }) => ({ name, type, time, location, watermark }))
+      attachments: form.attachments.map((a) => ({ ...a }))
     }, userStore.role)
     if (!result.success) return ElMessage.error(result.message || '提交失败')
     // 成功回执：展示生成的事件编号
@@ -196,6 +203,9 @@ onMounted(async () => {
 </script>
 
 <style lang="scss" scoped>
+/* 弹窗在手机壳内展示：宽度不超壳、内容超高滚动（用户反馈 2026-11-12） */
+:deep(.scroll-dialog){max-width:calc(100% - 20px);margin-top:40px !important}
+:deep(.scroll-dialog .el-dialog__body){max-height:560px;overflow-y:auto}
 .mobile-page{width:100%;min-width:0;box-sizing:border-box;margin:0;min-height:100%;background:#f5f7fa;padding:14px;overflow-x:hidden}
 .mobile-head,.form-card,.list-card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px}
 .mobile-head{display:flex;align-items:center;justify-content:space-between;color:#1f3c68}

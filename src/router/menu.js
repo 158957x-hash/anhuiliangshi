@@ -54,7 +54,6 @@ export const MENU_CONFIG = [
       { title: '长势对比库', route: '/fsr/stats', icon: 'PieChart', roles: ['province', 'city'] },
       { title: '变化图斑库', route: '/fsr/events', icon: 'MessageBox' },
       { title: '任务流程库', route: '/fsr/task', icon: 'Position' },
-      { title: '现场核查整改库', route: '/fsr/handle', icon: 'Tools', roles: ['city', 'province'] },
       { title: '内业智能核查', route: '/fsr/indoor', icon: 'Monitor', roles: ['province'], note: '内业安全环境演示' },
       { title: '事件简报与排名', route: '/fsr/reports', icon: 'Document', roles: ['province', 'city'] },
       { title: '业务配置', route: '/fsr/config', icon: 'Setting', roles: ['province'] },
@@ -77,6 +76,7 @@ export const MENU_CONFIG = [
       { title: '统计报表', route: '/pes/stats', icon: 'TrendCharts', roles: ['province', 'city', 'county'] },
       { title: '3D监管驾驶舱', route: '/pes/cockpit', icon: 'Monitor', roles: ['province', 'city', 'county'] },
       { title: '公众服务', route: '/pes/public', icon: 'Search' },
+      { title: '内容发布', route: '/pes/publish', icon: 'Promotion', roles: ['province'] },
       { title: '皖企通移动端演示', route: '/pes/mobile', icon: 'Iphone' },
       { title: '农药监管一张图', route: '/onemap/pesticide', icon: 'View' }
     ]

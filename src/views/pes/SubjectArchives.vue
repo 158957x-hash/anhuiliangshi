@@ -2,9 +2,10 @@
   <div class="page-container">
     <div class="panel">
       <div class="panel-title">
-        <span class="title-text">主体档案（E1）</span>
+        <span class="title-text">主体档案</span>
         <div class="title-extra">
           <el-button v-if="isProvince" type="primary" icon="Plus" @click="openCreate">新增主体</el-button>
+          <el-button v-if="isProvince" icon="Upload" @click="openImport">批量导入</el-button>
           <el-button icon="Refresh" @click="load">刷新</el-button>
         </div>
       </div>
@@ -80,18 +81,17 @@
           <el-descriptions-item label="状态">{{ current.status }}</el-descriptions-item>
         </el-descriptions>
 
-        <h4 class="drawer-sub-title">确认状态（E2 · C-11）</h4>
+        <h4 class="drawer-sub-title">确认状态</h4>
         <el-tag v-if="unconfirmedSet.has(current.id)" type="danger">未确认 — 企业须先确认主体信息才能上报台账</el-tag>
         <el-tag v-else type="success">已确认</el-tag>
 
-        <h4 class="drawer-sub-title">审核留痕</h4>
+        <h4 class="drawer-sub-title">流转留痕</h4>
         <FlowSteps :steps="currentSteps" />
       </template>
     </el-drawer>
 
     <!-- 新增主体（省级，design_proposal：状态枚举待业务确认） -->
-    <el-dialog v-model="createVisible" title="新增主体（省级维护 · C-11）" width="560px" :close-on-click-modal="false">
-      <el-alert type="info" :closable="false" show-icon title="主体由省级统一维护；状态枚举（正常/停产整改/责令整改/注销）为设计建议，待客户确认。" style="margin-bottom: 14px" />
+    <el-dialog v-model="createVisible" title="新增主体" width="560px" :close-on-click-modal="false">
       <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-width="110px">
         <el-form-item label="主体名称" prop="name"><el-input v-model="createForm.name" /></el-form-item>
         <el-form-item label="主体类型" prop="type">
@@ -113,6 +113,15 @@
         <el-button type="primary" @click="submitCreate">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 批量导入（省级，C-11） -->
+    <ImportDialog
+      ref="importRef"
+      title="主体档案批量导入"
+      :columns="importColumns"
+      :do-import="runImport"
+      @success="load"
+    />
   </div>
 </template>
 
@@ -120,9 +129,10 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import { fetchPesSubjects, fetchConfirms } from '@/api/pes'
+import { fetchPesSubjects, fetchConfirms, importPesSubjects } from '@/api/pes'
 import { PES_SUBJECTS } from '@/mock/pes/data'
 import FlowSteps from '@/components/common/FlowSteps.vue'
+import ImportDialog from '@/components/common/ImportDialog.vue'
 
 const TYPE_NAME = { produce: '生产企业', operate: '经营企业', use: '使用主体', recycle: '回收主体' }
 const TYPE_TAG = { produce: 'primary', operate: 'success', use: 'warning', recycle: 'danger' }
@@ -145,6 +155,18 @@ const createRules = {
   type: [{ required: true, message: '请选择主体类型', trigger: 'change' }],
   regionCode: [{ required: true, message: '请输入区划代码', trigger: 'blur' }]
 }
+const importRef = ref()
+const importColumns = [
+  { key: 'name', label: '主体名称', required: true, hint: '全称，唯一（重复行校验失败）', example: '太和县裕丰农资经营部' },
+  { key: 'creditCode', label: '统一社会信用代码', required: true, hint: '18位数字或大写字母', example: '91341222MA2PLQ0X7K' },
+  { key: 'type', label: '主体类型', required: true, hint: '生产企业 / 经营企业 / 使用主体 / 回收主体', example: '经营企业' },
+  { key: 'regionCode', label: '区划代码', required: true, hint: '6位行政区划代码', example: '341222' },
+  { key: 'legalPerson', label: '法定代表人', required: false, hint: '可空', example: '李建国' },
+  { key: 'license', label: '许可证号', required: false, hint: '农药经许字/生许字编号，可空', example: '农药经许(皖)第099号' },
+  { key: 'address', label: '地址', required: false, hint: '可空', example: '阜阳市太和县城关镇' }
+]
+const runImport = (rowsIn) => importPesSubjects(rowsIn)
+const openImport = () => importRef.value?.open()
 
 const cityOptions = computed(() => [...new Set(PES_SUBJECTS.map((s) => String(s.regionCode).slice(0, 4)))].sort())
 

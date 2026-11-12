@@ -34,9 +34,14 @@ const props = defineProps({
   actions: { type: Array, default: () => [{ value: 'pass', label: '通过' }] },
   defaultAction: { type: String, default: '' },
   tip: { type: String, default: '' },
-  placeholder: { type: String, default: '请填写处理意见' }
+  placeholder: { type: String, default: '请填写处理意见' },
+  // 选择"不通过/驳回"类动作时意见是否必填（为空则弹窗内拦截，不触发 confirm）
+  rejectReasonRequired: { type: Boolean, default: false }
 })
 const emit = defineEmits(['update:modelValue', 'confirm'])
+
+const REJECT_WORDS = ['不通过', '驳回', '退回']
+const isRejectAction = (value) => REJECT_WORDS.some((w) => (props.actions.find((a) => a.value === value)?.label || '').includes(w)) || value !== 'pass'
 
 const visible = computed({
   get: () => props.modelValue,
@@ -57,6 +62,10 @@ watch(() => props.modelValue, (v) => {
 const confirmText = computed(() => props.actions.find((a) => a.value === action.value)?.label || '确定')
 
 const confirm = () => {
+  if (props.rejectReasonRequired && isRejectAction(action.value) && !opinion.value.trim()) {
+    import('element-plus').then(({ ElMessage }) => ElMessage.warning('选择"不通过"时必须填写原因'))
+    return
+  }
   loading.value = true
   setTimeout(() => {
     loading.value = false

@@ -79,6 +79,16 @@
           <el-descriptions-item label="批次号">{{ current.batchNo }}</el-descriptions-item>
           <el-descriptions-item label="计划年度">{{ current.planYear }}</el-descriptions-item>
           <el-descriptions-item label="计划落实数据引用" :span="2">{{ current.planDataRef }}</el-descriptions-item>
+          <el-descriptions-item label="计划编号">{{ current.planNo || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="计划名称">{{ current.planName || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="计划播种进度">
+            <el-progress v-if="current.planSowProgress != null" :percentage="current.planSowProgress" :stroke-width="10" style="width: 100%" />
+            <span v-else>—</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="计划收获进度">
+            <el-progress v-if="current.planHarvestProgress != null" :percentage="current.planHarvestProgress" :stroke-width="10" status="success" style="width: 100%" />
+            <span v-else>—</span>
+          </el-descriptions-item>
           <el-descriptions-item label="区域范围">{{ current.regionScope }}</el-descriptions-item>
           <el-descriptions-item label="作物范围">{{ current.cropScope }}</el-descriptions-item>
           <el-descriptions-item label="疑似图斑数">{{ current.suspectCount }} 个</el-descriptions-item>

@@ -23,14 +23,13 @@ export const EVENT_TYPES = [
 
 export const EVENT_TYPE_MAP = Object.fromEntries(EVENT_TYPES.map((t) => [t.code, t]))
 
-// 事件来源
+// 事件来源（用户确认 2026-11-12 收敛为 5 类：遥感/无人机/地方推送为外部数据接入无需系统内入口，网格/随手拍有上报流程；数字围栏属青贮收储模块不纳入，苗情预警归入遥感/无人机影像分析）
 export const EVENT_SOURCES = [
   { code: 'remote', name: '遥感识别' },
+  { code: 'drone', name: '无人机识别' },
   { code: 'grid', name: '网格巡查' },
   { code: 'snapshot', name: '随手拍' },
-  { code: 'fence', name: '数字围栏联动' },
-  { code: 'platform', name: '地方平台推送' },
-  { code: 'growth_warning', name: '苗情预警' }
+  { code: 'platform', name: '地方平台推送' }
 ]
 
 export const EVENT_SOURCE_MAP = Object.fromEntries(EVENT_SOURCES.map((s) => [s.code, s]))

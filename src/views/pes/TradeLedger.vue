@@ -6,7 +6,7 @@
       type="warning"
       show-icon
       :closable="false"
-      title="主体信息未确认（C-11）：确认主体信息前不可录入销售出库"
+      title="主体信息未确认：确认主体信息前不可录入销售出库"
       style="margin-bottom: 12px"
     >
       <el-button size="small" type="primary" link @click="$router.push('/pes/confirm')">去确认</el-button>
@@ -14,9 +14,10 @@
 
     <div class="panel">
       <div class="panel-title">
-        <span class="title-text">经营台账（E6 · C-07 实名购买）</span>
+        <span class="title-text">经营台账</span>
         <div class="title-extra">
-          <el-button v-if="isOperator && operatorConfirmed" type="primary" icon="Plus" @click="openSale">销售出库录入</el-button>
+          <el-button v-if="(isOperator && operatorConfirmed) || isCounty" type="primary" icon="Plus" @click="openSale">销售出库录入</el-button>
+          <el-button v-if="(isOperator && operatorConfirmed) || isCounty" icon="Upload" @click="openImport">批量导入</el-button>
           <el-button icon="Connection" @click="apiVisible = true">接口上报记录</el-button>
           <el-button icon="Refresh" @click="load">刷新</el-button>
         </div>
@@ -63,25 +64,34 @@
             <el-tag v-else size="small" type="danger" disable-transitions>缺购买方</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="95" align="center">
+        <el-table-column label="断点标记" width="90" align="center">
           <template #default="{ row }">
             <el-tag v-if="row.breakPoint" size="small" type="warning" disable-transitions>断点</el-tag>
-            <el-tag v-else size="small" type="success" disable-transitions>正常</el-tag>
+            <span v-else>—</span>
           </template>
         </el-table-column>
-        <el-table-column label="备注" min-width="150" show-overflow-tooltip><template #default="{ row }">{{ row.remark || '—' }}</template></el-table-column>
+        <el-table-column label="核验状态" width="105" align="center">
+          <template #default="{ row }">
+            <StatusTag :dict="PES_CHECK_STATUS" :value="row.status" />
+          </template>
+        </el-table-column>
+        <el-table-column label="备注" min-width="140" show-overflow-tooltip><template #default="{ row }">{{ row.remark || '—' }}</template></el-table-column>
+        <el-table-column v-if="isCounty" label="操作" fixed="right" width="90">
+          <template #default="{ row }">
+            <el-button v-if="row.status === 'pending'" link type="warning" @click="openCheck(row)">核验</el-button>
+            <span v-else style="color: var(--ah-text-secondary)">已核验</span>
+          </template>
+        </el-table-column>
       </el-table>
-      <div class="corner-note">购买方证件号/电话字段集待 C-07 确认，演示中脱敏显示：证件 3412**********\*\*\*\* · 电话 138\*\*\*\*5678</div>
     </div>
 
     <div class="panel">
       <div class="panel-title">
-        <span class="title-text">本主体库存（M-05 口径）
-          <el-tooltip content="库存 = 入库 − 出库 + 退货 − 损耗 ± 盘点；损耗/盘点调整项为设计建议，口径待客户确认（C-08）。负库存置「待核查」不阻断业务。">
+        <span class="title-text">本主体库存
+          <el-tooltip content="库存 = 入库 − 出库 + 退货 − 损耗 ± 盘点；负库存置「待核查」不阻断业务。">
             <el-icon style="margin-left: 4px; vertical-align: -2px"><QuestionFilled /></el-icon>
           </el-tooltip>
         </span>
-        <span class="corner-note">库存口径待客户确认（C-08）</span>
       </div>
       <el-table :data="inventory" border size="small">
         <el-table-column prop="batchId" label="批次" width="110" />
@@ -108,9 +118,9 @@
     </div>
 
     <!-- 接口上报记录（R07：既有平台互联互通演示） -->
-    <el-drawer v-model="apiVisible" title="接口上报记录（E12 · R07 互联互通）" size="560px">
+    <el-drawer v-model="apiVisible" title="接口上报记录" size="560px">
       <el-alert type="info" :closable="false" show-icon style="margin-bottom: 12px"
-        title="经营软件/服务商按对接标准批量上报：幂等接收、逐条结果、失败可定位重试。正式接口协议待确认（Q-PES-05）。" />
+        title="经营软件/服务商按对接标准批量上报：幂等接收、逐条结果、失败可定位重试。" />
       <div v-for="log in apiLogs" :key="log.id" class="api-log-card">
         <div class="al-head">
           <b>{{ log.sourceSystem }}</b>
@@ -128,9 +138,9 @@
     </el-drawer>
 
     <!-- 销售出库录入 -->
-    <el-dialog v-model="saleVisible" :title="saleForm.flowType === 'sale' ? '销售出库录入（C-07 实名购买）' : saleForm.flowType === 'purchase' ? '采购入库录入' : '退货录入'" width="560px" :close-on-click-modal="false">
+    <el-dialog v-model="saleVisible" :title="saleForm.flowType === 'sale' ? '销售出库录入' : saleForm.flowType === 'purchase' ? '采购入库录入' : '退货录入'" width="560px" :close-on-click-modal="false">
       <el-alert v-if="saleForm.flowType === 'sale'" type="info" :closable="false" show-icon style="margin-bottom: 12px"
-        title="销售出库必填购买方名称（C-07）；证件号/电话字段集待确认，先行脱敏采集。" />
+        title="销售出库必填购买方名称；证件号/电话先行脱敏采集。" />
       <el-form ref="saleFormRef" :model="saleForm" :rules="saleRules" label-width="110px">
         <el-form-item label="业务类型" prop="flowType">
           <el-radio-group v-model="saleForm.flowType">
@@ -167,21 +177,51 @@
         <el-button type="primary" :loading="saving" @click="saveSale">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 批量导入 -->
+    <ImportDialog
+      ref="importRef"
+      title="经营台账批量导入"
+      :columns="importColumns"
+      :do-import="runImport"
+      @success="load"
+    />
+
+    <!-- 县级核验 -->
+    <AuditDialog
+      v-model="auditVisible"
+      title="经营流水核验（县级）"
+      :actions="CHECK_ACTIONS"
+      default-action="pass"
+      reject-reason-required
+      tip="核验通过后流水只读；核验不通过须填写原因，通知企业核对更正。"
+      placeholder="核验不通过时必填，如：出库数量与库存结转不符"
+      @confirm="doCheck"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onActivated, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import { fetchFlows, addFlow, fetchBatches, fetchConfirms, computeInventory, fetchApiLogs } from '@/api/pes'
-import { PES_SUBJECTS, PES_SUBJECT_MAP, PES_PRODUCT_MAP } from '@/mock/pes/data'
+import { fetchFlows, addFlow, fetchBatches, fetchConfirms, computeInventory, fetchApiLogs, importTradeFlows, checkPesRecord } from '@/api/pes'
+import { PES_SUBJECTS, PES_SUBJECT_MAP, PES_PRODUCT_MAP, PES_CHECK_STATUS } from '@/mock/pes/data'
+import ImportDialog from '@/components/common/ImportDialog.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
+import AuditDialog from '@/components/common/AuditDialog.vue'
+
+const CHECK_ACTIONS = [
+  { value: 'pass', label: '核验通过' },
+  { value: 'reject', label: '核验不通过' }
+]
 
 const FLOW_NAME = { produce: '生产入库', purchase: '采购入库', sale: '销售出库', buy: '购买', return: '退货' }
 const FLOW_TAG = { produce: 'primary', purchase: 'primary', sale: 'warning', buy: 'success', return: 'info' }
 
 const userStore = useUserStore()
 const isOperator = computed(() => userStore.role?.code === 'pes_operator')
+const isCounty = computed(() => userStore.role?.code === 'county')
 const filters = reactive({ type: '', batchId: '' })
 const rows = ref([])
 const batches = ref([])
@@ -189,6 +229,17 @@ const inventory = ref([])
 const operatorConfirmed = ref(true)
 const apiVisible = ref(false)
 const apiLogs = ref([])
+const importRef = ref()
+const auditVisible = ref(false)
+const auditRow = ref(null)
+const importColumns = [
+  { key: 'flowType', label: '业务类型', required: true, hint: '采购入库 / 销售出库 / 退货', example: '销售出库' },
+  { key: 'date', label: '日期', required: true, hint: '格式 YYYY-MM-DD', example: '2026-11-12' },
+  { key: 'batchNo', label: '批次号', required: true, hint: '产品包装上的生产批次号', example: 'HG20260301A' },
+  { key: 'qty', label: '数量', required: true, hint: '吨，>0', example: '2.5' },
+  { key: 'buyerName', label: '购买方名称', required: false, hint: '销售出库必填，其他类型留空', example: '太和县丰乐种植专业合作社' }
+]
+const runImport = (rowsIn) => importTradeFlows(rowsIn, userStore.role?.subjectId)
 const saleVisible = ref(false)
 const saleFormRef = ref()
 const saving = ref(false)
@@ -198,7 +249,7 @@ const saleRules = {
   buyerName: [{
     validator: (r, v, cb) => {
       if (saleForm.flowType !== 'sale') return cb()
-      if (!v || !String(v).trim()) return cb(new Error('购买方名称必填（C-07）'))
+      if (!v || !String(v).trim()) return cb(new Error('购买方名称必填'))
       cb()
     }, trigger: 'blur'
   }],
@@ -237,6 +288,7 @@ const openSale = () => {
   Object.assign(saleForm, { flowType: 'sale', batchId: '', buyerName: '', partySubjectId: '', idMasked: '', phoneMasked: '', remark: '', qty: 1, date: new Date().toISOString().slice(0, 10) })
   saleVisible.value = true
 }
+const openImport = () => importRef.value?.open()
 
 const saveSale = () => {
   saleFormRef.value?.validate(async (ok) => {
@@ -252,11 +304,27 @@ const saveSale = () => {
           ? { batchId: saleForm.batchId, type: 'purchase', from: saleForm.partySubjectId, to: me, qty: saleForm.qty, date: saleForm.date, realName: false, remark: '采购入库录入' }
           : { batchId: saleForm.batchId, type: 'return', from: saleForm.partySubjectId, to: me, qty: saleForm.qty, date: saleForm.date, realName: false, remark: saleForm.remark || '退货录入' }
       await addFlow(payload)
-      ElMessage.success({ sale: '销售出库已登记（购买方已实名）', purchase: '采购入库已登记', return: '退货已登记' }[ft])
+      ElMessage.success({ sale: '销售出库已提交（购买方已实名），状态：待核验', purchase: '采购入库已提交，状态：待核验', return: '退货已提交，状态：待核验' }[ft])
       saleVisible.value = false
       await load()
     } finally { saving.value = false }
   })
+}
+
+// 县级核验（统一核验流程）
+const openCheck = (row) => { auditRow.value = row; auditVisible.value = true }
+const doCheck = async ({ action, opinion }) => {
+  const res = await checkPesRecord('trade', auditRow.value.id, {
+    action,
+    opinion,
+    checker: `${userStore.role?.name || ''}（${userStore.role?.unit || ''}）`
+  })
+  if (res.success) {
+    ElMessage.success(action === 'pass' ? '核验通过' : '已核验不通过，须通知企业核对更正')
+  } else {
+    ElMessage.error(res.msg)
+  }
+  await load()
 }
 
 onMounted(async () => {
@@ -264,6 +332,8 @@ onMounted(async () => {
   apiLogs.value = await fetchApiLogs()
   await load()
 })
+// KeepAlive 二次进入时刷新确认状态（C-11 阻断条随主体确认实时解除）
+onActivated(load)
 </script>
 
 <style lang="scss" scoped>
