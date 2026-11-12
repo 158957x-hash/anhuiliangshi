@@ -1,0 +1,33 @@
+/* 政务蓝主题变量 —— 对齐《管理后台UI规范 V1.0》（06，2026-10-23）Ant Design 色板 */
+:root {
+  --ah-primary: #165dff;
+  --ah-primary-light: #4080ff;
+  --ah-primary-dark: #0e42d2;
+  --ah-success: #00b42a;
+  --ah-warning: #ff7d00;
+  --ah-danger: #f53f3f;
+  --ah-info: #86909c;
+  --ah-bg: #f2f3f5;
+  --ah-border: #e5e6eb;
+  --ah-text: #1d2129;
+  --ah-text-secondary: #4e5969;
+  --ah-text-muted: #86909c;
+  --ah-header-bg: #0f3f78;
+  --ah-sidebar-bg: #10233c;
+}
+
+/* Element Plus 主色覆盖 */
+:root {
+  --el-color-primary: var(--ah-primary);
+  --el-color-primary-light-3: var(--ah-primary-light);
+  --el-color-primary-light-5: #94bfff;
+  --el-color-primary-light-7: #bedaff;
+  --el-color-primary-light-8: #d6e8ff;
+  --el-color-primary-light-9: #e8f3ff;
+  --el-color-primary-dark-2: var(--ah-primary-dark);
+  --el-color-success: var(--ah-success);
+  --el-color-warning: var(--ah-warning);
+  --el-color-danger: var(--ah-danger);
+  --el-color-error: var(--ah-danger);
+  --el-color-info: var(--ah-info);
+}
