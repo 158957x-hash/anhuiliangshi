@@ -116,7 +116,11 @@ export const saveOrdinaryApplication = (data, role, submit = false) => result(()
   const applicant = old?.applicant || { code: role.code, name: role.name, unit: role.unit, roleName: role.roleName }
   const filledWeights = plotDetails.filter(p => p.expectedWeight !== null)
   const amountDetails = plotDetails.filter(p => p.expectedWeight !== null && p.expectedPrice !== null)
-  const item = { ...data, id: old?.id || `QZ-YT-${Date.now()}`, declarationType: 'ordinary', applicant, storageSubjectId: storageSubject?.id || '', storageSubjectName: storageSubject?.name || '', storageSubject: storageSubject || null, plotDetails, plotIds: [...detailIds], regionCodes: [...new Set(plotDetails.map(p => p.regionCode))], area: plotDetails.reduce((s,p) => s + Number(p.areaMu), 0), expectedYield: plotDetails.reduce((s,p) => s + Number(p.expectedYield || 0), 0), weight: filledWeights.length ? filledWeights.reduce((s,p) => s + p.expectedWeight, 0) : null, weightIncomplete: filledWeights.length < plotDetails.length, expectedAmount: amountDetails.length ? amountDetails.reduce((s,p) => s + p.expectedPrice * p.expectedWeight, 0) : null, status: submit ? 'pending' : old?.status === 'returned' ? 'returned' : 'draft', filedNo: '', attachments: data.usage === 'sell' ? data.attachments || [] : [], createdAt: old?.createdAt || now(), submittedAt: submit ? now() : old?.submittedAt || '', auditTrail: [...(old?.auditTrail || []), { action: submit ? old?.status === 'returned' ? '补正重提（审核期限重新计算）' : '提交整单申报' : '保存草稿', time: now(), user: `${role.name}（${role.roleName}）` }] }
+  const derivedSubjectIds = [...new Set(plotDetails.map(plot => plot.subjectId).filter(Boolean))]
+  const plantingSubjectIds = Array.isArray(data.plantingSubjectIds) && data.plantingSubjectIds.length ? [...new Set(data.plantingSubjectIds)] : derivedSubjectIds
+  if (submit && !plantingSubjectIds.length) throw new Error('请至少选择一个种植主体')
+  if (submit && plotDetails.some(plot => !plantingSubjectIds.includes(plot.subjectId))) throw new Error('所选地块必须属于第一步已选种植主体')
+  const item = { ...data, plantingSubjectIds, id: old?.id || `QZ-YT-${Date.now()}`, declarationType: 'ordinary', applicant, storageSubjectId: storageSubject?.id || '', storageSubjectName: storageSubject?.name || '', storageSubject: storageSubject || null, plotDetails, plotIds: [...detailIds], regionCodes: [...new Set(plotDetails.map(p => p.regionCode))], area: plotDetails.reduce((s,p) => s + Number(p.areaMu), 0), expectedYield: plotDetails.reduce((s,p) => s + Number(p.expectedYield || 0), 0), weight: filledWeights.length ? filledWeights.reduce((s,p) => s + p.expectedWeight, 0) : null, weightIncomplete: filledWeights.length < plotDetails.length, expectedAmount: amountDetails.length ? amountDetails.reduce((s,p) => s + p.expectedPrice * p.expectedWeight, 0) : null, status: submit ? 'pending' : old?.status === 'returned' ? 'returned' : 'draft', filedNo: '', attachments: data.usage === 'sell' ? data.attachments || [] : [], createdAt: old?.createdAt || now(), submittedAt: submit ? now() : old?.submittedAt || '', auditTrail: [...(old?.auditTrail || []), { action: submit ? old?.status === 'returned' ? '补正重提（审核期限重新计算）' : '提交整单申报' : '保存草稿', time: now(), user: `${role.name}（${role.roleName}）` }] }
   write(KEYS.applications, [item, ...all.filter(app => app.id !== item.id)])
   return { success: true, id: item.id }
 })
@@ -156,4 +160,5 @@ export const saveOrdinaryLedger = (data, role) => result(() => {
   const all = read(KEYS.ledgers, []); write(KEYS.ledgers, [row, ...all.filter(item => item.declarationId !== app.id)])
   return { success: true }
 })
+
 

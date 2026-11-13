@@ -148,8 +148,9 @@ const totals = computed(() => form.plotDetails.reduce((t,p) => { t.area += Numbe
 function applyPlots(rows) {
   const old = new Map(form.plotDetails.map(p => [p.plotId, p]))
   form.plotDetails = rows.map(p => { const id = p.plotId || p.id, existing = old.get(id); return existing || { plotId:id, name:p.name, subjectId:p.subjectId, subjectName:p.subjectName, areaMu:p.areaMu, regionCode:p.regionCode, regionName:p.regionName, geometry:clone(p.geometry), crop:'', variety:'', expectedYield:undefined, expectedPrice:undefined, expectedWeight:undefined } })
+  if (!props.mobile) form.plantingSubjectIds = [...new Set(form.plotDetails.map(p => p.subjectId))]
 }
-function removePlot(id) { form.plotDetails = form.plotDetails.filter(p => p.plotId !== id) }
+function removePlot(id) { form.plotDetails = form.plotDetails.filter(p => p.plotId !== id); if (!props.mobile) form.plantingSubjectIds = [...new Set(form.plotDetails.map(p => p.subjectId))] }
 function applyBatch() { if (!batch.crop && !batch.variety) return ElMessage.warning('请先选择作物或填写品种'); form.plotDetails.forEach(p => { if (batch.crop) p.crop = batch.crop; if (batch.variety) p.variety = batch.variety }); ElMessage.success('已应用至本单已选地块，各地块仍可单独调整') }
 function editPromise() { promiseDraft.value = form.promise.content; promiseVisible.value = true }
 function savePromise() { const changed = promiseDraft.value !== form.promise.content; form.promise.content = promiseDraft.value; if (changed) { form.promise.signedAt = ''; form.promise.signer = '' }; promiseVisible.value = false; ElMessage.success(changed ? '文档已修改，请重新电子签名' : '文档已保存') }
@@ -198,7 +199,8 @@ async function load() {
       if (version !== loadVersion) return
       if (!row) { loadError.value = '未找到该申报或当前用户无权查看，不能新建或覆盖原单'; return }
       loaded.value = row
-      Object.assign(form, clone(row), { plantingSubjectIds: clone(row.plantingSubjectIds || [...new Set((row.plotDetails || []).map(p => p.subjectId).filter(Boolean))]), promise:{ ...empty().promise, ...(row.promise || {}) }, attachments:clone(row.attachments || []), plotDetails:clone(row.plotDetails || []) })
+      const derivedSubjectIds = [...new Set((row.plotDetails || []).map(p => p.subjectId).filter(Boolean))]
+      Object.assign(form, clone(row), { plantingSubjectIds: clone(row.plantingSubjectIds?.length ? row.plantingSubjectIds : derivedSubjectIds), promise:{ ...empty().promise, ...(row.promise || {}) }, attachments:clone(row.attachments || []), plotDetails:clone(row.plotDetails || []) })
       form.year = String(form.year)
       if (form.season === 'spring_summer') form.season = '春夏季'
     }

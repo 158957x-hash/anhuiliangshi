@@ -39,7 +39,7 @@ export const MENU_CONFIG = [
       { title: '种植地块列表', route: '/sil/plots', icon: 'Grid', roles: ['province'] },
       { title: '收储主体维护', route: '/sil/storage-subjects', icon: 'OfficeBuilding', roles: ['province', 'county'] },
       { title: '青贮饲料作物收储申报', route: '/sil/declare', icon: 'Tickets', roles: ['province', 'city', 'county', 'grower', 'storage_subject'] },
-      { title: '受灾作物补充收储上报', route: '/sil/supplement', icon: 'Warning', roles: ['county', 'grower', 'storage_subject'] },
+      { title: '受灾作物补充收储上报', route: '/sil/supplement', icon: 'Warning', roles: ['province', 'city', 'county', 'grower', 'storage_subject'] },
       { title: '青贮作物收储', route: '/sil/audit', icon: 'Stamp', roles: ['province', 'city', 'county'] },
       { title: '种植上图·数字围栏', route: '/sil/fence', icon: 'Grid' },
       { title: '收储台账', route: '/sil/ledger', icon: 'Notebook' },

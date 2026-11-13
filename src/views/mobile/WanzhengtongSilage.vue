@@ -1,6 +1,9 @@
 <template>
   <div class="mobile-page" v-loading="loading">
     <header class="mobile-header"><button aria-label="返回" @click="router.back()">‹</button><b>青贮饲料管理</b><el-button link @click="load">刷新</el-button></header>
+    <el-tabs v-model="businessTab"><el-tab-pane label="普通收储" name="ordinary"/><el-tab-pane label="受灾补充" name="disaster"/></el-tabs>
+    <DisasterWorkspace v-if="businessTab==='disaster'" mobile/>
+    <template v-else>
     <section class="hero"><b>普通收储申报总览</b><span>查看辖区内整单备案与执行情况</span></section>
     <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon />
     <el-alert v-if="unavailable" :title="unavailable" type="warning" :closable="false" show-icon />
@@ -9,6 +12,7 @@
       <button v-for="item in filteredApplications" :key="item.id" class="application-row" @click="openApplication(item)"><div class="row-title"><b>{{ item.storageSubjectName || item.subjectName || '未选择收储主体' }}</b><el-tag size="small" :type="SIL_STATUS[item.status]?.tag||'info'">{{ SIL_STATUS[item.status]?.name||item.status }}</el-tag></div><span>{{ item.filedNo || item.id }}</span><small>{{ item.plotDetails?.length||0 }} 块地 · {{ Number(item.area||0).toFixed(1) }} 亩 · 预计产量 {{ Number(item.expectedYield||0).toFixed(1) }} 吨</small><small>申报人：{{ item.applicant?.name || item.applicant?.userName || '—' }} · 种植主体：{{ plantingNames(item) }}</small><div class="execution-line">执行：{{ executionSummary(item) }}</div></button>
       <el-empty v-if="!loading&&!filteredApplications.length" description="暂无匹配的普通申报" :image-size="60" />
     </section>
+    </template>
     <el-drawer v-model="drawer" title="普通收储申报详情" size="96%" append-to-body><template v-if="current">
       <OrdinaryDetail :application="current" />
       <section class="execution-card"><h3>实际执行摘要</h3><el-descriptions v-if="ledgerFor(current)" :column="1" border size="small"><el-descriptions-item label="执行状态">{{ ledgerFor(current).status || '已填报' }}</el-descriptions-item><el-descriptions-item label="实际面积">{{ showValue(ledgerFor(current).actualArea,'亩') }}</el-descriptions-item><el-descriptions-item label="实际产量">{{ showValue(ledgerFor(current).actualYield,'吨') }}</el-descriptions-item><el-descriptions-item label="实际收储重量">{{ showValue(ledgerFor(current).weight,'吨') }}</el-descriptions-item><el-descriptions-item label="实际收储价格">{{ showValue(ledgerFor(current).price,'元/吨') }}</el-descriptions-item></el-descriptions><el-empty v-else description="尚未填报执行台账" :image-size="50" /></section>
@@ -20,10 +24,12 @@
 import { computed,onMounted,ref,watch } from 'vue'
 import { useRoute,useRouter } from 'vue-router'
 import OrdinaryDetail from '@/components/sil/OrdinaryDetail.vue'
+import DisasterWorkspace from '@/components/sil/DisasterWorkspace.vue'
 import { fetchOrdinaryApplications,fetchOrdinaryLedgers } from '@/api/silOrdinary'
 import { SIL_STATUS } from '@/mock/common/dict'
 import { useUserStore } from '@/stores/user'
 const userStore=useUserStore(),route=useRoute(),router=useRouter()
+const businessTab=ref('ordinary')
 const applications=ref([]),ledgers=ref([]),keyword=ref(''),status=ref(''),loading=ref(false),error=ref(''),unavailable=ref(''),current=ref(null),drawer=ref(false)
 const filed=computed(()=>applications.value.filter(item=>item.status==='filed'))
 const totalArea=computed(()=>applications.value.reduce((sum,item)=>sum+Number(item.area||0),0))
