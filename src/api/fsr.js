@@ -9,6 +9,7 @@ import { BIZ_CONFIG } from '@/mock/fsr/config'
 import { EVENT_TYPE_MAP } from '@/mock/common/dict'
 import { CHECKERS } from '@/mock/common/checkers'
 import { PLOTS } from '@/mock/geo/plot-gen'
+import { PROVINCE_INSPECTIONS } from '@/mock/fsr/inspections'
 
 const filterByRole = (list, role) => {
   if (!role) return []
@@ -432,6 +433,64 @@ export const importBatch = (id, operator) =>
     })
     b.logs.unshift({ time, action: '导入成功', user: operator || '内业人员（演示）', extra: `生成监管事件 ${created.length} 条：${created.join('、')}` })
     return { success: true, createdEvents: created }
+  }, 600)
+
+// ===== 省级地块抽查（全省地块随机抽取；抽查发现疑似问题后进入统一变化图斑流程） =====
+export const fetchInspectionPlots = () =>
+  mockRequest(() => PLOTS.map((plot) => ({ ...plot })), 300)
+
+export const fetchProvinceInspections = () =>
+  mockRequest(() => PROVINCE_INSPECTIONS.map((item) => ({ ...item })), 300)
+
+export const saveProvinceInspection = (plot, payload, role) =>
+  mockRequest(() => {
+    if (!plot?.id) return { success: false, message: '未选择抽查地块' }
+    if (!payload?.conclusion) return { success: false, message: '请选择抽查结论' }
+    if (!payload?.desc?.trim()) return { success: false, message: '请填写抽查说明' }
+    const inspectionId = `INS-2026-${String(PROVINCE_INSPECTIONS.length + 1).padStart(4, '0')}`
+    const time = nowText()
+    const item = {
+      inspectionId,
+      plotId: plot.id,
+      plotName: plot.name,
+      regionCode: plot.regionCode,
+      regionName: plot.regionName || plot.unitName || '所属区域',
+      cropName: plot.crop || '待确认',
+      areaMu: plot.areaMu || 0,
+      conclusion: payload.conclusion,
+      desc: payload.desc.trim(),
+      inspector: role?.name || '省级抽查人员',
+      inspectedAt: time,
+      source: 'province_inspection',
+      imagePeriod: payload.imagePeriod || '2026年10月（演示）',
+      generatedSpotId: '',
+      generatedEventId: ''
+    }
+    PROVINCE_INSPECTIONS.unshift(item)
+    return { success: true, inspection: item }
+  }, 500)
+
+export const createInspectionEvent = (plot, payload, role) =>
+  mockRequest(() => {
+    if (!plot?.id) return { success: false, message: '未选择抽查地块' }
+    if (!payload?.desc?.trim()) return { success: false, message: '纳入变化图斑前请填写疑似问题说明' }
+    const inspectionId = payload.inspectionId || `INS-2026-${String(PROVINCE_INSPECTIONS.length + 1).padStart(4, '0')}`
+    const eventId = `EVT-2026-${String(FSR_EVENTS.length + 1).padStart(4, '0')}`
+    const code = eventId.replace('EVT-', 'FSR-')
+    const time = nowText()
+    const event = {
+      id: eventId, code, type: payload.type || 'qita', source: 'province_inspection', risk: payload.risk || 'medium',
+      regionCode: plot.regionCode, regionName: plot.regionName || plot.unitName || '所属区域',
+      spot: { plotId: plot.id, geometry: plot.geometry || null, center: plot.center || null, areaMu: plot.areaMu || 0 },
+      subjectId: plot.subjectId || null, subjectName: plot.subjectName || '待核实',
+      foundTime: time.slice(0, 10), desc: payload.desc.trim(), status: 'to_review',
+      deadline: null, taskId: null, provinceInspectionId: inspectionId,
+      trail: [{ time, action: '省级抽查纳入变化图斑库', user: `${role?.name || '省级抽查人员'}（皖政通）`, extra: `抽查记录${inspectionId}，来源：省级抽查` }]
+    }
+    FSR_EVENTS.unshift(event)
+    const inspection = PROVINCE_INSPECTIONS.find((item) => item.inspectionId === inspectionId)
+    if (inspection) { inspection.generatedSpotId = code; inspection.generatedEventId = eventId; inspection.conclusion = '纳入变化图斑库'; inspection.desc = payload.desc.trim() }
+    return { success: true, eventId, code, inspectionId }
   }, 600)
 
 // ===== 事件简报与地市排名 =====

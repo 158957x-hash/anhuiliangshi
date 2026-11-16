@@ -2,7 +2,7 @@
   <div class="mobile-page">
     <div class="mobile-head">
       <button class="back-button" @click="$router.back()">‹</button>
-      <div><b>进度上报</b><span>{{ isTown ? '查看辖区主体上报明细，并向县级上报' : isCounty ? '审核乡镇上报的播种与收获进度' : '查看皖企通种植主体上报的播种与收获进度' }}</span></div>
+      <div><b>进度上报</b><span>{{ isTown ? '查看辖区数据，并可向县级上报' : isCounty ? '按县级上报计划填报并向市级上报' : '查看皖企通种植主体自报的播种与收获进度' }}</span></div>
     </div>
 
     <div class="filters">
@@ -22,15 +22,15 @@
     </div>
 
     <!-- 乡镇角色：向县级上报 -->
-    <section v-if="isTown" class="report-action-card">
+    <section v-if="isTown || isCounty" class="report-action-card">
       <div class="summary-head">
-        <b>向县级上报 {{ year }}年{{ quarter }}{{ type === 'sow' ? '播种' : '收获' }}进度</b>
+        <b>{{ isTown ? '向县级' : '向市级' }}上报 {{ year }}年{{ quarter }}{{ type === 'sow' ? '播种' : '收获' }}进度</b>
         <el-tag size="small" type="warning">{{ myOrderStatus }}</el-tag>
       </div>
       <div class="summary-number"><strong>{{ summary.reportedArea.toFixed(1) }}</strong><span> / {{ summary.planArea.toFixed(1) }} 亩</span></div>
       <el-progress :percentage="summary.progress" :show-text="false" />
-      <p class="report-hint">上报数据为辖区内种植主体上报汇总，主体上报免审直接生效。</p>
-      <button class="report-button" @click="submit">向县级上报</button>
+      <p class="report-hint">{{ isCounty ? '县级按已审核通过的县级上报计划填报；乡镇和主体数据有则查看，无则不影响县级上报。' : '乡镇上报为可选数据，提交后由县级审核。' }}</p>
+      <button class="report-button" @click="submit">{{ isTown ? '向县级上报' : '向市级上报' }}</button>
       <div v-if="myOrderOpinion" class="audit-opinion">审核意见：{{ myOrderOpinion }}</div>
     </section>
 
@@ -54,7 +54,7 @@
     <section class="summary-card">
       <div class="summary-head">
         <b>{{ type === 'sow' ? '播种' : '收获' }}进度汇总</b>
-        <el-tag size="small" :type="type === 'sow' ? 'warning' : 'success'">种植主体上报</el-tag>
+        <el-tag size="small" :type="type === 'sow' ? 'warning' : 'success'">本级及可选下级数据</el-tag>
       </div>
       <div class="summary-number"><strong>{{ summary.reportedArea.toFixed(1) }}</strong><span> / {{ summary.planArea.toFixed(1) }} 亩</span></div>
       <el-progress :percentage="summary.progress" :status="type === 'harvest' ? 'success' : undefined" :show-text="false" />
@@ -66,7 +66,7 @@
       <b>{{ item.subjectName || '种植主体' }}</b>
       <p>{{ item.planName }} · {{ item.cropName || item.crop }} · {{ item.regionName }}</p>
       <div class="data-line"><span>计划面积 {{ Number(item.planArea || 0).toFixed(1) }} 亩</span><strong>{{ Number(item.reportedArea || 0).toFixed(1) }} 亩</strong></div>
-      <div class="report-source">数据来源：皖企通种植主体上报</div>
+      <div class="report-source">数据来源：本级正式上报数据；乡镇和主体数据仅作参考</div>
     </section>
     <el-empty v-if="!visibleRows.length" :description="`暂无${type === 'sow' ? '播种' : '收获'}进度上报数据`" />
   </div>
@@ -117,11 +117,12 @@ const load = async () => {
 
 const submit = async () => {
   try {
-    await ElMessageBox.confirm(`确认将 ${year.value}年${quarter.value} ${type.value === 'sow' ? '播种' : '收获'}进度向县级上报吗？`, '上报确认', { type: 'warning' })
+  const targetName = isTown.value ? '县级' : '市级'
+  await ElMessageBox.confirm(`确认将 ${year.value}年${quarter.value} ${type.value === 'sow' ? '播种' : '收获'}进度向${targetName}上报吗？`, '上报确认', { type: 'warning' })
   } catch { return }
   const result = await submitProgressReport(userStore.role, { type: type.value, year: year.value, quarter: quarter.value })
   if (!result.success) return ElMessage.error(result.message)
-  ElMessage.success('已向县级上报，等待审核')
+  ElMessage.success(`已向${targetName}上报，等待审核`)
   await load()
 }
 

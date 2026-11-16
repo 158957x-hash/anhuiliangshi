@@ -1,12 +1,12 @@
 <template>
   <div class="mobile-page">
     <div class="mobile-head">
-      <div><b>皖企通</b><span>年度任务与种植意向</span></div>
+      <div><b>皖企通</b><span>上级下达计划参考与主体自报计划</span></div>
       <el-tag size="small" type="success">{{ userStore.regionName }}</el-tag>
     </div>
 
     <div class="form-card summary-card">
-      <div class="section-title"><b>本地年度生产计划</b><el-tag size="small">{{ currentYear }} 年</el-tag></div>
+      <div class="section-title"><b>上级下达计划（参考）</b><el-tag size="small">{{ currentYear }} 年</el-tag></div>
       <template v-if="task">
         <p class="plan-name">{{ task.planName }}</p>
         <div class="metrics"><div><b>{{ task.taskAreaMu }}</b><span>计划面积（亩）</span></div><div><b>{{ task.progress }}%</b><span>当前落实进度</span></div><div><b>{{ task.cropType }}</b><span>计划作物</span></div></div>
@@ -16,14 +16,14 @@
     </div>
 
     <div class="form-card">
-      <div class="section-title"><b>填报本户种植意向</b><el-tag size="small" type="warning">极简填报</el-tag></div>
+      <div class="section-title"><b>维护主体自报计划</b><el-tag size="small" type="warning">主体自行维护</el-tag></div>
       <el-form label-position="top">
         <el-form-item label="经营主体"><el-input v-model="form.subjectName" disabled /></el-form-item>
         <el-form-item label="种植作物品种"><el-checkbox-group v-model="form.crops"><el-checkbox label="wheat">小麦</el-checkbox><el-checkbox label="rice">水稻</el-checkbox><el-checkbox label="corn">玉米</el-checkbox><el-checkbox label="soybean">大豆</el-checkbox></el-checkbox-group></el-form-item>
         <el-form-item label="各作物意向面积（亩）"><div class="crop-inputs"><el-input-number v-model="form.wheat" :min="0" controls-position="right" placeholder="小麦"/><el-input-number v-model="form.rice" :min="0" controls-position="right" placeholder="水稻"/><el-input-number v-model="form.corn" :min="0" controls-position="right" placeholder="玉米"/><el-input-number v-model="form.soybean" :min="0" controls-position="right" placeholder="大豆"/></div></el-form-item>
         <el-form-item label="预计播种时间"><el-date-picker v-model="form.sowDate" type="date" value-format="YYYY-MM-DD" style="width:100%" /></el-form-item>
       </el-form>
-      <el-alert title="提交后将用于匹配属地气象预警和农事建议" type="info" :closable="false" show-icon />
+      <el-alert title="主体自报计划仅作为本主体计划和进度参考，不改变县、市、省正式上报计划或进度。" type="info" :closable="false" show-icon />
     </div>
 
     <div class="form-card">
@@ -39,7 +39,7 @@
       <div class="plot-list"><button v-for="plot in subjectPlots" :key="plot.id" :class="['plot-item', { selected: selectedPlots.includes(plot.id) }]" @click="togglePlot(plot)"><span>{{ plot.name }}</span><small>{{ plot.areaMu }}亩 · {{ plot.crop }}</small><b>{{ selectedPlots.includes(plot.id) ? '已选' : '选择' }}</b></button></div>
     </div>
 
-    <div class="actions"><el-button @click="saveDraft">保存草稿</el-button><el-button type="primary" @click="submit">提交种植意向</el-button></div>
+    <div class="actions"><el-button @click="saveDraft">保存主体自报草稿</el-button><el-button type="primary" @click="submit">提交主体自报计划</el-button></div>
     <el-alert v-if="draftSaved" title="草稿已保存在本机，联网后可继续提交" type="success" :closable="false" show-icon />
   </div>
 </template>

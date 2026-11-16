@@ -1,7 +1,7 @@
 <template>
   <div class="page-container plan-page">
     <div class="page-head">
-      <div><h2>种植计划制定</h2><p>{{ userStore.role?.code === 'province' ? '管理年度、季度及全年种植计划，并将计划任务分解下达到各市。' : userStore.role?.code === 'city' ? '修改省级下达的种植计划，并分解到本市各县。' : userStore.role?.code === 'county' ? '接收市级下达任务，并分解到本县各乡镇。' : '接收县级下达任务，并分解到本乡镇种植大户和地块。' }}</p></div>
+      <div><h2>种植计划管理</h2><p>{{ userStore.role?.code === 'province' ? '制定省级计划并向各市下达参考计划。' : userStore.role?.code === 'city' ? '查看省级下达计划，编制市级上报计划，并向各县下达参考计划。' : '查看市级下达计划，编制县级上报计划，并向各乡镇下达参考计划。' }}</p></div>
       <el-button v-if="userStore.role?.code === 'province'" type="primary" @click="openCreate">新增种植计划</el-button>
     </div>
 
@@ -28,8 +28,8 @@
             <span v-else class="attachment-empty">未上传</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100"><template #default="{ row }"><el-tag size="small" :type="row.status === '已分解' ? 'success' : 'warning'">{{ row.status }}</el-tag></template></el-table-column>
-        <el-table-column label="操作" width="260" fixed="right"><template #default="{ row }"><div class="action-buttons"><el-button link type="primary" @click="showDetail(row)">任务分解</el-button><el-button v-if="userStore.role?.code !== 'province' && ['市级修改中', '县级修改中'].includes(row.status)" link type="success" @click="submit(row)">提交审核</el-button><el-button v-if="userStore.role?.code === 'province'" link type="primary" @click="openEdit(row)">编辑</el-button><el-button v-if="userStore.role?.code === 'province'" link type="danger" @click="removePlan(row)">删除</el-button></div></template></el-table-column>
+        <el-table-column label="状态" width="125"><template #default="{ row }"><el-tag size="small" :type="['市级上报已通过', '县级上报已通过', '已下达'].includes(row.status) ? 'success' : ['市级上报已退回', '县级上报已退回'].includes(row.status) ? 'danger' : 'warning'">{{ row.status }}</el-tag></template></el-table-column>
+        <el-table-column label="操作" width="330" fixed="right"><template #default="{ row }"><div class="action-buttons"><el-button link type="primary" @click="showDetail(row)">{{ userStore.role?.code === 'province' ? '查看下达与分解' : '查看下达与本级上报' }}</el-button><el-button v-if="userStore.role?.code !== 'province'" link type="primary" @click="openEdit(row)">编制本级上报计划</el-button><el-button v-if="userStore.role?.code !== 'province' && ['市级上报草稿', '县级上报草稿', '市级上报已退回', '县级上报已退回'].includes(row.status)" link type="success" @click="submit(row)">提交上报审核</el-button><el-button v-if="userStore.role?.code === 'province'" link type="primary" @click="openEdit(row)">编辑</el-button><el-button v-if="userStore.role?.code === 'province'" link type="danger" @click="removePlan(row)">删除</el-button></div></template></el-table-column>
       </el-table>
       <el-empty v-if="!rows.length" description="暂无种植计划"/>
     </div>
@@ -46,10 +46,10 @@
       <template #footer><el-button @click="formVisible=false">取消</el-button><el-button type="primary" @click="save">保存计划</el-button></template>
     </el-dialog>
 
-    <el-dialog v-model="detailVisible" title="种植计划任务分解" width="1050px">
+    <el-dialog v-model="detailVisible" title="下达计划与本级上报计划" width="1050px">
       <template v-if="current">
         <el-descriptions :column="3" border><el-descriptions-item label="年份">{{ current.year }}年</el-descriptions-item><el-descriptions-item label="季度">{{ current.quarter }}</el-descriptions-item><el-descriptions-item label="计划种植面积">{{ current.area }} 万亩</el-descriptions-item><el-descriptions-item label="作物类型">{{ current.cropType }}</el-descriptions-item><el-descriptions-item label="附件">{{ current.attachmentName || '未上传' }}</el-descriptions-item><el-descriptions-item label="状态"><el-tag size="small">{{ current.status }}</el-tag></el-descriptions-item><el-descriptions-item label="计划说明" :span="3">{{ current.description }}</el-descriptions-item></el-descriptions>
-        <div class="detail-title"><b>{{ taskTitle }}</b><el-button type="primary" size="small" @click="openDecompose">{{ userStore.role?.code === 'province' ? '分解任务' : userStore.role?.code === 'county' ? '分解到本县各乡镇' : userStore.role?.code === 'town' ? '分解到种植大户和地块' : '修改分解' }}</el-button></div>
+        <div class="detail-title"><b>{{ taskTitle }}</b><el-button type="primary" size="small" @click="openDecompose">{{ userStore.role?.code === 'province' ? '下达参考计划到各市' : userStore.role?.code === 'county' ? '下达参考计划到各乡镇' : '下达参考计划到各县' }}</el-button></div>
         <el-table v-if="userStore.role?.code !== 'town'" :data="cityRows" stripe border max-height="390"><el-table-column :prop="taskRegionField" :label="taskRegionLabel" min-width="140"/><el-table-column prop="targetArea" :label="taskAreaLabel" width="150" align="right"/><el-table-column prop="cropType" label="作物类型" min-width="150"/><el-table-column label="影响因子" min-width="270" v-if="userStore.role?.code !== 'county'"><template #default="{ row }"><div class="factor-summary">历史产量：{{ row.influencingFactors?.historicalYield }}；土壤资源与地力保护：{{ row.influencingFactors?.soilAndFertility }}；耕地撂荒：{{ row.influencingFactors?.abandonedFarmland }}；地方标准地改革：{{ row.influencingFactors?.localStandardFarmland }}；气象与自然灾害风险：{{ row.influencingFactors?.weatherDisasterRisk }}</div></template></el-table-column><el-table-column prop="status" label="分解状态" width="110"><template #default="{ row }"><el-tag size="small" :type="row.status === '已下达' || row.status === '已分解' ? 'success' : 'warning'">{{ row.status }}</el-tag></template></el-table-column><el-table-column prop="issuedAt" label="下达时间" width="120"/></el-table><el-table v-else :data="subjectRows" stripe border max-height="390"><el-table-column prop="subjectName" label="种植大户/主体" min-width="220"/><el-table-column prop="owner" label="负责人" width="100"/><el-table-column prop="villageName" label="村" width="110"/><el-table-column prop="targetArea" label="主体任务面积（亩）" width="140" align="right"/><el-table-column label="地块落实面积" min-width="270"><template #default="{ row }"><div v-for="plot in row.plotRows" :key="plot.plotId" class="plot-summary-row">{{ plot.plotName }}：{{ Number(plot.targetArea || 0).toFixed(1) }}亩</div></template></el-table-column><el-table-column prop="cropType" label="作物类型" width="110"/><el-table-column prop="status" label="分解状态" width="110"><template #default="{ row }"><el-tag size="small" :type="row.status === '已分解' ? 'success' : 'warning'">{{ row.status }}</el-tag></template></el-table-column></el-table>
       </template>
     </el-dialog>
@@ -91,7 +91,7 @@ const cityRows = ref([])
 const subjectRows = ref([])
 const form = reactive({ id: '', year: '2026', quarter: '第一季度', area: 0, cropTypes: [], cropType: '', description: '', attachmentName: '' })
 const decomposedTotal = computed(() => cityRows.value.reduce((sum, item) => sum + Number(item.targetArea || 0), 0))
-const taskTitle = computed(() => userStore.role?.code === 'province' ? '任务分解到各市' : userStore.role?.code === 'city' ? '市级分解到各县' : userStore.role?.code === 'county' ? '县级分解到各乡镇' : '乡镇分解到种植大户和地块')
+const taskTitle = computed(() => userStore.role?.code === 'province' ? '省级下达计划（各市参考）' : userStore.role?.code === 'city' ? '市级下达计划（各县参考）' : '县级下达计划（各乡镇参考）')
 const taskRegionField = computed(() => userStore.role?.code === 'province' ? 'cityName' : userStore.role?.code === 'city' ? 'countyName' : 'townName')
 const taskRegionLabel = computed(() => userStore.role?.code === 'province' ? '市级行政区' : userStore.role?.code === 'city' ? '县级行政区' : '乡镇行政区')
 const taskAreaLabel = computed(() => userStore.role?.code === 'province' ? '计划种植面积（万亩）' : userStore.role?.code === 'city' ? '实际种植面积（万亩）' : '乡镇任务面积（万亩）')
@@ -187,13 +187,13 @@ const saveDecompose = async () => {
   current.value.status = result.rows[0]?.status || current.value.status
   decomposeVisible.value = false
   detailVisible.value = true
-  ElMessage.success(userStore.role?.code === 'province' ? '任务已分解下达到各市' : userStore.role?.code === 'county' ? '任务已分解下达到本县各乡镇' : '计划修改已保存')
+    ElMessage.success(userStore.role?.code === 'province' ? '参考计划已下达到各市' : userStore.role?.code === 'county' ? '参考计划已下达到本县各乡镇' : '市级参考计划已下达到各县')
   await load()
 }
 const submit = async (row) => {
   const result = await submitPlantingPlan(row.id, userStore.role)
   if (!result.success) return ElMessage.error(result.message)
-  ElMessage.success(userStore.role?.code === 'city' ? '计划已提交至县级' : '计划已提交市级审核')
+  ElMessage.success(userStore.role?.code === 'city' ? '市级上报计划已提交省级审核' : '县级上报计划已提交市级审核')
   await load()
 }
 onMounted(load)

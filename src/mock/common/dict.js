@@ -27,7 +27,8 @@ export const EVENT_SOURCES = [
   { code: 'drone', name: '无人机识别' },
   { code: 'grid', name: '网格巡查' },
   { code: 'snapshot', name: '随手拍' },
-  { code: 'platform', name: '地方平台推送' }
+  { code: 'platform', name: '地方平台推送' },
+  { code: 'province_inspection', name: '省级抽查' }
 ]
 
 export const EVENT_SOURCE_MAP = Object.fromEntries(EVENT_SOURCES.map((s) => [s.code, s]))

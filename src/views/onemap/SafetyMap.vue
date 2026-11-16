@@ -98,8 +98,13 @@
           <el-descriptions-item label="事件描述" :span="1">{{ curEvent.desc }}</el-descriptions-item>
         </el-descriptions>
 
-        <div class="sub-title">处置轨迹</div>
-        <FlowSteps :steps="curEvent.trail" />
+        <div class="sub-title">关联地块历史记录</div>
+        <div v-if="plotHistory.length" class="plot-history-list">
+          <div v-for="item in plotHistory" :key="item.key" class="plot-history-item">
+            <span>{{ item.time }}</span><b>{{ item.title }}</b><em>{{ item.status }}</em>
+          </div>
+        </div>
+        <el-empty v-else description="该地块暂无历史事件或抽查记录" :image-size="50" />
 
         <div class="drawer-actions">
           <el-button type="primary" size="small" @click="$router.push('/fsr/events')">进入事件中心处置</el-button>
@@ -118,6 +123,7 @@ import DrillBreadcrumb from '@/components/map/DrillBreadcrumb.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
 import FlowSteps from '@/components/common/FlowSteps.vue'
 import { FSR_EVENTS } from '@/mock/fsr/events'
+import { PROVINCE_INSPECTIONS } from '@/mock/fsr/inspections'
 import { EVENT_STATUS, EVENT_TYPE_MAP, EVENT_SOURCE_MAP, RISK_MAP } from '@/mock/common/dict'
 import anhuiCityGeo from '@/mock/geo/anhui-city.json'
 import { PLOTS } from '@/mock/geo/plot-gen'
@@ -178,6 +184,14 @@ const alerts = computed(() => [
 const filteredEvents = computed(() =>
   statusFilter.value ? FSR_EVENTS.filter((e) => e.status === statusFilter.value) : FSR_EVENTS
 )
+
+const plotHistory = computed(() => {
+  const plotId = curEvent.value?.spot?.plotId
+  if (!plotId) return []
+  const eventItems = FSR_EVENTS.filter((e) => e.spot?.plotId === plotId).map((e) => ({ key: e.id, time: e.foundTime || '—', title: `${e.code} · ${EVENT_TYPE_MAP[e.type]?.name || '监管事件'}`, status: EVENT_STATUS[e.status]?.name || e.status }))
+  const inspectionItems = PROVINCE_INSPECTIONS.filter((i) => i.plotId === plotId).map((i) => ({ key: i.inspectionId, time: i.inspectedAt || '—', title: `${i.inspectionId} · 省级抽查`, status: i.conclusion }))
+  return [...eventItems, ...inspectionItems].sort((a, b) => String(b.time).localeCompare(String(a.time)))
+})
 
 const statusColor = (s) => EVENT_STATUS[s]?.color || '#999'
 

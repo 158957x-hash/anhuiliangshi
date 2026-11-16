@@ -194,7 +194,17 @@ const chooseRole = (code) => {
   }
   roleDialogVisible.value = false
   ElMessage.success(`已切换为「${userStore.role.roleName}」`)
-  router.push(userStore.role?.homeRoute || '/entry')
+
+  // 粮食安全综合监管分系统的种植主体使用皖事通入口；
+  // 其他系统仍沿用角色自身的默认入口，避免改变皖企通/其他系统的串场路径。
+  const inFoodSafetySystem = route.path.startsWith('/fsr/')
+    || route.path.startsWith('/onemap/safety')
+    || route.path === '/mobile/wzt-food-safety'
+    || route.path === '/mobile/wzt-safety'
+  const target = userStore.role?.code === 'grower' && inFoodSafetySystem
+    ? '/mobile/wanzhengtong'
+    : (userStore.role?.homeRoute || '/entry')
+  router.push(target)
 }
 
 const onOrgCommand = (cmd) => {

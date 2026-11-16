@@ -3,21 +3,21 @@
     <div class="page-head">
       <div>
         <h2>种植计划下达</h2>
-        <p>仅展示种植计划制定中审核通过并已下达的最终版本，省、市、县、乡镇按权限查看对应分解任务，不提供修改操作。</p>
+        <p>仅展示已直接下达的参考计划，省、市、县按权限查看对应分解任务，不提供修改操作。</p>
       </div>
       <el-button @click="load">刷新计划</el-button>
     </div>
 
     <div class="metric-grid">
       <div class="metric-card"><span>查看范围</span><strong>{{ userStore.role?.roleName || levelLabel(userStore.role?.code) }}</strong><small>按当前角色权限展示</small></div>
-      <div class="metric-card blue"><span>正式计划数</span><strong>{{ countyIssueRows.length }}</strong><small>审核通过并已下达</small></div>
+      <div class="metric-card blue"><span>下达计划数</span><strong>{{ countyIssueRows.length }}</strong><small>直接下达的参考计划</small></div>
       <div class="metric-card green"><span>计划种植面积</span><strong>{{ currentArea.toLocaleString() }}</strong><small>万亩</small></div>
       <div class="metric-card orange"><span>版本状态</span><strong>最终版</strong><small>只读不可修改</small></div>
     </div>
 
     <div class="panel county-issue-panel">
       <div class="panel-title">
-        <span class="title-text">审核通过的种植计划下达列表</span>
+        <span class="title-text">已下达参考计划列表</span>
         <el-tag type="info" effect="plain">只读查看</el-tag>
       </div>
       <el-form :inline="true" class="county-filters">
@@ -110,7 +110,7 @@
       <el-empty v-else description="暂无匹配的计划" />
     </div>
 
-    <el-dialog v-model="countyIssueVisible" title="种植计划任务分解" width="1050px" destroy-on-close>
+    <el-dialog v-model="countyIssueVisible" title="已下达参考计划分解" width="1050px" destroy-on-close>
       <template v-if="countyIssueDetail">
         <el-descriptions :column="3" border>
           <el-descriptions-item label="年份">{{ countyIssueDetail.year }}年</el-descriptions-item>

@@ -68,6 +68,9 @@ function buildPlots() {
         geometry: { type: 'Polygon', coordinates: [ring] },
         areaMu,
         crop,
+        regionName: subject.regionName || seed.name,
+        subjectName: subject.name,
+        // 演示抽查与地图穿透字段
         // 是否青贮备案地块（数字围栏）
         silageFiled: crop === 'silage_corn' && rand() > 0.3,
         // 计划落实状态

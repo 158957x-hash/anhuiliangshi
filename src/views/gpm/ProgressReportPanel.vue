@@ -1,6 +1,6 @@
 <template>
   <div class="report-panel">
-    <el-alert class="flow-alert" type="info" :closable="false" title="上报流程：主体上报（免审，直接生效）→ 乡镇向县级上报 → 县级审核 → 县级向市级上报 → 市级审核 → 市级向省级上报 → 省级审核" />
+    <el-alert class="flow-alert" type="info" :closable="false" title="进度依据审核通过的本级上报计划填报。县级、市级正式上报并接受上级审核；乡镇和主体数据有则查看，无则不影响县级、市级上报。" />
 
     <div class="panel toolbar-panel">
       <el-form :inline="true" class="filters">
@@ -13,7 +13,7 @@
 
     <div class="metric-grid">
       <div class="metric-card"><span>计划面积</span><strong>{{ summary.planArea.toLocaleString() }}</strong><small>亩（{{ filters.year }}年{{ filters.quarter }}）</small></div>
-      <div class="metric-card blue"><span>{{ isSow ? '已播面积' : '已收获面积' }}</span><strong>{{ summary.doneArea.toLocaleString() }}</strong><small>亩（下级上报汇总）</small></div>
+      <div class="metric-card blue"><span>{{ isSow ? '已播面积' : '已收获面积' }}</span><strong>{{ summary.doneArea.toLocaleString() }}</strong><small>亩（当前上报数据）</small></div>
       <div class="metric-card green"><span>{{ isSow ? '播种' : '收获' }}进度</span><strong>{{ summary.progress }}%</strong><small>已完成 / 计划</small></div>
       <div class="metric-card orange"><span>上报主体数</span><strong>{{ summary.subjectCount }}</strong><small>辖区内种植主体</small></div>
     </div>
@@ -49,7 +49,7 @@
         <span class="title-text">上报管理（{{ levelNameMap[roleCode] || '' }} → {{ parentName }}）</span>
         <el-button type="primary" @click="submit">向{{ parentName }}上报</el-button>
       </div>
-      <el-alert v-if="roleCode !== 'town'" type="warning" :closable="false" class="report-tip" :title="`上报前需先完成辖区内${childLevelName}上报单的审核（至少一张审核通过），上级汇总数据以辖区内下级上报为准。`" />
+      <el-alert type="info" :closable="false" class="report-tip" title="当前上报数据由本级按已审核通过的本级上报计划填报；下级数据仅作查看和参考，不作为本级上报前置条件。" />
       <el-table :data="myOrders" stripe border max-height="260">
         <el-table-column prop="year" label="年份" width="80"><template #default="{ row }">{{ row.year }}年</template></el-table-column>
         <el-table-column prop="quarter" label="周期" width="100" />
@@ -213,7 +213,7 @@ const myOrders = computed(() => orders.value.filter((item) => item.regionCode ==
 const auditOrders = computed(() => orders.value.filter((item) => item.level === ({ county: 'town', city: 'county', province: 'city' }[roleCode.value] || '')))
 const submit = async () => {
   try {
-    await ElMessageBox.confirm(`确认将 ${filters.year}年${filters.quarter} ${isSow.value ? '播种' : '收获'}进度向${parentName.value}上报吗？上报数据为当前辖区内下级上报汇总。`, '上报确认', { type: 'warning' })
+    await ElMessageBox.confirm(`确认将 ${filters.year}年${filters.quarter} ${isSow.value ? '播种' : '收获'}进度向${parentName.value}上报吗？上报数据将作为本级正式进度记录。`, '上报确认', { type: 'warning' })
   } catch { return }
   const result = await submitProgressReport(role.value, { type: props.type, year: filters.year, quarter: filters.quarter })
   if (!result.success) return ElMessage.error(result.message)

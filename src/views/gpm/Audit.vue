@@ -2,8 +2,8 @@
   <div class="page-container gpm-page">
     <div class="page-head">
       <div>
-        <h2>{{ readonlyMode ? '种植计划下达' : '种植计划审核' }}</h2>
-        <p>{{ readonlyMode ? '查看审核通过后的种植计划、行政区划、作物类型、主体类型和地块范围任务下达信息。' : userStore.role?.code === 'city' ? '审核县级分解到种植主体、镇村和具体地块的任务，支持退回修改、意见填写和审核留痕。' : '对年度种植计划及各级任务分解进行逐级审核，支持退回修改、意见填写和审核留痕。' }}</p>
+        <h2>{{ readonlyMode ? '种植计划下达' : '上报计划审核' }}</h2>
+        <p>{{ readonlyMode ? '查看已下达的参考计划及其行政区划分解信息。' : userStore.role?.code === 'city' ? '审核县级上报计划，填写审核意见并保留审核记录。' : '审核市级上报计划，填写审核意见并保留审核记录。' }}</p>
       </div>
       <el-tag v-if="!readonlyMode" type="warning">待审核 {{ pendingCount }} 条</el-tag>
       <el-tag v-else type="success">只读查看</el-tag>
@@ -11,12 +11,6 @@
 
     <div class="panel">
       <el-form :inline="true" class="filters">
-        <el-form-item v-if="!readonlyMode && userStore.role?.code !== 'city'" label="审核范围">
-          <el-select v-model="filters.view" clearable placeholder="全部范围" style="width:150px">
-            <el-option label="市级审核县级" value="city-county" />
-            <el-option label="县级分配计划" value="county-plan" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="关键字">
           <el-input v-model="filters.keyword" clearable placeholder="计划、提交行政区" />
         </el-form-item>
@@ -73,7 +67,7 @@
       </el-table>
     </div>
 
-    <el-dialog v-model="visible" :title="readonlyMode ? '种植计划下达详情' : (current?.status === 'pending' ? '种植计划审核' : '种植计划审核留痕')" width="920px" destroy-on-close>
+    <el-dialog v-model="visible" :title="readonlyMode ? '种植计划下达详情' : (current?.status === 'pending' ? '上报计划审核' : '上报计划审核留痕')" width="920px" destroy-on-close>
       <template v-if="current">
         <el-descriptions :column="3" border>
           <el-descriptions-item label="计划年度">{{ current.planYear }}年</el-descriptions-item>
@@ -97,7 +91,7 @@
         </el-descriptions>
 
         <div class="detail-title">
-          <b>{{ userStore.role?.code === 'city' ? '县级任务分解明细' : '县级计划分解明细' }}</b>
+          <b>{{ userStore.role?.code === 'city' ? '县级上报计划明细' : '市级上报计划明细' }}</b>
           <span v-if="userStore.role?.code === 'province'">点击县级行查看种植主体和地块明细</span>
         </div>
         <template v-if="userStore.role?.code === 'city'">
@@ -204,7 +198,7 @@ const countyDetail = ref(null)
 const countySubjectRows = ref([])
 const pendingCount = computed(() => rows.value.filter((item) => item.status === 'pending').length)
 const countyTotal = computed(() => Number((current.value?.countyPlans || []).reduce((sum, item) => sum + Number(item.area || 0), 0).toFixed(2)))
-const areaMatched = computed(() => userStore.role?.code === 'city' || (!!current.value && countyTotal.value === Number(current.value.totalArea)))
+const areaMatched = computed(() => userStore.role?.code !== 'city' || !current.value || current.value.type !== '县级计划提交市级审核' || countyTotal.value === Number(current.value.totalArea))
 const statusName = (status) => ({ pending: '待审核', approved: '已通过', rejected: '已退回' }[status] || status)
 const tagType = (status) => ({ pending: 'warning', approved: 'success', rejected: 'danger' }[status] || 'info')
 
