@@ -1,0 +1,1 @@
+const r=e=>new Promise(t=>setTimeout(t,e));function c(e,t=300,o=700){const n=Math.floor(t+Math.random()*(o-t));return r(n).then(()=>typeof e=="function"?e():e).then(s=>JSON.parse(JSON.stringify(s)))}export{c as m};

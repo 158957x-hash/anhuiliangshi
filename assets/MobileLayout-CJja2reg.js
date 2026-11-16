@@ -1,0 +1,1 @@
+import{_ as s,o as t,c,a as e,d as a,f as n}from"./index-LCsamtki.js";const _={},r={class:"mobile-shell"},d={class:"phone-wrap"},i={class:"phone-content"};function l(p,f){const o=n("router-view");return t(),c("div",r,[e("div",d,[e("div",i,[a(o)])])])}const m=s(_,[["render",l],["__scopeId","data-v-c7877b3e"]]);export{m as default};
