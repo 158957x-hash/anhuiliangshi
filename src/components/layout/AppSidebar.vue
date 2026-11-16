@@ -52,10 +52,18 @@
               <el-icon><component :is="group.icon" /></el-icon>
               <span>{{ group.title }}</span>
             </template>
-            <el-menu-item v-for="c in group.children" :key="c.route" :index="c.route">
-              <el-icon><component :is="c.icon" /></el-icon>
-              <template #title>{{ c.title }}</template>
-            </el-menu-item>
+            <template v-for="(c, ci) in group.children" :key="c.route">
+              <div
+                v-if="c.section && (ci === 0 || c.section !== group.children[ci - 1].section)"
+                class="menu-section-title sub"
+              >
+                {{ c.section }}
+              </div>
+              <el-menu-item :index="c.route">
+                <el-icon><component :is="c.icon" /></el-icon>
+                <template #title>{{ c.title }}</template>
+              </el-menu-item>
+            </template>
           </el-sub-menu>
         </template>
       </el-menu>
@@ -94,13 +102,6 @@ const userStore = useUserStore()
 const collapsed = computed(() => appStore.sidebarCollapsed)
 const activeMenu = computed(() => route.path)
 
-// 移动端演示入口（皖政通=政务人员，皖企通=主体），按角色过滤
-const MOBILE_ENTRIES = [
-  { title: '皖政通·粮食安全核查', route: '/mobile/wzt-food-safety', icon: 'Position', roles: ['county', 'province'] },
-  { title: '皖事通·随手拍', route: '/mobile/snapshot', icon: 'Camera', roles: ['grower', 'storage_subject'] }
-]
-const mobileMenus = computed(() => MOBILE_ENTRIES.filter((e) => userStore.hasRole(e.roles)))
-
 // 门户工作台展示全部导航；进入子系统后仅展示本系统菜单
 const currentSystem = computed(() => getSystemForRoute(route.path))
 const menus = computed(() => getMenusForRole())
@@ -108,6 +109,25 @@ const systemGroup = computed(() => {
   if (currentSystem.value === 'portal') return []
   const groups = getMenusForSystem(currentSystem.value)
   return groups[0] || null
+})
+
+// 移动端演示入口：按所属系统（gpm/sil/fsr）归类，各子系统侧栏仅显示本系统入口，门户不展示
+const MOBILE_ENTRIES = [
+  // 粮食计划管理
+  { title: '皖政通·计划管理任务', route: '/mobile/check/list', icon: 'Iphone', roles: ['county'], system: 'gpm' },
+  { title: '皖政通·进度上报', route: '/mobile/wzt-progress', icon: 'Upload', roles: ['county', 'town'], system: 'gpm' },
+  { title: '皖企通·主体填报', route: '/mobile/declare', icon: 'Tickets', roles: ['grower', 'storage_subject'], system: 'gpm' },
+  // 青贮饲料管理
+  { title: '皖企通·青贮饲料管理', route: '/mobile/wqt-silage', icon: 'Wheat', roles: ['grower', 'storage_subject'], system: 'sil' },
+  { title: '皖政通·青贮饲料管理', route: '/mobile/wzt-silage', icon: 'Iphone', roles: ['county'], system: 'sil' },
+  // 粮食安全综合监管
+  { title: '皖政通·粮食安全核查', route: '/mobile/wzt-food-safety', icon: 'Position', roles: ['county', 'province'], system: 'fsr' },
+  { title: '皖事通·随手拍', route: '/mobile/snapshot', icon: 'Camera', roles: ['grower', 'storage_subject'], system: 'fsr' }
+]
+const mobileMenus = computed(() => {
+  const system = currentSystem.value
+  if (!['gpm', 'sil', 'fsr', 'pes'].includes(system)) return []
+  return MOBILE_ENTRIES.filter((e) => e.system === system && userStore.hasRole(e.roles))
 })
 </script>
 
@@ -148,6 +168,10 @@ const systemGroup = computed(() => {
     padding: 10px 0 0;
     color: transparent;
     overflow: hidden;
+  }
+
+  &.sub {
+    padding-left: 36px;
   }
 }
 

@@ -12,13 +12,11 @@ export const CROPS = [
 
 export const CROP_MAP = Object.fromEntries(CROPS.map((c) => [c.code, c]))
 
-// 事件类型
+// 事件类型（用户确认 2026-11-16 收敛为 3 类：割青毁粮/耕地撂荒/其他；原毁麦毁粮、未备案收割归入割青毁粮，非粮化、长势异常归入其他）
 export const EVENT_TYPES = [
-  { code: 'baomai', name: '毁麦毁粮', color: '#e64545' },
+  { code: 'geqing', name: '割青毁粮', color: '#e64545' },
   { code: 'piaohuang', name: '耕地撂荒', color: '#e67e22' },
-  { code: 'feilianghua', name: '非粮化', color: '#c0392b' },
-  { code: 'zhangshi', name: '长势异常', color: '#f1c40f' },
-  { code: 'weibeian', name: '未备案收割', color: '#9b59b6' }
+  { code: 'qita', name: '其他', color: '#909399' }
 ]
 
 export const EVENT_TYPE_MAP = Object.fromEntries(EVENT_TYPES.map((t) => [t.code, t]))

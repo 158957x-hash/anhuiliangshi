@@ -141,7 +141,7 @@ const sowChartOption = computed(() => ({
 
 // 事件类型分布
 const eventChartOption = computed(() => {
-  const typeNames = { baomai: '毁麦毁粮', piaohuang: '耕地撂荒', feilianghua: '非粮化', zhangshi: '长势异常', weibeian: '未备案收割' }
+  const typeNames = { geqing: '割青毁粮', piaohuang: '耕地撂荒', qita: '其他' }
   const colors = ['#e64545', '#e67e22', '#c0392b', '#f1c40f', '#9b59b6']
   const counts = {}
   FSR_EVENTS.forEach((e) => { counts[e.type] = (counts[e.type] || 0) + 1 })

@@ -172,7 +172,7 @@ const alerts = computed(() => [
   { label: '新增疑似图斑（近7日）', count: FSR_EVENTS.filter((e) => e.foundTime >= '2026-09-22').length, color: '#FF4C4C' },
   { label: '超期未处置', count: FSR_EVENTS.filter((e) => e.overdue).length, color: '#F97D47' },
   { label: '高风险事件', count: FSR_EVENTS.filter((e) => e.risk === 'high' && e.status !== 'closed').length, color: '#FF4C4C' },
-  { label: '长势明显偏差区域', count: FSR_EVENTS.filter((e) => e.type === 'zhangshi').length, color: '#F97D47' }
+  { label: '其他问题图斑区域', count: FSR_EVENTS.filter((e) => e.type === 'qita').length, color: '#F97D47' }
 ])
 
 const filteredEvents = computed(() =>
@@ -225,11 +225,11 @@ onMounted(() => {
     onEachFeature: (feature, layer) => layer.bindTooltip(`高标准农田（示意）：${feature.properties.name}`, { sticky: true })
   })
 
-  // 长势偏差区域（橙色半透明固定演示面：取长势异常事件图斑）
-  const zhangshi = FSR_EVENTS.filter((e) => e.type === 'zhangshi')
+  // 其他问题区域（橙色半透明固定演示面：取其他类型事件图斑）
+  const qita = FSR_EVENTS.filter((e) => e.type === 'qita')
   baseMapRef.value.addGeoJSON('longTerm', {
     type: 'FeatureCollection',
-    features: zhangshi.map((e) => ({ type: 'Feature', properties: {}, geometry: e.spot.geometry }))
+    features: qita.map((e) => ({ type: 'Feature', properties: {}, geometry: e.spot.geometry }))
   }, {
     style: { color: '#F97D47', weight: 3, fillColor: '#F97D47', fillOpacity: 0.15, dashArray: '8 6' }
   })

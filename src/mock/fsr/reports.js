@@ -5,7 +5,7 @@ export const EVENT_REPORTS = [
     reportNo: 'RPT-2026-0004',
     eventId: 'EVT-2026-0002',
     eventCode: 'FSR-2026-0002',
-    title: '太和县绿源家庭农场疑似毁麦收贮事件简报',
+    title: '太和县绿源家庭农场疑似割青毁粮事件简报',
     statVersion: '演示口径 v1.0（待业务确认）',
     generatedAt: '2026-07-25 16:00',
     summary: '事件于2026-05-20接入，经现场核查属实，责任单位限期整改并复耕，2026-07-25复核通过结案。全流程15个环节留痕，处置用时66天。',

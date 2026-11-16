@@ -186,8 +186,8 @@ const sourceName = (s) => EVENT_SOURCE_MAP[s]?.name || '其他来源'
 // 演示风险规则：按面积/问题类型/区县关键字自动判定（口径待业务确认）
 const assess = (e) => {
   const area = Number(e.spot?.areaMu || 0)
-  const basic = e.desc?.includes('永久基本农田') || e.type === 'feilianghua' || e.regionName?.includes('重点') || e.regionName?.includes('基本农田')
-  const risk = basic || area >= 400 || e.type === 'baomai' ? 'high' : area >= 200 || e.type === 'zhangshi' ? 'medium' : 'low'
+  const basic = e.desc?.includes('永久基本农田') || e.regionName?.includes('重点') || e.regionName?.includes('基本农田')
+  const risk = basic || area >= 400 || e.type === 'geqing' ? 'high' : area >= 200 ? 'medium' : 'low'
   return { risk, basis: `图斑面积${area}亩；${basic ? '涉及永久基本农田或重点问题；' : '未识别永久基本农田；'}问题类型为${typeName(e.type)}` }
 }
 

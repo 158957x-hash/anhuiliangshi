@@ -101,13 +101,12 @@ export const saveOrdinaryApplication = (data, role, submit = false) => result(()
     return { ...detail, plotId: plot.id, name: plot.name, areaMu: plot.areaMu, location: plot.location || '', center: plot.center, geometry: plot.geometry, subjectId: plot.subjectId, subjectName: allGrowers().find(s => s.id === plot.subjectId)?.name || detail.subjectName, regionCode: plot.regionCode, expectedYield: number(detail.expectedYield, '地块预计产量', submit), expectedPrice: number(detail.expectedPrice, '预计收储价格'), expectedWeight: number(detail.expectedWeight, '预计收储重量') }
   })
   if (submit) {
-    if (!storageSubject || storageSubject.status !== '启用') throw new Error('请选择启用的收储主体')
+    // 收储主体、用途、订单/合同附件、电子承诺书均为选填，可提交后自行补齐且无需再审核。
+    if (data.storageSubjectId && (!storageSubject || storageSubject.status !== '启用')) throw new Error('收储主体选填；如已选择则必须为启用状态')
     if (!data.applicantContact || !data.applicantPhone) throw new Error('请填写申报联系人和联系方式')
     if (!data.year || data.season !== '春夏季') throw new Error('普通申报应填写计划年度，收储范围固定为春夏季')
     if (!plotDetails.length) throw new Error('请按图选择至少一个地块')
-    if (!['self', 'sell'].includes(data.usage)) throw new Error('请选择收储用途')
-    if (data.usage === 'sell' && !data.attachments?.length) throw new Error('出售用途请上传订单或合同')
-    if (!data.promise?.signedAt || !data.promise?.content || !data.promise?.signer) throw new Error('请签署电子承诺书')
+    if (data.usage && !['self', 'sell'].includes(data.usage)) throw new Error('收储用途仅可为自用或出售')
     const duplicate = all.find(app => app.id !== old?.id && ['pending', 'filed'].includes(app.status) && Number(app.year) === Number(data.year) && app.plotDetails.some(other => plotDetails.some(detail => detail.plotId === other.plotId)))
     if (duplicate) throw new Error(`重复地块：同一计划年度已存在待审或已备案申报 ${duplicate.id}，请核对原申报；退回补正请修改原单`)
     const counties = new Set(plotDetails.map(plot => String(plot.regionCode).slice(0, 6)))
@@ -118,11 +117,28 @@ export const saveOrdinaryApplication = (data, role, submit = false) => result(()
   const amountDetails = plotDetails.filter(p => p.expectedWeight !== null && p.expectedPrice !== null)
   const derivedSubjectIds = [...new Set(plotDetails.map(plot => plot.subjectId).filter(Boolean))]
   const plantingSubjectIds = Array.isArray(data.plantingSubjectIds) && data.plantingSubjectIds.length ? [...new Set(data.plantingSubjectIds)] : derivedSubjectIds
-  if (submit && !plantingSubjectIds.length) throw new Error('请至少选择一个种植主体')
+  if (submit && !plantingSubjectIds.length) throw new Error('请选择一个种植主体')
   if (submit && plotDetails.some(plot => !plantingSubjectIds.includes(plot.subjectId))) throw new Error('所选地块必须属于第一步已选种植主体')
-  const item = { ...data, plantingSubjectIds, id: old?.id || `QZ-YT-${Date.now()}`, declarationType: 'ordinary', applicant, storageSubjectId: storageSubject?.id || '', storageSubjectName: storageSubject?.name || '', storageSubject: storageSubject || null, plotDetails, plotIds: [...detailIds], regionCodes: [...new Set(plotDetails.map(p => p.regionCode))], area: plotDetails.reduce((s,p) => s + Number(p.areaMu), 0), expectedYield: plotDetails.reduce((s,p) => s + Number(p.expectedYield || 0), 0), weight: filledWeights.length ? filledWeights.reduce((s,p) => s + p.expectedWeight, 0) : null, weightIncomplete: filledWeights.length < plotDetails.length, expectedAmount: amountDetails.length ? amountDetails.reduce((s,p) => s + p.expectedPrice * p.expectedWeight, 0) : null, status: submit ? 'pending' : old?.status === 'returned' ? 'returned' : 'draft', filedNo: '', attachments: data.usage === 'sell' ? data.attachments || [] : [], createdAt: old?.createdAt || now(), submittedAt: submit ? now() : old?.submittedAt || '', auditTrail: [...(old?.auditTrail || []), { action: submit ? old?.status === 'returned' ? '补正重提（审核期限重新计算）' : '提交整单申报' : '保存草稿', time: now(), user: `${role.name}（${role.roleName}）` }] }
+  const item = { ...data, plantingSubjectIds, id: old?.id || `QZ-YT-${Date.now()}`, declarationType: 'ordinary', applicant, storageSubjectId: storageSubject?.id || '', storageSubjectName: storageSubject?.name || '', storageSubject: storageSubject || null, plotDetails, plotIds: [...detailIds], regionCodes: [...new Set(plotDetails.map(p => p.regionCode))], area: plotDetails.reduce((s,p) => s + Number(p.areaMu), 0), expectedYield: plotDetails.reduce((s,p) => s + Number(p.expectedYield || 0), 0), weight: filledWeights.length ? filledWeights.reduce((s,p) => s + p.expectedWeight, 0) : null, weightIncomplete: filledWeights.length < plotDetails.length, expectedAmount: amountDetails.length ? amountDetails.reduce((s,p) => s + p.expectedPrice * p.expectedWeight, 0) : null, status: submit ? 'pending' : old?.status === 'returned' ? 'returned' : 'draft', filedNo: '', attachments: data.attachments || [], createdAt: old?.createdAt || now(), submittedAt: submit ? now() : old?.submittedAt || '', auditTrail: [...(old?.auditTrail || []), { action: submit ? old?.status === 'returned' ? '补正重提（审核期限重新计算）' : '提交整单申报' : '保存草稿', time: now(), user: `${role.name}（${role.roleName}）` }] }
   write(KEYS.applications, [item, ...all.filter(app => app.id !== item.id)])
   return { success: true, id: item.id }
+})
+// 申报人补齐选填信息：不改变状态、不重置审核期限，保存后立即生效。
+export const fillOrdinaryApplication = (id, patch, role) => result(() => {
+  const all = applications(); const app = all.find(row => row.id === id)
+  if (!app || !inScope(app, role)) throw new Error('未找到该申报或当前身份无权补齐')
+  if (!isOrdinaryOwner(app, role)) throw new Error('仅申报人可补齐信息')
+  if (!['pending', 'filed'].includes(app.status)) throw new Error('仅待审核或已备案申报支持补齐信息')
+  let storageSubject = null
+  if (patch.storageSubjectId) { storageSubject = storageSubjects().find(item => item.id === patch.storageSubjectId); if (!storageSubject || storageSubject.status !== '启用') throw new Error('请选择启用的收储主体') }
+  const changed = []
+  if (patch.storageSubjectId !== undefined) { app.storageSubjectId = patch.storageSubjectId || ''; app.storageSubjectName = storageSubject?.name || ''; app.storageSubject = storageSubject; if (patch.storageSubjectId) changed.push('收储主体') }
+  if (patch.usage !== undefined) { app.usage = patch.usage; if (patch.usage) changed.push('收储用途') }
+  if (patch.attachments !== undefined) { app.attachments = patch.attachments; if (patch.attachments?.length) changed.push('订单/合同附件') }
+  if (patch.promise !== undefined) { app.promise = patch.promise; if (patch.promise?.signedAt) changed.push('电子承诺书') }
+  app.auditTrail.push({ action: changed.length ? `补齐信息（${changed.join('、')}），立即生效无需再审核` : '补齐信息（无变更）', time: now(), user: `${role.name}（${role.roleName}）` })
+  write(KEYS.applications, all)
+  return { success: true }
 })
 export const auditOrdinaryApplication = (id, action, opinion, role) => result(() => {
   if (!canAuditOrdinary(role)) throw new Error('仅县级审核身份可处理普通收储申报')
@@ -139,8 +155,8 @@ export const auditOrdinaryApplication = (id, action, opinion, role) => result(()
   write(KEYS.applications, all)
   return { success: true, filedNo: app.filedNo }
 })
-export const fetchOrdinaryFences = role => mockRequest(() => applications().filter(app => app.status === 'filed' && inScope(app, role)).map(app => ({ ...app, id: `ORD-FENCE-${app.id}`, declarationId: app.id, subjectId: app.storageSubjectId, subjectName: app.storageSubjectName, createdAt: app.filedAt || app.createdAt })), 100, 200)
-export const ordinaryFenceGeoJSON = fence => ({ type: 'FeatureCollection', features: (fence.plotDetails || []).filter(plot => plot.geometry).map(plot => ({ type: 'Feature', properties: { fenceId: fence.id, filedNo: fence.filedNo, plotId: plot.plotId, plotName: plot.name, areaMu: plot.areaMu, subjectName: fence.storageSubjectName, plantingSubjectName: plot.subjectName }, geometry: clone(plot.geometry) })) })
+export const fetchOrdinaryFences = role => mockRequest(() => applications().filter(app => app.status === 'filed' && inScope(app, role)).map(app => ({ ...app, id: `ORD-FENCE-${app.id}`, declarationId: app.id, subjectId: app.storageSubjectId, subjectName: app.storageSubjectName || '未确定收储主体', createdAt: app.filedAt || app.createdAt })), 100, 200)
+export const ordinaryFenceGeoJSON = fence => ({ type: 'FeatureCollection', features: (fence.plotDetails || []).filter(plot => plot.geometry).map(plot => ({ type: 'Feature', properties: { fenceId: fence.id, filedNo: fence.filedNo, plotId: plot.plotId, plotName: plot.name, areaMu: plot.areaMu, subjectName: fence.storageSubjectName || '未确定收储主体', plantingSubjectName: plot.subjectName }, geometry: clone(plot.geometry) })) })
 export const ordinaryDeadline = app => {
   let days = 10
   try { days = Number(JSON.parse(localStorage.getItem('ah_sil_audit_config') || '{}').storageDays) || 10 } catch { /* defaults */ }

@@ -1,7 +1,7 @@
 <template>
   <div class="page-container plan-page">
     <div class="page-head">
-      <div><h2>种植计划制定</h2><p>{{ userStore.role?.code === 'province' ? '管理年度季度种植计划，并将计划任务分解下达到各市。' : userStore.role?.code === 'city' ? '修改省级下达的种植计划，并分解到本市各县。' : '接收市级下达任务，并分解到本县种植大户和地块。' }}</p></div>
+      <div><h2>种植计划制定</h2><p>{{ userStore.role?.code === 'province' ? '管理年度、季度及全年种植计划，并将计划任务分解下达到各市。' : userStore.role?.code === 'city' ? '修改省级下达的种植计划，并分解到本市各县。' : userStore.role?.code === 'county' ? '接收市级下达任务，并分解到本县各乡镇。' : '接收县级下达任务，并分解到本乡镇种植大户和地块。' }}</p></div>
       <el-button v-if="userStore.role?.code === 'province'" type="primary" @click="openCreate">新增种植计划</el-button>
     </div>
 
@@ -49,23 +49,23 @@
     <el-dialog v-model="detailVisible" title="种植计划任务分解" width="1050px">
       <template v-if="current">
         <el-descriptions :column="3" border><el-descriptions-item label="年份">{{ current.year }}年</el-descriptions-item><el-descriptions-item label="季度">{{ current.quarter }}</el-descriptions-item><el-descriptions-item label="计划种植面积">{{ current.area }} 万亩</el-descriptions-item><el-descriptions-item label="作物类型">{{ current.cropType }}</el-descriptions-item><el-descriptions-item label="附件">{{ current.attachmentName || '未上传' }}</el-descriptions-item><el-descriptions-item label="状态"><el-tag size="small">{{ current.status }}</el-tag></el-descriptions-item><el-descriptions-item label="计划说明" :span="3">{{ current.description }}</el-descriptions-item></el-descriptions>
-        <div class="detail-title"><b>{{ taskTitle }}</b><el-button type="primary" size="small" @click="openDecompose">{{ userStore.role?.code === 'province' ? '分解任务' : userStore.role?.code === 'county' ? '分解到种植大户和地块' : '修改分解' }}</el-button></div>
-        <el-table v-if="userStore.role?.code !== 'county'" :data="cityRows" stripe border max-height="390"><el-table-column :prop="taskRegionField" :label="taskRegionLabel" min-width="140"/><el-table-column prop="targetArea" :label="userStore.role?.code === 'city' ? '实际种植面积（万亩）' : '计划种植面积（万亩）'" width="150" align="right"/><el-table-column prop="cropType" label="作物类型" min-width="150"/><el-table-column label="影响因子" min-width="270"><template #default="{ row }"><div class="factor-summary">历史产量：{{ row.influencingFactors?.historicalYield }}；土壤资源与地力保护：{{ row.influencingFactors?.soilAndFertility }}；耕地撂荒：{{ row.influencingFactors?.abandonedFarmland }}；地方标准地改革：{{ row.influencingFactors?.localStandardFarmland }}；气象与自然灾害风险：{{ row.influencingFactors?.weatherDisasterRisk }}</div></template></el-table-column><el-table-column prop="status" label="分解状态" width="110"><template #default="{ row }"><el-tag size="small" :type="row.status === '已下达' ? 'success' : 'warning'">{{ row.status }}</el-tag></template></el-table-column><el-table-column prop="issuedAt" label="下达时间" width="120"/></el-table><el-table v-else :data="subjectRows" stripe border max-height="390"><el-table-column prop="subjectName" label="种植大户/主体" min-width="220"/><el-table-column prop="owner" label="负责人" width="100"/><el-table-column prop="townName" label="乡镇" width="110"/><el-table-column prop="villageName" label="村" width="110"/><el-table-column prop="targetArea" label="主体任务面积（亩）" width="140" align="right"/><el-table-column label="地块落实面积" min-width="270"><template #default="{ row }"><div v-for="plot in row.plotRows" :key="plot.plotId" class="plot-summary-row">{{ plot.plotName }}：{{ Number(plot.targetArea || 0).toFixed(1) }}亩</div></template></el-table-column><el-table-column prop="cropType" label="作物类型" width="110"/><el-table-column prop="status" label="分解状态" width="110"><template #default="{ row }"><el-tag size="small" :type="row.status === '已分解' ? 'success' : 'warning'">{{ row.status }}</el-tag></template></el-table-column></el-table>
+        <div class="detail-title"><b>{{ taskTitle }}</b><el-button type="primary" size="small" @click="openDecompose">{{ userStore.role?.code === 'province' ? '分解任务' : userStore.role?.code === 'county' ? '分解到本县各乡镇' : userStore.role?.code === 'town' ? '分解到种植大户和地块' : '修改分解' }}</el-button></div>
+        <el-table v-if="userStore.role?.code !== 'town'" :data="cityRows" stripe border max-height="390"><el-table-column :prop="taskRegionField" :label="taskRegionLabel" min-width="140"/><el-table-column prop="targetArea" :label="taskAreaLabel" width="150" align="right"/><el-table-column prop="cropType" label="作物类型" min-width="150"/><el-table-column label="影响因子" min-width="270" v-if="userStore.role?.code !== 'county'"><template #default="{ row }"><div class="factor-summary">历史产量：{{ row.influencingFactors?.historicalYield }}；土壤资源与地力保护：{{ row.influencingFactors?.soilAndFertility }}；耕地撂荒：{{ row.influencingFactors?.abandonedFarmland }}；地方标准地改革：{{ row.influencingFactors?.localStandardFarmland }}；气象与自然灾害风险：{{ row.influencingFactors?.weatherDisasterRisk }}</div></template></el-table-column><el-table-column prop="status" label="分解状态" width="110"><template #default="{ row }"><el-tag size="small" :type="row.status === '已下达' || row.status === '已分解' ? 'success' : 'warning'">{{ row.status }}</el-tag></template></el-table-column><el-table-column prop="issuedAt" label="下达时间" width="120"/></el-table><el-table v-else :data="subjectRows" stripe border max-height="390"><el-table-column prop="subjectName" label="种植大户/主体" min-width="220"/><el-table-column prop="owner" label="负责人" width="100"/><el-table-column prop="villageName" label="村" width="110"/><el-table-column prop="targetArea" label="主体任务面积（亩）" width="140" align="right"/><el-table-column label="地块落实面积" min-width="270"><template #default="{ row }"><div v-for="plot in row.plotRows" :key="plot.plotId" class="plot-summary-row">{{ plot.plotName }}：{{ Number(plot.targetArea || 0).toFixed(1) }}亩</div></template></el-table-column><el-table-column prop="cropType" label="作物类型" width="110"/><el-table-column prop="status" label="分解状态" width="110"><template #default="{ row }"><el-tag size="small" :type="row.status === '已分解' ? 'success' : 'warning'">{{ row.status }}</el-tag></template></el-table-column></el-table>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="decomposeVisible" :title="taskTitle" :width="userStore.role?.code === 'county' ? '94vw' : '900px'" top="5vh" class="decompose-dialog" destroy-on-close>
-      <template v-if="userStore.role?.code === 'county'">
-        <el-alert class="decompose-guide" title="请将市级下发的任务分解到本县种植大户，并为每块地填写具体落实面积。地块落实面积可根据实际情况填写。" type="info" :closable="false"/>
+    <el-dialog v-model="decomposeVisible" :title="taskTitle" :width="userStore.role?.code === 'town' ? '94vw' : '900px'" top="5vh" class="decompose-dialog" destroy-on-close>
+      <template v-if="userStore.role?.code === 'town'">
+        <el-alert class="decompose-guide" title="请将县级下发的任务分解到本乡镇种植大户，并为每块地填写具体落实面积。地块落实面积可根据实际情况填写。" type="info" :closable="false"/>
         <el-table :data="subjectRows" border stripe class="decompose-table"><el-table-column prop="subjectName" label="种植大户/主体" min-width="210"/><el-table-column prop="owner" label="负责人" width="100"/><el-table-column prop="targetArea" label="主体任务面积（亩）" width="145" align="right"><template #default="{ row }"><el-input-number v-model="row.targetArea" :min="0" :precision="1" controls-position="right"/></template></el-table-column><el-table-column label="镇村及地块落实" min-width="540"><template #default="{ row }"><div v-for="plot in row.plotRows" :key="plot.plotId" class="plot-task-row"><span class="plot-region">{{ plot.townName }} / {{ plot.villageName }}</span><span class="plot-name">{{ plot.plotName }}</span><span class="plot-capacity">{{ plot.areaMu.toFixed(1) }}亩</span><el-input-number v-model="plot.targetArea" :min="0" :max="plot.areaMu" :precision="1" controls-position="right" size="small"/></div><div v-if="!row.plotRows?.length" class="attachment-empty">请先选择地块</div></template></el-table-column><el-table-column label="地块选择" min-width="210"><template #default="{ row }"><el-select v-model="row.plotIds" multiple collapse-tags collapse-tags-tooltip placeholder="选择地块" style="width:100%" @change="syncPlotRows(row)"><el-option v-for="plot in row.plots" :key="plot.id" :label="`${plot.name}（${plot.areaMu.toFixed(1)}亩）`" :value="plot.id"/></el-select></template></el-table-column><el-table-column prop="cropType" label="作物类型" width="110"/></el-table>
         <div class="decompose-summary"><div><span>主体数量</span><b>{{ subjectRows.length }}</b><em>个</em></div><div><span>主体任务合计</span><b>{{ subjectTotal.toFixed(1) }}</b><em>亩</em></div><div><span>地块数量</span><b>{{ subjectRows.reduce((sum, row) => sum + (row.plotIds?.length || 0), 0) }}</b><em>块</em></div></div>
       </template>
       <template v-else>
         <el-alert :title="`${taskRegionLabel}分解面积可根据实际情况调整，不要求与${userStore.role?.code === 'city' ? '省级计划中的实际种植面积' : '当前计划种植面积'}完全一致。`" type="info" :closable="false"/>
-        <el-table :data="cityRows" border stripe class="decompose-table"><el-table-column :prop="taskRegionField" :label="taskRegionLabel" min-width="160"/><el-table-column :label="userStore.role?.code === 'city' ? '实际种植面积（万亩）' : '计划种植面积（万亩）'" width="220"><template #default="{ row }"><el-input-number v-model="row.targetArea" :min="0" :precision="0" controls-position="right" @change="generateFactors"/></template></el-table-column><el-table-column prop="cropType" label="作物类型" min-width="150"/><el-table-column label="影响因子自动生成" min-width="330"><template #default="{ row }"><div class="factor-tags" :title="factorText(row)"><el-tag size="small">历史产量</el-tag><el-tag size="small" type="success">土壤地力</el-tag><el-tag size="small" type="warning">撂荒</el-tag><el-tag size="small" type="info">气象风险</el-tag></div></template></el-table-column></el-table>
+        <el-table :data="cityRows" border stripe class="decompose-table"><el-table-column :prop="taskRegionField" :label="taskRegionLabel" min-width="160"/><el-table-column :label="taskAreaLabel" width="220"><template #default="{ row }"><el-input-number v-model="row.targetArea" :min="0" :precision="0" controls-position="right" @change="generateFactors"/></template></el-table-column><el-table-column prop="cropType" label="作物类型" min-width="150"/><el-table-column label="影响因子自动生成" min-width="330" v-if="userStore.role?.code !== 'county'"><template #default="{ row }"><div class="factor-tags" :title="factorText(row)"><el-tag size="small">历史产量</el-tag><el-tag size="small" type="success">土壤地力</el-tag><el-tag size="small" type="warning">撂荒</el-tag><el-tag size="small" type="info">气象风险</el-tag></div></template></el-table-column></el-table>
         <div class="decompose-total">已分解计划种植面积：<b>{{ decomposedTotal }}</b> 万亩 <el-tag type="info">允许与计划面积存在差异</el-tag></div>
       </template>
-      <template #footer><div class="dialog-footer"><span class="footer-tip">请根据实际情况确认每块地的落实面积后再保存</span><div><el-button @click="decomposeVisible=false">取消</el-button><el-button type="primary" @click="saveDecompose">{{ userStore.role?.code === 'province' ? '保存并下达' : userStore.role?.code === 'county' ? '保存主体和地块任务' : '保存修改' }}</el-button></div></div></template>
+      <template #footer><div class="dialog-footer"><span class="footer-tip">{{ userStore.role?.code === 'town' ? '请根据实际情况确认每块地的落实面积后再保存' : '请根据实际情况确认分解面积后再保存' }}</span><div><el-button @click="decomposeVisible=false">取消</el-button><el-button type="primary" @click="saveDecompose">{{ userStore.role?.code === 'province' ? '保存并下达' : userStore.role?.code === 'county' ? '保存并下达乡镇任务' : userStore.role?.code === 'town' ? '保存主体和地块任务' : '保存修改' }}</el-button></div></div></template>
     </el-dialog>
   </div>
 </template>
@@ -78,7 +78,7 @@ import { listCities } from '@/mock/common/regions'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()
-const quarters = ['第一季度', '第二季度', '第三季度', '第四季度']
+const quarters = ['全年', '第一季度', '第二季度', '第三季度', '第四季度']
 const cropOptions = ['小麦', '水稻', '玉米', '大豆', '油菜', '高粱', '薯类', '其他']
 const years = [2026, 2025, 2024]
 const rows = ref([])
@@ -91,9 +91,10 @@ const cityRows = ref([])
 const subjectRows = ref([])
 const form = reactive({ id: '', year: '2026', quarter: '第一季度', area: 0, cropTypes: [], cropType: '', description: '', attachmentName: '' })
 const decomposedTotal = computed(() => cityRows.value.reduce((sum, item) => sum + Number(item.targetArea || 0), 0))
-const taskTitle = computed(() => userStore.role?.code === 'province' ? '任务分解到各市' : userStore.role?.code === 'city' ? '市级分解到各县' : '县级分解到种植大户和地块')
+const taskTitle = computed(() => userStore.role?.code === 'province' ? '任务分解到各市' : userStore.role?.code === 'city' ? '市级分解到各县' : userStore.role?.code === 'county' ? '县级分解到各乡镇' : '乡镇分解到种植大户和地块')
 const taskRegionField = computed(() => userStore.role?.code === 'province' ? 'cityName' : userStore.role?.code === 'city' ? 'countyName' : 'townName')
 const taskRegionLabel = computed(() => userStore.role?.code === 'province' ? '市级行政区' : userStore.role?.code === 'city' ? '县级行政区' : '乡镇行政区')
+const taskAreaLabel = computed(() => userStore.role?.code === 'province' ? '计划种植面积（万亩）' : userStore.role?.code === 'city' ? '实际种植面积（万亩）' : '乡镇任务面积（万亩）')
 const subjectTotal = computed(() => subjectRows.value.reduce((sum, item) => sum + Number(item.targetArea || 0), 0))
 const syncPlotRows = (row) => {
   const selected = row.plotIds || []
@@ -152,7 +153,7 @@ const attachFile = async (row, file) => {
 }
 const showDetail = (row) => { current.value = row; cityRows.value = []; subjectRows.value = []; detailVisible.value = true; loadCityRows(row) }
 const loadCityRows = async (row) => {
-  if (userStore.role?.code === 'county') {
+  if (userStore.role?.code === 'town') {
     subjectRows.value = await fetchPlantingPlanSubjectTasks(row.id, userStore.role)
     return
   }
@@ -171,13 +172,13 @@ const generateFactors = async () => {
   cityRows.value = result
 }
 const saveDecompose = async () => {
-  if (userStore.role?.code === 'county') {
+  if (userStore.role?.code === 'town') {
     const result = await savePlantingPlanSubjectTasks(current.value.id, subjectRows.value, userStore.role)
     if (!result.success) return ElMessage.error(result.message)
     subjectRows.value = result.rows
     decomposeVisible.value = false
     detailVisible.value = true
-    ElMessage.success('已将市级任务分解到种植大户和地块')
+    ElMessage.success('已将县级任务分解到种植大户和地块')
     return
   }
   const result = await savePlantingPlanCityTasks(current.value.id, cityRows.value, userStore.role)
@@ -186,7 +187,7 @@ const saveDecompose = async () => {
   current.value.status = result.rows[0]?.status || current.value.status
   decomposeVisible.value = false
   detailVisible.value = true
-  ElMessage.success(userStore.role?.code === 'province' ? '任务已分解下达到各市' : '计划修改已保存')
+  ElMessage.success(userStore.role?.code === 'province' ? '任务已分解下达到各市' : userStore.role?.code === 'county' ? '任务已分解下达到本县各乡镇' : '计划修改已保存')
   await load()
 }
 const submit = async (row) => {

@@ -8,7 +8,7 @@
         <article v-for="item in records" :key="item.id" class="application-card">
           <div class="card-head"><b>{{ item.storageSubjectName || '未选择收储主体' }}</b><el-tag size="small" :type="statusType(item.status)">{{ statusName(item.status) }}</el-tag></div>
           <small>{{ item.id }}</small><p>{{ item.year }} 年 · {{ item.plotDetails?.length || 0 }} 块地 · {{ Number(item.area || 0).toFixed(1) }} 亩</p><p>预计产量 {{ Number(item.expectedYield || 0).toFixed(1) }} 吨</p><p v-if="item.filedNo">备案编号 {{ item.filedNo }}</p>
-          <div class="record-actions"><el-button link type="primary" @click="edit(item)">{{ ['draft','returned'].includes(item.status) && isOrdinaryOwner(item,userStore.role) ? item.status === 'returned' ? '补正重提' : '继续填写' : '查看申报' }}</el-button><el-button v-if="item.status==='filed'" link type="primary" @click="router.push({path:'/sil/fence',query:{id:item.id}})">查看围栏</el-button></div>
+          <div class="record-actions"><el-button link type="primary" @click="edit(item)">{{ ['draft','returned'].includes(item.status) && isOrdinaryOwner(item,userStore.role) ? item.status === 'returned' ? '补正重提' : '继续填写' : canFill(item) ? '补齐信息' : '查看申报' }}</el-button><el-button v-if="item.status==='filed'" link type="primary" @click="router.push({path:'/sil/fence',query:{id:item.id}})">查看围栏</el-button></div>
         </article>
         <el-empty v-if="!loading && !records.length" description="暂无普通收储申报" :image-size="65"/>
       </div>
@@ -32,6 +32,7 @@ const statusType=s=>({filed:'success',pending:'warning',returned:'warning',rejec
 async function showRecords(){tab.value='records';loading.value=true;try{records.value=await fetchOrdinaryApplications(userStore.role)}catch{ElMessage.error('申报记录加载失败，请重试')}finally{loading.value=false}}
 function newApplication(){editingId.value='';formKey.value++;tab.value='form'}
 function edit(item){editingId.value=item.id;tab.value='form'}
+function canFill(item){return ['pending','filed'].includes(item.status)&&isOrdinaryOwner(item,userStore.role)}
 onMounted(()=>{if(route.query.id){editingId.value=String(route.query.id);tab.value='form'}else if(route.query.new){newApplication()}else showRecords()})
 watch(()=>userStore.role?.code,()=>{editingId.value='';showRecords()})
 watch(()=>[route.query.id,route.query.new],()=>{if(route.query.id){editingId.value=String(route.query.id);tab.value='form'}else if(route.query.new){newApplication()}})

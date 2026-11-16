@@ -10,32 +10,35 @@ function seededRandom(seed) {
   }
 }
 
-// 种植主体（演示数据，SUB-0001 为演示主角陈勇的合作社）
+// 种植主体（演示数据，SUB-0001 为演示主角陈勇的合作社；主体挂接到具体乡镇，县级及以上按区划前缀可见）
 export const GROW_SUBJECTS = [
-  { id: 'SUB-0001', name: '太和县丰乐种植专业合作社', type: 'cooperative', owner: '陈勇', phone: '139****6688', regionCode: '341222', area: 3200 },
-  { id: 'SUB-0002', name: '太和县绿源家庭农场', type: 'family_farm', owner: '王建国', phone: '138****2345', regionCode: '341222', area: 850 },
-  { id: 'SUB-0003', name: '太和县宏发农业发展有限公司', type: 'enterprise', owner: '李宏', phone: '137****9012', regionCode: '341222', area: 2100 },
+  { id: 'SUB-0001', name: '太和县丰乐种植专业合作社', type: 'cooperative', owner: '陈勇', phone: '139****6688', regionCode: '341222104', area: 3200 },
+  { id: 'SUB-0002', name: '太和县绿源家庭农场', type: 'family_farm', owner: '王建国', phone: '138****2345', regionCode: '341222103', area: 850 },
+  { id: 'SUB-0003', name: '太和县宏发农业发展有限公司', type: 'enterprise', owner: '李宏', phone: '137****9012', regionCode: '341222108', area: 2100 },
   { id: 'SUB-0004', name: '旧县镇赵多种植大户', type: 'big_household', owner: '赵多', phone: '136****3456', regionCode: '341222104', area: 420 },
   { id: 'SUB-0005', name: '旧县镇田乐家庭农场', type: 'family_farm', owner: '田乐', phone: '135****7890', regionCode: '341222104', area: 380 },
   { id: 'SUB-0006', name: '太和县税镇镇兴农合作社', type: 'cooperative', owner: '孙兴', phone: '139****1122', regionCode: '341222108', area: 1560 },
-  { id: 'SUB-0007', name: '涡阳县丰收种植合作社', type: 'cooperative', owner: '马丰', phone: '138****5566', regionCode: '341622', area: 2800 },
-  { id: 'SUB-0008', name: '涡阳县刘桥家庭农场', type: 'family_farm', owner: '刘桥', phone: '137****8899', regionCode: '341622', area: 620 },
-  { id: 'SUB-0009', name: '肥西县三河现代农业公司', type: 'enterprise', owner: '张三河', phone: '136****4477', regionCode: '340123', area: 3500 },
-  { id: 'SUB-0010', name: '肥西县严店种粮大户集群', type: 'big_household', owner: '严店', phone: '135****2233', regionCode: '340123', area: 980 },
-  { id: 'SUB-0011', name: '长丰县下塘龙虾稻田农场', type: 'family_farm', owner: '王塘', phone: '139****9911', regionCode: '340121', area: 760 },
-  { id: 'SUB-0012', name: '长丰县水湖草莓粮经合作社', type: 'cooperative', owner: '李水湖', phone: '138****3344', regionCode: '340121', area: 1200 }
+  { id: 'SUB-0007', name: '涡阳县丰收种植合作社', type: 'cooperative', owner: '马丰', phone: '138****5566', regionCode: '341622105', area: 2800 },
+  { id: 'SUB-0008', name: '涡阳县刘桥家庭农场', type: 'family_farm', owner: '刘桥', phone: '137****8899', regionCode: '341622201', area: 620 },
+  { id: 'SUB-0009', name: '肥西县三河现代农业公司', type: 'enterprise', owner: '张三河', phone: '136****4477', regionCode: '340123101', area: 3500 },
+  { id: 'SUB-0010', name: '肥西县严店种粮大户集群', type: 'big_household', owner: '严店', phone: '135****2233', regionCode: '340123201', area: 980 },
+  { id: 'SUB-0011', name: '长丰县下塘龙虾稻田农场', type: 'family_farm', owner: '王塘', phone: '139****9911', regionCode: '340121101', area: 760 },
+  { id: 'SUB-0012', name: '长丰县水湖草莓粮经合作社', type: 'cooperative', owner: '李水湖', phone: '138****3344', regionCode: '340121201', area: 1200 }
 ]
 
 export const SUBJECT_MAP = Object.fromEntries(GROW_SUBJECTS.map((s) => [s.id, s]))
 
-// 县中心点（用于生成地块）
+// 县/乡镇中心点（用于生成地块）
 const COUNTY_SEEDS = {
-  '341222': { center: [115.622, 33.16], name: '太和县' },
   '341222104': { center: [115.544, 33.148], name: '旧县镇' },
+  '341222103': { center: [115.532, 33.074], name: '大新镇' },
   '341222108': { center: [115.451, 33.196], name: '税镇镇' },
-  '341622': { center: [116.216, 33.493], name: '涡阳县' },
-  '340123': { center: [116.854, 31.708], name: '肥西县' },
-  '340121': { center: [117.167, 32.479], name: '长丰县' }
+  '341622105': { center: [116.102, 33.569], name: '义门镇' },
+  '341622201': { center: [116.236, 33.512], name: '涡阳城关镇' },
+  '340123101': { center: [117.251, 31.512], name: '三河镇' },
+  '340123201': { center: [116.832, 31.726], name: '肥西城关镇' },
+  '340121101': { center: [117.148, 32.372], name: '下塘镇' },
+  '340121201': { center: [117.167, 32.479], name: '长丰城关镇' }
 }
 
 const CROP_POOL = ['wheat', 'wheat', 'wheat', 'corn', 'corn', 'rice', 'soybean', 'silage_corn']

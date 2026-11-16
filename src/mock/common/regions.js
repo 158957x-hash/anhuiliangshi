@@ -54,7 +54,7 @@ const COUNTY_MAP = {
   ]
 }
 
-// 乡镇（仅细化太和县旧县镇片区，用于乡镇角色演示）
+// 乡镇（太和县为真实乡镇数据，用于乡镇角色演示）
 const TOWNS = {
   '341222': [
     { code: '341222104', name: '旧县镇', center: [115.544, 33.148] },
@@ -64,6 +64,31 @@ const TOWNS = {
     { code: '341222113', name: '原墙镇', center: [115.782, 33.218] }
   ]
 }
+
+// 其余代表县生成演示乡镇（首个乡镇沿用既有 mock 引用的编码与名称）
+const NAMED_FIRST_TOWNS = {
+  '340123': { code: '340123101', name: '三河镇', center: [117.251, 31.512] },
+  '340121': { code: '340121101', name: '下塘镇', center: [117.148, 32.372] },
+  '341622': { code: '341622105', name: '义门镇', center: [116.102, 33.569] }
+}
+const TOWN_NAME_POOL = ['城关镇', '东城镇', '河西镇', '临湖镇', '双桥镇']
+const ALL_TOWNS = {}
+Object.values(COUNTY_MAP).flat().forEach((county) => {
+  if (TOWNS[county.code]?.length) {
+    ALL_TOWNS[county.code] = TOWNS[county.code]
+    return
+  }
+  const first = NAMED_FIRST_TOWNS[county.code]
+  const names = first ? [first, ...TOWN_NAME_POOL] : TOWN_NAME_POOL
+  ALL_TOWNS[county.code] = names.map((town, index) => {
+    if (index === 0 && first) return first
+    return {
+      code: `${county.code}${String(201 + index)}`,
+      name: town,
+      center: [county.center[0] + (index - 2) * 0.022, county.center[1] + (index - 2) * 0.016]
+    }
+  })
+})
 
 // 构建完整区划树
 export const REGION_TREE = [
@@ -80,7 +105,7 @@ export const REGION_TREE = [
         name: c.name,
         center: c.center,
         hasGeo: c.hasGeo || false,
-        children: (TOWNS[c.code] || []).map((t) => ({
+        children: (ALL_TOWNS[c.code] || []).map((t) => ({
           code: t.code,
           name: t.name,
           center: t.center,
@@ -104,6 +129,8 @@ export const REGION_MAP = flatMap
 
 export const getRegion = (code) => flatMap[code]
 export const listCities = () => CITIES.map((c) => ({ ...c, center: CITY_CENTER[c.code] }))
+// 列出某县下辖乡镇
+export const listTowns = (countyCode) => (getRegion(countyCode)?.children || []).map((t) => ({ code: t.code, name: t.name, center: t.center }))
 
 // 判断 code 是否在 regionCode 范围内（前缀匹配，同级行政区划编码规则）
 export const inRegion = (dataRegionCode, userRegionCode) => {

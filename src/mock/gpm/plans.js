@@ -3,6 +3,7 @@ import { getRegion, listCities } from '@/mock/common/regions'
 import { GROW_SUBJECTS, PLOTS } from '@/mock/geo/plot-gen'
 
 export const PLANTING_PLAN_LIST = [
+  { id: 'PLANT-2026-FULL', year: 2026, quarter: '全年', area: 10920, cropType: '小麦、水稻、玉米、大豆', description: '2026年全年粮食生产总体安排，统筹四季种植结构与面积任务，作为年度总纲逐级分解下达。', attachmentName: '2026年全年粮食生产种植计划.pdf', status: '已分解' },
   { id: 'PLANT-2026-Q1', year: 2026, quarter: '第一季度', area: 2184, cropType: '小麦', description: '稳定夏粮播种面积，重点保障小麦生产任务落实。', attachmentName: '2026年第一季度小麦种植计划.pdf', status: '已分解' },
   { id: 'PLANT-2026-Q2', year: 2026, quarter: '第二季度', area: 3822, cropType: '水稻', description: '统筹早中晚稻生产布局，推进水稻绿色高质高效生产。', attachmentName: '2026年第二季度水稻种植计划.docx', status: '已分解' },
   { id: 'PLANT-2026-Q3', year: 2026, quarter: '第三季度', area: 3276, cropType: '玉米、大豆', description: '落实玉米大豆带状复合种植，稳定秋粮生产面积。', attachmentName: '', status: '待分解' },
@@ -136,6 +137,8 @@ const ALL_TOWN_PLANS = COUNTY_PLANS.flatMap((county) => {
 const SOWING_TOWN_PLANS = [...TOWN_PLANS, ...ALL_TOWN_PLANS]
 
 const sowingCropKeys = ['wheat', 'rice', 'corn', 'soybean']
+// 按作物农时推断进度所属季度（演示数据用）
+const cropQuarter = { wheat: '第一季度', rice: '第二季度', corn: '第三季度', soybean: '第三季度' }
 const sowingRowsFromPlans = (plans, level) => plans.flatMap((plan) => sowingCropKeys.map((crop, index) => {
   const planArea = Number(plan[crop] || 0)
   const sownArea = Number((planArea * (0.58 + ((index + String(plan.id).length) % 25) / 100)).toFixed(1))
@@ -144,6 +147,7 @@ const sowingRowsFromPlans = (plans, level) => plans.flatMap((plan) => sowingCrop
   return {
     id: `SOW-${level}-${regionCode}-${crop}`,
     year: plan.year,
+    quarter: cropQuarter[crop] || '第一季度',
     level,
     regionCode,
     regionName,
@@ -159,7 +163,7 @@ const sowingRowsFromPlans = (plans, level) => plans.flatMap((plan) => sowingCrop
 
 const sowingSubjectRows = () => GROW_SUBJECTS.flatMap((subject, subjectIndex) => {
   const townPlans = SOWING_TOWN_PLANS.filter(plan => plan.countyCode === subject.regionCode || plan.townCode === subject.regionCode)
-  const countyPlan = COUNTY_PLANS.find(plan => plan.countyCode === subject.regionCode)
+  const countyPlan = COUNTY_PLANS.find(plan => plan.countyCode === String(subject.regionCode || '').slice(0, 6))
   const townPlan = townPlans[subjectIndex % Math.max(townPlans.length, 1)] || (countyPlan ? {
     ...countyPlan,
     townCode: countyPlan.countyCode,
@@ -411,4 +415,21 @@ export const RESCUE_ACTIONS = [
   { id: 'RA-002', disasterId: 'DIS-001', phase: '灾中处置', unit: '旧县镇人民政府', action: '组织排涝和扶苗培土', time: '2026-08-15 09:00', result: '排涝1850亩' },
   { id: 'RA-003', disasterId: 'DIS-001', phase: '灾后救助', unit: '太和县财政局', action: '核灾定损，启动政策性农业保险理赔', time: '2026-08-20 10:00', result: '理赔到账58万元' },
   { id: 'RA-004', disasterId: 'DIS-002', phase: '灾中处置', unit: '涡阳县农业农村局', action: '调配移动泵站开展农田排水', time: '2026-07-28 14:00', result: '完成排水2100亩' }
+]
+
+// ===== 播种/收获进度逐级上报单（主体免审 → 乡镇上报 → 县审核 → 县上报 → 市审核 → 市上报 → 省审核）=====
+// 每条记录代表某地区某周期一次向上级的上报；汇总面积不落库，由 API 按下级明细实时聚合。
+export const PROGRESS_REPORT_ORDERS = [
+  // 第三季度 播种：太和县各乡镇上报单（覆盖不同审核状态供演示）
+  { id: 'PRO-SOW-2026-Q3-341222104', year: 2026, quarter: '第三季度', type: 'sow', level: 'town', regionCode: '341222104', regionName: '旧县镇', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', status: '审核通过', reporter: '旧县镇人民政府', reportedAt: '2026-10-09', auditor: '太和县农业农村局', auditedAt: '2026-10-10', auditOpinion: '数据与主体上报明细一致，同意通过。', timeline: [{ time: '2026-10-09 10:20', operator: '旧县镇人民政府', action: '乡镇向县级上报第三季度播种进度' }, { time: '2026-10-10 09:15', operator: '太和县农业农村局', action: '县级审核通过' }] },
+  { id: 'PRO-SOW-2026-Q3-341222103', year: 2026, quarter: '第三季度', type: 'sow', level: 'town', regionCode: '341222103', regionName: '大新镇', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', status: '待审核', reporter: '大新镇人民政府', reportedAt: '2026-11-12', auditor: '', auditedAt: '', auditOpinion: '', timeline: [{ time: '2026-11-12 15:40', operator: '大新镇人民政府', action: '乡镇向县级上报第三季度播种进度' }] },
+  { id: 'PRO-SOW-2026-Q3-341222108', year: 2026, quarter: '第三季度', type: 'sow', level: 'town', regionCode: '341222108', regionName: '税镇镇', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', status: '已驳回', reporter: '税镇镇人民政府', reportedAt: '2026-11-08', auditor: '太和县农业农村局', auditedAt: '2026-11-09', auditOpinion: '已播面积与主体上报明细汇总不一致，请核实后重新上报。', timeline: [{ time: '2026-11-08 11:05', operator: '税镇镇人民政府', action: '乡镇向县级上报第三季度播种进度' }, { time: '2026-11-09 09:30', operator: '太和县农业农村局', action: '县级审核驳回' }] },
+  // 县级上报单（乡镇单通过后由县发起）
+  { id: 'PRO-SOW-2026-Q3-341222', year: 2026, quarter: '第三季度', type: 'sow', level: 'county', regionCode: '341222', regionName: '太和县', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', status: '待审核', reporter: '太和县农业农村局', reportedAt: '2026-11-10', auditor: '', auditedAt: '', auditOpinion: '', timeline: [{ time: '2026-11-10 10:00', operator: '太和县农业农村局', action: '县级向市级上报第三季度播种进度' }] },
+  // 市级上报单
+  { id: 'PRO-SOW-2026-Q3-341200', year: 2026, quarter: '第三季度', type: 'sow', level: 'city', regionCode: '341200', regionName: '阜阳市', cityCode: '341200', cityName: '阜阳市', countyCode: '', countyName: '', status: '待审核', reporter: '阜阳市农业农村局', reportedAt: '2026-11-11', auditor: '', auditedAt: '', auditOpinion: '', timeline: [{ time: '2026-11-11 09:20', operator: '阜阳市农业农村局', action: '市级向省级上报第三季度播种进度' }] },
+  // 第三季度 收获：一组乡镇单演示
+  { id: 'PRO-HARVEST-2026-Q3-341222104', year: 2026, quarter: '第三季度', type: 'harvest', level: 'town', regionCode: '341222104', regionName: '旧县镇', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', status: '审核通过', reporter: '旧县镇人民政府', reportedAt: '2026-10-15', auditor: '太和县农业农村局', auditedAt: '2026-10-16', auditOpinion: '收获进度正常，同意通过。', timeline: [{ time: '2026-10-15 14:10', operator: '旧县镇人民政府', action: '乡镇向县级上报第三季度收获进度' }, { time: '2026-10-16 09:00', operator: '太和县农业农村局', action: '县级审核通过' }] },
+  { id: 'PRO-HARVEST-2026-Q3-341222112', year: 2026, quarter: '第三季度', type: 'harvest', level: 'town', regionCode: '341222112', regionName: '皮条孙镇', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', status: '待审核', reporter: '皮条孙镇人民政府', reportedAt: '2026-11-13', auditor: '', auditedAt: '', auditOpinion: '', timeline: [{ time: '2026-11-13 16:25', operator: '皮条孙镇人民政府', action: '乡镇向县级上报第三季度收获进度' }] },
+  { id: 'PRO-HARVEST-2026-Q3-341222', year: 2026, quarter: '第三季度', type: 'harvest', level: 'county', regionCode: '341222', regionName: '太和县', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', status: '审核通过', reporter: '太和县农业农村局', reportedAt: '2026-10-18', auditor: '阜阳市农业农村局', auditedAt: '2026-10-19', auditOpinion: '同意通过。', timeline: [{ time: '2026-10-18 10:30', operator: '太和县农业农村局', action: '县级向市级上报第三季度收获进度' }, { time: '2026-10-19 11:00', operator: '阜阳市农业农村局', action: '市级审核通过' }] }
 ]

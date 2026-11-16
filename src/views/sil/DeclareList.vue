@@ -20,7 +20,7 @@
       <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon class="load-error"><template #default><el-button size="small" @click="load">重新加载</el-button></template></el-alert>
       <el-table v-loading="loading" :data="rows" stripe border class="application-table">
         <el-table-column prop="id" label="申报编号" min-width="195" show-overflow-tooltip />
-        <el-table-column prop="storageSubjectName" label="收储主体" min-width="210" show-overflow-tooltip />
+        <el-table-column label="收储主体" min-width="210" show-overflow-tooltip><template #default="{ row }">{{ row.storageSubjectName || '未确定（待补齐）' }}</template></el-table-column>
         <el-table-column label="申报单位 / 操作人" min-width="210"><template #default="{ row }"><span class="cell-main">{{ row.applicant?.unit || '—' }}</span><small class="cell-sub">{{ row.applicant?.name || row.applicantContact || '—' }}</small></template></el-table-column>
         <el-table-column prop="year" label="年度" width="85" />
         <el-table-column label="地块数" width="90" align="right"><template #default="{ row }">{{ row.plotDetails?.length || 0 }}</template></el-table-column>
@@ -29,13 +29,13 @@
         <el-table-column label="预计收储重量（吨）" width="160" align="right"><template #default="{ row }">{{ row.weight === null || row.weight === undefined || row.weight === '' ? '未填' : Number(row.weight).toFixed(1) }}</template></el-table-column>
         <el-table-column label="状态" width="110"><template #default="{ row }"><el-tag :type="statusType(row.status)" size="small">{{ statusLabels[row.status] || row.status }}</el-tag></template></el-table-column>
         <el-table-column label="提交时间" min-width="165"><template #default="{ row }">{{ row.submittedAt || '尚未提交' }}</template></el-table-column>
-        <el-table-column label="操作" width="160" fixed="right"><template #default="{ row }"><el-button link type="primary" @click="openDetail(row)">查看详情</el-button><el-button v-if="canEdit(row)" link type="primary" @click="edit(row)">{{ row.status === 'returned' ? '补正重提' : '继续填写' }}</el-button></template></el-table-column>
+        <el-table-column label="操作" width="210" fixed="right"><template #default="{ row }"><el-button link type="primary" @click="openDetail(row)">查看详情</el-button><el-button v-if="canEdit(row)" link type="primary" @click="edit(row)">{{ row.status === 'returned' ? '补正重提' : '继续填写' }}</el-button><el-button v-if="canFill(row)" link type="primary" @click="edit(row)">补齐信息</el-button></template></el-table-column>
         <template #empty><el-empty :description="loading ? '正在加载申报记录' : '暂无匹配的收储申报'" /></template>
       </el-table>
     </section>
     <el-dialog v-model="detailVisible" title="青贮饲料作物收储申报详情" width="min(1180px, 96vw)" destroy-on-close class="ordinary-dialog">
       <div class="detail-scroll"><OrdinaryDetail v-if="current" :application="current" /></div>
-      <template #footer><el-button @click="detailVisible = false">关闭</el-button><el-button v-if="current && canEdit(current)" type="primary" @click="edit(current)">{{ current.status === 'returned' ? '补正重提' : '继续填写' }}</el-button></template>
+      <template #footer><el-button @click="detailVisible = false">关闭</el-button><el-button v-if="current && canEdit(current)" type="primary" @click="edit(current)">{{ current.status === 'returned' ? '补正重提' : '继续填写' }}</el-button><el-button v-if="current && canFill(current)" type="primary" @click="edit(current)">补齐信息</el-button></template>
     </el-dialog>
   </div>
 </template>
@@ -62,6 +62,7 @@ const yieldOf = row => Number(row.expectedYield ?? (row.plotDetails || []).reduc
 const totalArea = computed(() => rows.value.reduce((sum, row) => sum + areaOf(row), 0))
 const totalYield = computed(() => rows.value.reduce((sum, row) => sum + yieldOf(row), 0))
 const canEdit = row => canSubmitOrdinary(userStore.role) && ['draft', 'returned'].includes(row.status) && row.applicant?.code === userStore.role?.code && row.applicant?.name === userStore.role?.name
+const canFill = row => canSubmitOrdinary(userStore.role) && ['pending', 'filed'].includes(row.status) && row.applicant?.code === userStore.role?.code && row.applicant?.name === userStore.role?.name
 const load = async () => { loading.value = true; error.value = ''; try { sourceRows.value = await fetchOrdinaryApplications(userStore.role); if(route.query.id){const row=sourceRows.value.find(item=>item.id===route.query.id);if(row)openDetail(row);else error.value='该申报不存在或当前身份无权查看'} } catch { error.value = '申报记录加载失败，请重试。' } finally { loading.value = false } }
 const resetFilters = () => { Object.assign(filters, { keyword: '', year: '', status: '' }); load() }
 const openDetail = row => { current.value = row; detailVisible.value = true }

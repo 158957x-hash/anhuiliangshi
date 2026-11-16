@@ -22,7 +22,7 @@ export const INDOOR_BATCHES = [
     suspectCount: 3,
     outputSpots: [
       { spotId: 'SP-IB01-01', regionCode: '341222', regionName: '太和县', center: [115.622, 33.16], areaMu: 85, desc: '计划种植小麦但影像显示无耕种迹象，疑似计划未落实' },
-      { spotId: 'SP-IB01-02', regionCode: '341622', regionName: '涡阳县', center: [116.216, 33.493], areaMu: 120, desc: '永久基本农田上疑似种植苗木（非粮化）' },
+      { spotId: 'SP-IB01-02', regionCode: '341622', regionName: '涡阳县', center: [116.216, 33.493], areaMu: 120, desc: '永久基本农田上疑似种植苗木' },
       { spotId: 'SP-IB01-03', regionCode: '341222', regionName: '太和县', center: [115.701, 33.201], areaMu: 45, desc: '疑似撂荒，连续两季无作物' }
     ],
     verifyStatus: '通过',
@@ -61,7 +61,7 @@ export const INDOOR_BATCHES = [
     suspectCount: 2,
     outputSpots: [
       { spotId: 'SP-IB02-01', regionCode: '341622', regionName: '涡阳县', center: [116.25, 33.52], areaMu: 60, desc: '疑似计划未落实' },
-      { spotId: 'SP-IB02-02', regionCode: '341622', regionName: '涡阳县', center: [116.18, 33.45], areaMu: 95, desc: '疑似非粮化' }
+      { spotId: 'SP-IB02-02', regionCode: '341622', regionName: '涡阳县', center: [116.18, 33.45], areaMu: 95, desc: '疑似占用耕地种植苗木' }
     ],
     verifyStatus: '通过',
     verifier: '孙敏（演示）',
@@ -167,7 +167,7 @@ export const INDOOR_BATCHES = [
     suspectCount: 2,
     outputSpots: [
       { spotId: 'SP-IB05-01', regionCode: '341302', regionName: '埇桥区', center: [117.02, 33.63], areaMu: 110, desc: '计划种植小麦但影像显示无耕种迹象，疑似计划未落实' },
-      { spotId: 'SP-IB05-02', regionCode: '341302', regionName: '埇桥区', center: [117.08, 33.58], areaMu: 55, desc: '疑似非粮化，影像显示连片苗木' }
+      { spotId: 'SP-IB05-02', regionCode: '341302', regionName: '埇桥区', center: [117.08, 33.58], areaMu: 55, desc: '疑似占用耕地种植苗木，影像显示连片苗木' }
     ],
     verifyStatus: '待核验',
     verifier: '',

@@ -6,7 +6,7 @@
         <el-form-item label="普通收储申报审核期限（天）"><el-input-number v-model="config.storageDays" :min="1" :max="365" :step="1" :precision="0" /><div class="field-hint">适用于整份青贮饲料作物收储申报。</div></el-form-item>
         <el-form-item label="首次计时起点"><el-tag>整单发起时间</el-tag></el-form-item>
         <el-form-item label="补正重提计时"><el-tag type="warning">以本次重新提交时间重新计算</el-tag></el-form-item>
-        <el-form-item label="受灾作物补充收储上报"><el-tag type="success">保留三名专家签字后的免审流程</el-tag></el-form-item>
+        <el-form-item label="受灾作物补充收储上报"><el-tag type="success">专家会签非必填，上报后均免审生效</el-tag></el-form-item>
       </el-form>
       <div class="actions"><el-button @click="reset">恢复默认</el-button><el-button type="primary" @click="save">保存配置</el-button></div>
     </section>

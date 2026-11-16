@@ -30,8 +30,8 @@ const buildEvents = () => {
 
   // --- 待派发（3条，供演示派发流程）---
   events.push({
-    id: 'EVT-2026-0012', code: 'FSR-2026-0012', type: 'baomai', source: 'remote', risk: 'high',
-    regionCode: '341222104', regionName: '太和县旧县镇', spot: mkSpotFromPlot(taihePlots[3] || taihePlots[0], 'baomai', 'high'),
+    id: 'EVT-2026-0012', code: 'FSR-2026-0012', type: 'geqing', source: 'remote', risk: 'high',
+    regionCode: '341222104', regionName: '太和县旧县镇', spot: mkSpotFromPlot(taihePlots[3] || taihePlots[0], 'geqing', 'high'),
     subjectId: taihePlots[3]?.subjectId || 'SUB-0004', subjectName: GROW_SUBJECTS.find((s) => s.id === (taihePlots[3]?.subjectId))?.name || '旧县镇赵多种植大户',
     foundTime: '2026-09-28', desc: '遥感影像比对发现疑似毁青收贮行为，5月小麦灌浆期地块出现大面积收割痕迹',
     status: 'pending', deadline: null, trail: [
@@ -49,8 +49,8 @@ const buildEvents = () => {
     ]
   })
   events.push({
-    id: 'EVT-2026-0014', code: 'FSR-2026-0014', type: 'feilianghua', source: 'snapshot', risk: null,
-    regionCode: '341622', regionName: '涡阳县', spot: mkStandaloneSpot('341622', offsetPoint([116.216, 33.493], -8, 5), 'feilianghua', 'high', 560),
+    id: 'EVT-2026-0014', code: 'FSR-2026-0014', type: 'qita', source: 'snapshot', risk: null,
+    regionCode: '341622', regionName: '涡阳县', spot: mkStandaloneSpot('341622', offsetPoint([116.216, 33.493], -8, 5), 'qita', 'high', 560),
     subjectId: null, subjectName: '待核实',
     foundTime: '2026-09-26', desc: '群众随手拍举报：永久基本农田疑似开挖鱼塘，改变耕地用途',
     status: 'to_review', deadline: null, trail: [
@@ -60,8 +60,8 @@ const buildEvents = () => {
 
   // --- 待核查（已派发任务，3条）---
   events.push({
-    id: 'EVT-2026-0011', code: 'FSR-2026-0011', type: 'baomai', source: 'drone', risk: 'high',
-    regionCode: '341222', regionName: '太和县', spot: mkSpotFromPlot(taihePlots[8] || taihePlots[1], 'baomai', 'high'),
+    id: 'EVT-2026-0011', code: 'FSR-2026-0011', type: 'geqing', source: 'drone', risk: 'high',
+    regionCode: '341222', regionName: '太和县', spot: mkSpotFromPlot(taihePlots[8] || taihePlots[1], 'geqing', 'high'),
     subjectId: taihePlots[8]?.subjectId || 'SUB-0003', subjectName: '太和县宏发农业发展有限公司',
     foundTime: '2026-09-25', desc: '无人机巡查识别：未备案地块疑似青贮收割行为，航线比对后生成本事件',
     status: 'checking', deadline: '2026-10-02', assignee: '旧县镇人民政府（核查员：赵磊）', taskId: 'TSK-2026-0011',
@@ -71,8 +71,8 @@ const buildEvents = () => {
     ]
   })
   events.push({
-    id: 'EVT-2026-0010', code: 'FSR-2026-0010', type: 'zhangshi', source: 'remote', risk: 'medium',
-    regionCode: '340123', regionName: '肥西县', spot: mkStandaloneSpot('340123', offsetPoint([116.854, 31.708], 5, 4), 'zhangshi', 'medium', 410),
+    id: 'EVT-2026-0010', code: 'FSR-2026-0010', type: 'qita', source: 'remote', risk: 'medium',
+    regionCode: '340123', regionName: '肥西县', spot: mkStandaloneSpot('340123', offsetPoint([116.854, 31.708], 5, 4), 'qita', 'medium', 410),
     subjectId: 'SUB-0009', subjectName: '肥西县三河现代农业公司',
     foundTime: '2026-09-24', desc: '作物长势监测发现水稻长势明显偏差，NDVI低于常年同期15%',
     status: 'checking', deadline: '2026-09-30', assignee: '肥西县农业农村局（核查员：周平）', taskId: 'TSK-2026-0010',
@@ -95,10 +95,10 @@ const buildEvents = () => {
 
   // --- 待审核（已核查上报，2条）---
   events.push({
-    id: 'EVT-2026-0008', code: 'FSR-2026-0008', type: 'baomai', source: 'remote', risk: 'high',
-    regionCode: '341222104', regionName: '太和县旧县镇', spot: mkSpotFromPlot(taihePlots[5] || taihePlots[2], 'baomai', 'high'),
+    id: 'EVT-2026-0008', code: 'FSR-2026-0008', type: 'geqing', source: 'remote', risk: 'high',
+    regionCode: '341222104', regionName: '太和县旧县镇', spot: mkSpotFromPlot(taihePlots[5] || taihePlots[2], 'geqing', 'high'),
     subjectId: taihePlots[5]?.subjectId || 'SUB-0005', subjectName: '旧县镇田乐家庭农场',
-    foundTime: '2026-09-20', desc: '遥感发现疑似毁麦毁粮图斑',
+    foundTime: '2026-09-20', desc: '遥感发现疑似割青毁粮图斑',
     status: 'reviewing', deadline: '2026-09-28', assignee: '阜阳市农业农村局', taskId: 'TSK-2026-0008',
     checkReport: {
       conclusion: '属实', desc: '经现场核查，该地块存在提前收割青贮行为，未办理青贮备案手续',
@@ -141,10 +141,10 @@ const buildEvents = () => {
 
   // --- 整改中（2条）---
   events.push({
-    id: 'EVT-2026-0006', code: 'FSR-2026-0006', type: 'feilianghua', source: 'remote', risk: 'high',
-    regionCode: '341222', regionName: '太和县', spot: mkStandaloneSpot('341222', offsetPoint([115.622, 33.16], 9, 6), 'feilianghua', 'high', 380),
+    id: 'EVT-2026-0006', code: 'FSR-2026-0006', type: 'qita', source: 'remote', risk: 'high',
+    regionCode: '341222', regionName: '太和县', spot: mkStandaloneSpot('341222', offsetPoint([115.622, 33.16], 9, 6), 'qita', 'high', 380),
     subjectId: 'SUB-0003', subjectName: '太和县宏发农业发展有限公司',
-    foundTime: '2026-09-08', desc: '永久基本农田疑似种植苗木（非粮化）',
+    foundTime: '2026-09-08', desc: '永久基本农田疑似种植苗木',
     status: 'audited', deadline: '2026-10-15', assignee: '太和县农业农村局', taskId: 'TSK-2026-0006',
     riskAuto: 'medium', riskFinal: 'high', riskAdjustReason: '涉及永久基本农田且面积超300亩，按演示规则上调为高风险',
     checkReport: {
@@ -168,10 +168,10 @@ const buildEvents = () => {
     ]
   })
   events.push({
-    id: 'EVT-2026-0005', code: 'FSR-2026-0005', type: 'baomai', source: 'platform', risk: 'high',
-    regionCode: '341622', regionName: '涡阳县', spot: mkStandaloneSpot('341622', offsetPoint([116.216, 33.493], 10, -6), 'baomai', 'high', 260),
+    id: 'EVT-2026-0005', code: 'FSR-2026-0005', type: 'geqing', source: 'platform', risk: 'high',
+    regionCode: '341622', regionName: '涡阳县', spot: mkStandaloneSpot('341622', offsetPoint([116.216, 33.493], 10, -6), 'geqing', 'high', 260),
     subjectId: null, subjectName: '某收储经纪点',
-    foundTime: '2026-09-05', desc: '地方平台推送：未备案青贮收割事件',
+    foundTime: '2026-09-05', desc: '地方平台推送：疑似割青毁粮收储事件',
     status: 'audited', deadline: '2026-10-10', assignee: '涡阳县农业农村局', taskId: 'TSK-2026-0005',
     sources: [{ sourceType: '地方平台推送', sourceSystem: '亳州市粮食安全平台', accessBatchNo: 'JRB-2026-0905-01', serialNo: 'BZ-20260905-0037', receiptStatus: '已受理', receiptNo: 'HZ-20260905-0037', originalEvidence: ['推送报文截图.png', '平台事件详情.pdf'] }],
     checkReport: {
@@ -221,8 +221,8 @@ const buildEvents = () => {
     ]
   })
   events.push({
-    id: 'EVT-2026-0003', code: 'FSR-2026-0003', type: 'zhangshi', source: 'remote', risk: 'low',
-    regionCode: '341622', regionName: '涡阳县', spot: mkStandaloneSpot('341622', offsetPoint([116.216, 33.493], -10, 8), 'zhangshi', 'low', 450),
+    id: 'EVT-2026-0003', code: 'FSR-2026-0003', type: 'qita', source: 'remote', risk: 'low',
+    regionCode: '341622', regionName: '涡阳县', spot: mkStandaloneSpot('341622', offsetPoint([116.216, 33.493], -10, 8), 'qita', 'low', 450),
     subjectId: 'SUB-0007', subjectName: '涡阳县丰收种植合作社',
     foundTime: '2026-08-28', desc: '玉米长势异常，疑似病虫害',
     status: 'recheck', deadline: '2026-10-01', assignee: '亳州市农业农村局', taskId: 'TSK-2026-0003',
@@ -261,12 +261,12 @@ const buildEvents = () => {
 
   // --- 已结案（6条）---
   const closedCases = [
-    { id: 'EVT-2026-0002', type: 'baomai', source: 'remote', risk: 'high', regionCode: '341222', regionName: '太和县', offset: [4, -8], subjectId: 'SUB-0002', subjectName: '太和县绿源家庭农场', desc: '疑似毁麦收贮', found: '2026-05-20', area: 150 },
-    { id: 'EVT-2026-0001', type: 'feilianghua', source: 'remote', risk: 'medium', regionCode: '340121', regionName: '长丰县', offset: [-5, 6], subjectId: 'SUB-0011', subjectName: '长丰县下塘龙虾稻田农场', desc: '耕地疑似建养殖设施', found: '2026-06-12', area: 90 },
+    { id: 'EVT-2026-0002', type: 'geqing', source: 'remote', risk: 'high', regionCode: '341222', regionName: '太和县', offset: [4, -8], subjectId: 'SUB-0002', subjectName: '太和县绿源家庭农场', desc: '疑似割青毁粮收贮', found: '2026-05-20', area: 150 },
+    { id: 'EVT-2026-0001', type: 'qita', source: 'remote', risk: 'medium', regionCode: '340121', regionName: '长丰县', offset: [-5, 6], subjectId: 'SUB-0011', subjectName: '长丰县下塘龙虾稻田农场', desc: '耕地疑似建养殖设施', found: '2026-06-12', area: 90 },
     { id: 'EVT-2026-0019', type: 'piaohuang', source: 'grid', risk: 'low', regionCode: '341222104', regionName: '太和县旧县镇', offset: [7, 7], subjectId: 'SUB-0004', subjectName: '旧县镇赵多种植大户', desc: '网格上报疑似撂荒（实为轮作休耕）', found: '2026-07-02', area: 120 },
-    { id: 'EVT-2026-0016', type: 'zhangshi', source: 'remote', risk: 'medium', regionCode: '340123', regionName: '肥西县', offset: [8, -3], subjectId: 'SUB-0009', subjectName: '肥西县三河现代农业公司', desc: '水稻长势异常（干旱缺水）', found: '2026-07-18', area: 300 },
-    { id: 'EVT-2026-0017', type: 'baomai', source: 'snapshot', risk: 'high', regionCode: '341222', regionName: '太和县', offset: [-4, -7], subjectId: null, subjectName: '某个体收储户', desc: '群众举报夜间毁粮收储', found: '2026-05-28', area: 80 },
-    { id: 'EVT-2026-0018', type: 'feilianghua', source: 'platform', risk: 'medium', regionCode: '341200', regionName: '阜阳市颍东区', offset: [12, 4], subjectId: null, subjectName: '某苗木种植户', desc: '地方平台推送耕地种树', found: '2026-06-25', area: 210 }
+    { id: 'EVT-2026-0016', type: 'qita', source: 'remote', risk: 'medium', regionCode: '340123', regionName: '肥西县', offset: [8, -3], subjectId: 'SUB-0009', subjectName: '肥西县三河现代农业公司', desc: '水稻长势异常（干旱缺水）', found: '2026-07-18', area: 300 },
+    { id: 'EVT-2026-0017', type: 'geqing', source: 'snapshot', risk: 'high', regionCode: '341222', regionName: '太和县', offset: [-4, -7], subjectId: null, subjectName: '某个体收储户', desc: '群众举报夜间毁粮收储', found: '2026-05-28', area: 80 },
+    { id: 'EVT-2026-0018', type: 'qita', source: 'platform', risk: 'medium', regionCode: '341200', regionName: '阜阳市颍东区', offset: [12, 4], subjectId: null, subjectName: '某苗木种植户', desc: '地方平台推送耕地种树', found: '2026-06-25', area: 210 }
   ]
   closedCases.forEach((c, i) => {
     const countyCenter = { '341222': [115.622, 33.16], '341222104': [115.544, 33.148], '340121': [117.167, 32.479], '340123': [116.854, 31.708], '341622': [116.216, 33.493], '341200': [115.82, 32.901] }[c.regionCode]

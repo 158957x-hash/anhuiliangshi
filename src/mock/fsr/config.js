@@ -5,16 +5,14 @@ export const BIZ_CONFIG = {
   sections: {
     eventTypes: {
       name: '事件类型字典',
-      version: 3,
-      effectiveAt: '2026-10-15 09:00',
+      version: 4,
+      effectiveAt: '2026-11-16 09:00',
       updatedBy: '省管理员（演示）',
       approvedStatus: '已生效（演示）',
       value: [
-        { code: 'baomai', name: '毁麦毁粮', demoRiskRule: '面积≥100亩或涉及永久基本农田→高风险', demoDeadline: 7, enabled: true },
+        { code: 'geqing', name: '割青毁粮', demoRiskRule: '面积≥100亩或涉及永久基本农田→高风险', demoDeadline: 7, enabled: true },
         { code: 'piaohuang', name: '耕地撂荒', demoRiskRule: '面积≥300亩→高风险；100—300亩→中风险', demoDeadline: 7, enabled: true },
-        { code: 'feilianghua', name: '非粮化', demoRiskRule: '涉及永久基本农田→高风险', demoDeadline: 15, enabled: true },
-        { code: 'zhangshi', name: '长势异常', demoRiskRule: 'NDVI偏差≥10%→中风险', demoDeadline: 5, enabled: true },
-        { code: 'weibeian', name: '未备案收割', demoRiskRule: '围栏联动默认高风险', demoDeadline: 3, enabled: true }
+        { code: 'qita', name: '其他', demoRiskRule: '市级研判确定；涉及永久基本农田→高风险', demoDeadline: 15, enabled: true }
       ]
     },
     reportFields: {

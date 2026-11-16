@@ -101,7 +101,7 @@ const nearbyPlots = ref([])
 // 地块定位口径（用户确认 2026-11-12）：公众未必知道系统地块、也未必站在地块内——地块改为可不选；
 // 定位后按 GPS 自动推荐"附近地块"供参考（真实实现：拍照坐标与地块中心求距离），未选择时由省级研判归属
 const localPlots = computed(() => PLOTS.filter(item => String(item.regionCode || '').startsWith('341222') && !nearbyPlots.value.some((n) => n.id === item.id)))
-const form = reactive({ type: 'huimai', region: ['阜阳市', '太和县', '旧县镇'], plotId: '', location: '安徽省太和县（定位待更新）', gps: null, description: '', attachments: [], reporterType: 'anonymous', reporterName: '', reporterPhone: '' })
+const form = reactive({ type: '', region: ['阜阳市', '太和县', '旧县镇'], plotId: '', location: '安徽省太和县（定位待更新）', gps: null, description: '', attachments: [], reporterType: 'anonymous', reporterName: '', reporterPhone: '' })
 const reports = ref([])
 const detailVisible = ref(false)
 const activeReport = ref(null)

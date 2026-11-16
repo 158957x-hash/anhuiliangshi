@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h2>种植计划下达</h2>
-        <p>仅展示种植计划制定中审核通过并已下达的最终版本，省、市、县按权限查看对应分解任务，不提供修改操作。</p>
+        <p>仅展示种植计划制定中审核通过并已下达的最终版本，省、市、县、乡镇按权限查看对应分解任务，不提供修改操作。</p>
       </div>
       <el-button @click="load">刷新计划</el-button>
     </div>
@@ -121,13 +121,13 @@
           <el-descriptions-item label="版本"><el-tag size="small" type="success">最终下达版</el-tag></el-descriptions-item>
           <el-descriptions-item label="计划说明" :span="3">{{ countyIssueDetail.description }}</el-descriptions-item>
         </el-descriptions>
-        <div class="detail-title"><b>{{ issueLevelTitle }}</b><span class="drill-tip">点击市、县行继续下钻</span></div>
+        <div class="detail-title"><b>{{ issueLevelTitle }}</b><span class="drill-tip">点击市、县、乡镇行继续下钻</span></div>
         <el-table :data="countySubjectRows" stripe border max-height="390" @row-click="openIssueRow">
           <el-table-column v-if="issueTableLevel === 'city'" prop="cityName" label="市级行政区" min-width="180" />
           <el-table-column v-if="issueTableLevel === 'county'" prop="countyName" label="县级行政区" min-width="180" />
+          <el-table-column v-if="issueTableLevel === 'town'" prop="townName" label="乡镇行政区" min-width="180" />
           <el-table-column v-if="issueTableLevel === 'subject'" prop="subjectName" label="种植大户/主体" min-width="220" />
           <el-table-column v-if="issueTableLevel === 'subject'" prop="owner" label="负责人" width="100" />
-          <el-table-column v-if="issueTableLevel === 'subject'" prop="townName" label="乡镇" width="110" />
           <el-table-column v-if="issueTableLevel === 'subject'" prop="villageName" label="村" width="110" />
           <el-table-column prop="targetArea" :label="issueTableLevel === 'subject' ? '主体任务面积（亩）' : '计划种植面积（万亩）'" width="170" align="right" />
           <el-table-column v-if="issueTableLevel === 'subject'" label="地块落实面积" min-width="270"><template #default="{ row }"><div v-for="plot in row.plotRows" :key="plot.plotId" class="plot-summary-row">{{ plot.plotName }}：{{ Number(plot.targetArea || 0).toFixed(1) }}亩</div></template></el-table-column>
@@ -217,7 +217,7 @@ const detail = ref(null)
 const detailVisible = ref(false)
 const drillVisible = ref(false)
 const filters = reactive({ year: '', quarter: '', region: '', cropType: '', subjectType: '', plotRange: '', keyword: '' })
-const quarters = ['第一季度', '第二季度', '第三季度', '第四季度']
+const quarters = ['全年', '第一季度', '第二季度', '第三季度', '第四季度']
 const regionOptions = ['阜阳市', '亳州市', '合肥市']
 const cropOptions = ['小麦', '水稻', '玉米', '大豆']
 const levelLabels = { province: '省级计划', city: '市级', county: '县级', town: '乡镇', village: '村级', subject: '种植主体', plot: '地块' }
@@ -228,7 +228,7 @@ const currentLevel = computed(() => currentRows.value[0]?.level || currentNode.v
 const currentTitle = computed(() => currentNode.value ? `${currentNode.value.name}下级任务` : '审核通过的种植计划')
 const currentArea = computed(() => countyIssueRows.value.reduce((sum, item) => sum + Number(item.area || 0), 0))
 const completedCount = computed(() => countyIssueRows.value.length)
-const issueLevelTitle = computed(() => ({ city: '市级任务', county: '县级任务', subject: '种植主体和地块任务' }[issueTableLevel.value]))
+const issueLevelTitle = computed(() => ({ city: '市级任务', county: '县级任务', town: '乡镇任务', subject: '种植主体和地块任务' }[issueTableLevel.value]))
 const statusType = (status) => ({ 已落实: 'success', 落实中: 'warning', 已下达: 'primary' }[status] || 'info')
 const cropName = (crop) => ({ wheat: '小麦', rice: '水稻', corn: '玉米', soybean: '大豆', silage_corn: '青贮玉米' }[crop] || crop || '未设置')
 
@@ -240,7 +240,7 @@ const loadCountyIssueList = async () => {
 const openCountyIssue = async (row) => {
   countyIssueDetail.value = row
   issueParent.value = null
-  issueTableLevel.value = userStore.role?.code === 'province' ? 'city' : userStore.role?.code === 'city' ? 'county' : 'subject'
+  issueTableLevel.value = userStore.role?.code === 'province' ? 'city' : userStore.role?.code === 'city' ? 'county' : userStore.role?.code === 'county' ? 'town' : 'subject'
   countySubjectRows.value = await fetchPlantingPlanIssueRows(row.id, issueTableLevel.value, userStore.role)
   countyIssueVisible.value = true
 }
@@ -249,6 +249,9 @@ const openIssueRow = async (row) => {
     issueTableLevel.value = 'county'
     issueParent.value = row
   } else if (issueTableLevel.value === 'county') {
+    issueTableLevel.value = 'town'
+    issueParent.value = row
+  } else if (issueTableLevel.value === 'town') {
     issueTableLevel.value = 'subject'
     issueParent.value = row
   } else {

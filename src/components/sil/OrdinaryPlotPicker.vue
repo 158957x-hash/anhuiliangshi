@@ -6,9 +6,10 @@
       <el-button type="primary" :loading="searching" @click="searchSubjects">搜索主体</el-button>
     </div>
     <div v-if="searched && !fixedSubjectIds.length" class="subject-results">
-      <el-checkbox-group v-model="subjectIds"><el-checkbox v-for="s in subjects" :key="s.id" :label="s.id">{{ s.name }}</el-checkbox></el-checkbox-group>
+      <el-radio-group v-model="subjectId"><el-radio v-for="s in subjects" :key="s.id" :label="s.id">{{ s.name }}</el-radio></el-radio-group>
       <el-empty v-if="!subjects.length" description="未找到种植主体，请修改关键词" :image-size="42" />
-      <el-button v-if="subjects.length" type="primary" plain :disabled="!subjectIds.length" :loading="loading" @click="loadPlots">查询所选主体地块</el-button>
+      <el-button v-if="subjects.length" type="primary" plain :disabled="!subjectId" :loading="loading" @click="loadPlots">查询该主体地块</el-button>
+      <p class="subject-tip">种植主体单选；更换主体后，原主体名下已勾选地块将自动移除。</p>
     </div>
     <div v-if="error" class="load-error">{{ error }} <el-button link type="primary" @click="retry">重试</el-button></div>
     <div class="picker-body">
@@ -40,7 +41,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import BaseMap from '@/components/map/BaseMap.vue'
 import { searchPlantingSubjects, searchOrdinaryPlots } from '@/api/silOrdinary'
@@ -48,7 +49,7 @@ import { useUserStore } from '@/stores/user'
 
 const emit = defineEmits(['confirm'])
 const userStore = useUserStore()
-const opened = ref(false), mapRef = ref(null), subjectKeyword = ref(''), subjects = ref([]), subjectIds = ref([])
+const opened = ref(false), mapRef = ref(null), subjectKeyword = ref(''), subjects = ref([]), subjectId = ref('')
 const fixedSubjectIds = ref([])
 const searched = ref(false), queried = ref(false), searching = ref(false), loading = ref(false), error = ref(''), errorSource = ref('')
 const candidatePlots = ref([]), plotKeyword = ref(''), selectedIds = ref([]), knownPlots = ref(new Map())
@@ -63,26 +64,32 @@ function open(rows = [], presetSubjectIds = []) {
   if (presetSubjectIds.length) rows = rows.filter(plot => presetSubjectIds.includes(plot.subjectId))
   knownPlots.value = new Map(rows.map(p => [p.plotId || p.id, { ...p, id: p.plotId || p.id }]))
   selectedIds.value = [...knownPlots.value.keys()]
-  candidatePlots.value = []; subjects.value = []; subjectIds.value = [...presetSubjectIds]; subjectKeyword.value = ''; plotKeyword.value = ''; searched.value = !!presetSubjectIds.length; queried.value = false; error.value = ''; drawFilter.value = null; opened.value = true
+  candidatePlots.value = []; subjects.value = []; subjectId.value = presetSubjectIds[0] || ''; subjectKeyword.value = ''; plotKeyword.value = ''; searched.value = !!presetSubjectIds.length; queried.value = false; error.value = ''; drawFilter.value = null; opened.value = true
   if (presetSubjectIds.length) loadPlots()
 }
 async function searchSubjects() {
   if (!subjectKeyword.value.trim()) return ElMessage.warning('请输入种植主体名称或负责人后再搜索')
   searching.value = true; error.value = ''
-  try { subjects.value = await searchPlantingSubjects(subjectKeyword.value.trim(), userStore.role); subjectIds.value = []; searched.value = true }
+  try { subjects.value = await searchPlantingSubjects(subjectKeyword.value.trim(), userStore.role); subjectId.value = ''; searched.value = true }
   catch { error.value = '主体查询失败，请重试'; errorSource.value = 'subjects' }
   finally { searching.value = false }
 }
 async function loadPlots() {
-  if (!subjectIds.value.length) return ElMessage.warning('请先选择要查询的种植主体')
+  if (!subjectId.value) return ElMessage.warning('请先选择要查询的种植主体')
   stopDraw(); loading.value = true; error.value = ''
   try {
-    candidatePlots.value = await searchOrdinaryPlots([...subjectIds.value], userStore.role)
+    candidatePlots.value = await searchOrdinaryPlots([subjectId.value], userStore.role)
     const next = new Map(knownPlots.value); candidatePlots.value.forEach(p => next.set(p.id, p)); knownPlots.value = next
     queried.value = true; drawFilter.value = null; await nextTick(); renderMap(true)
   } catch { error.value = '地块加载失败，请重试'; errorSource.value = 'plots' }
   finally { loading.value = false }
 }
+watch(subjectId, id => {
+  if (!id) return
+  const stale = selectedIds.value.filter(pid => { const p = knownPlots.value.get(pid); return p && p.subjectId !== id })
+  if (stale.length) { selectedIds.value = selectedIds.value.filter(pid => !stale.includes(pid)); renderMap(); ElMessage.info(`已移除原主体名下 ${stale.length} 块已选地块`) }
+})
+
 function toggle(p) {
   if (drawing.value || (!p.geometry && !selectedIds.value.includes(p.id))) return
   selectedIds.value = selectedIds.value.includes(p.id) ? selectedIds.value.filter(id => id !== p.id) : [...selectedIds.value, p.id]
@@ -130,7 +137,7 @@ defineExpose({ open, close })
 </script>
 
 <style scoped lang="scss">
-.picker-search{display:flex;gap:10px}.subject-results{padding:12px 0;border-bottom:1px solid #e7edf3}.subject-results :deep(.el-checkbox-group){display:flex;flex-wrap:wrap;gap:8px}.subject-results :deep(.el-checkbox){height:auto;white-space:normal;margin:0 14px 8px 0}.picker-body{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:14px;margin-top:14px}.map-side{min-width:0}.map-canvas{height:350px;position:relative;border:1px solid #dbe5ed;border-radius:10px;overflow:hidden}.map-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.map-tools :deep(.el-button+.el-button){margin-left:0}.map-tip{color:#687b8d;font-size:12px;line-height:1.6;margin:8px 0}.list-side{min-width:0;border:1px solid #e2e9ef;border-radius:10px;padding:10px}.list-toolbar{display:flex;align-items:center;justify-content:space-between;gap:4px;flex-wrap:wrap;font-size:12px;padding:8px 0}.candidate-list{height:320px;overflow:auto}.plot-row{padding:10px;border:1px solid #e5ecf2;border-radius:8px;margin-bottom:8px}.plot-row.selected{background:#fff7e9;border-color:#f0bd69}.plot-row :deep(.el-checkbox){width:100%;height:auto;white-space:normal}.plot-row :deep(.el-checkbox__label){min-width:0;white-space:normal;word-break:break-word}.plot-row small{display:block;color:#7b8999;margin:5px 0;font-size:12px}.plot-position{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#8b99a6;gap:4px}.selection-head{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e7edf3;padding-top:12px;margin-top:8px}.selection-tags{display:flex;gap:6px;flex-wrap:wrap;max-height:85px;overflow:auto;padding:8px 0;color:#8b99a6;font-size:12px}.selection-tags :deep(.el-tag){height:auto;white-space:normal;padding:4px 8px}.load-error{background:#fff1ef;color:#c44436;padding:8px;margin-top:8px}
-@media(max-width:650px){.picker-body{grid-template-columns:1fr}.map-canvas{height:240px}.candidate-list{height:180px}.picker-search{gap:5px}.selection-tags{max-height:70px}.picker-search :deep(.el-button){padding:8px}.map-tools :deep(.el-button){font-size:11px;padding:8px}.subject-results :deep(.el-checkbox__label){white-space:normal}.map-tip{font-size:11px}}
+.picker-search{display:flex;gap:10px}.subject-results{padding:12px 0;border-bottom:1px solid #e7edf3}.subject-results :deep(.el-radio-group){display:flex;flex-wrap:wrap;gap:8px}.subject-results :deep(.el-radio){height:auto;white-space:normal;margin:0 14px 8px 0}.subject-tip{color:#687b8d;font-size:12px;line-height:1.6;margin:6px 0 0}.picker-body{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:14px;margin-top:14px}.map-side{min-width:0}.map-canvas{height:350px;position:relative;border:1px solid #dbe5ed;border-radius:10px;overflow:hidden}.map-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.map-tools :deep(.el-button+.el-button){margin-left:0}.map-tip{color:#687b8d;font-size:12px;line-height:1.6;margin:8px 0}.list-side{min-width:0;border:1px solid #e2e9ef;border-radius:10px;padding:10px}.list-toolbar{display:flex;align-items:center;justify-content:space-between;gap:4px;flex-wrap:wrap;font-size:12px;padding:8px 0}.candidate-list{height:320px;overflow:auto}.plot-row{padding:10px;border:1px solid #e5ecf2;border-radius:8px;margin-bottom:8px}.plot-row.selected{background:#fff7e9;border-color:#f0bd69}.plot-row :deep(.el-checkbox){width:100%;height:auto;white-space:normal}.plot-row :deep(.el-checkbox__label){min-width:0;white-space:normal;word-break:break-word}.plot-row small{display:block;color:#7b8999;margin:5px 0;font-size:12px}.plot-position{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#8b99a6;gap:4px}.selection-head{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e7edf3;padding-top:12px;margin-top:8px}.selection-tags{display:flex;gap:6px;flex-wrap:wrap;max-height:85px;overflow:auto;padding:8px 0;color:#8b99a6;font-size:12px}.selection-tags :deep(.el-tag){height:auto;white-space:normal;padding:4px 8px}.load-error{background:#fff1ef;color:#c44436;padding:8px;margin-top:8px}
+@media(max-width:650px){.picker-body{grid-template-columns:1fr}.map-canvas{height:240px}.candidate-list{height:180px}.picker-search{gap:5px}.selection-tags{max-height:70px}.picker-search :deep(.el-button){padding:8px}.map-tools :deep(.el-button){font-size:11px;padding:8px}.subject-results :deep(.el-radio__label){white-space:normal}.map-tip{font-size:11px}}
 </style>
 <style lang="scss">.ordinary-plot-dialog{max-width:calc(100vw - 24px);border-radius:12px}.ordinary-plot-dialog .el-dialog__body{max-height:calc(92vh - 130px);overflow-y:auto}.ordinary-plot-dialog .el-dialog__footer{border-top:1px solid #edf0f3}.ordinary-plot-dialog .el-dialog__title{font-size:17px}@media(max-width:650px){.ordinary-plot-dialog{max-width:calc(100vw - 12px);padding:12px}.ordinary-plot-dialog .el-dialog__body{max-height:calc(92vh - 130px)}}</style>

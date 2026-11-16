@@ -13,7 +13,7 @@ export const TODOS = [
   },
   {
     id: 'TD-0002',
-    title: '【事件核查】FSR-2026-0012 毁麦毁粮疑似图斑待派发任务',
+    title: '【事件核查】FSR-2026-0012 割青毁粮疑似图斑待派发任务',
     type: 'dispatch',
     subsystem: 'fsr',
     route: '/fsr/events',

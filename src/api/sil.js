@@ -108,7 +108,7 @@ export const saveDeclaration = (data, role, submit = false) => mockRequest(() =>
     if (submit) {
       item.status = isSupplement && exemptAudit ? 'filed' : 'pending'
       if (item.status === 'filed' && !item.filedNo) item.filedNo = `皖青贮补〔${item.year || new Date().getFullYear()}〕第${String(Date.now()).slice(-4)}`
-      item.auditTrail = [...item.auditTrail, { time: now(), action: isSupplement && exemptAudit ? '专家签字后免审生效' : old?.status === 'returned' ? '补正重提' : '提交申报', user: `${r.name || '用户'}（${r.roleName || r.code || '浏览器模拟'}）` }]
+      item.auditTrail = [...item.auditTrail, { time: now(), action: isSupplement && exemptAudit ? (data.expertsSigned ? '专家签字后免审生效' : '跳过专家会签，直接免审生效') : old?.status === 'returned' ? '补正重提' : '提交申报', user: `${r.name || '用户'}（${r.roleName || r.code || '浏览器模拟'}）` }]
     }
     saveDeclarations([item, ...all.filter((d) => d.id !== item.id)]); return { success: true, id: item.id }
   } catch (e) { return { success: false, message: e.message } }
@@ -118,7 +118,7 @@ let filedSeq = 20
 export const auditDeclaration = (id, action, opinion, role) => mockRequest(() => {
   if (!roleCanAudit(role)) return { success: false, message: '仅省市县角色可审核' }
   const all = declarations(); const item = all.find((d) => d.id === id); if (!item || !inScope(item, role)) return { success: false, message: '无权审核该申报' }
-  if (item.declarationType === 'supplement' && item.exemptAudit) return { success: false, message: '该记录已完成专家签字，免于再次审核' }
+  if (item.declarationType === 'supplement' && item.exemptAudit) return { success: false, message: '该记录免审已生效（专家会签或直接上报），无需再次审核' }
   if (item.status !== 'pending') return { success: false, message: '当前状态不可审核' }
   if (item.submittedBy?.code === role.code && item.submittedBy?.name === role.name) return { success: false, message: '不得审核本人提交的数据' }
   if (action !== 'pass' && !String(opinion || '').trim()) return { success: false, message: '退回或驳回必须填写意见' }

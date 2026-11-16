@@ -6,6 +6,7 @@ import { INDOOR_BATCHES } from '@/mock/fsr/indoor'
 import { GROWTH_RECORDS } from '@/mock/fsr/growth'
 import { EVENT_REPORTS, CITY_RANK } from '@/mock/fsr/reports'
 import { BIZ_CONFIG } from '@/mock/fsr/config'
+import { EVENT_TYPE_MAP } from '@/mock/common/dict'
 import { CHECKERS } from '@/mock/common/checkers'
 import { PLOTS } from '@/mock/geo/plot-gen'
 
@@ -231,7 +232,7 @@ export const closeEvent = (eventId, action, opinion, auditor) =>
       EVENT_REPORTS.unshift({
         reportNo: `RPT-2026-${String(EVENT_REPORTS.length + 5).padStart(4, '0')}`,
         eventId: ev.id, eventCode: ev.code,
-        title: `${regionName}${ev.type === 'zhangshi' ? '长势异常' : '毁麦毁粮'}事件简报`,
+        title: `${regionName}${EVENT_TYPE_MAP[ev.type]?.name || '粮食安全'}事件简报`,
         statVersion: '演示口径 v1.0（待业务确认）',
         generatedAt: time,
         summary: `事件于${ev.foundTime || ''}接入，经现场核查与整改，${time}复核通过结案，结案编号${ev.closeNo}。`,
@@ -356,7 +357,7 @@ export const pushGrowthWarning = (growthId) =>
     const code = id.replace('EVT-', 'FSR-')
     const time = nowText()
     FSR_EVENTS.unshift({
-      id, code, type: 'zhangshi', source: 'remote', risk: 'medium',
+      id, code, type: 'qita', source: 'remote', risk: 'medium',
       regionCode: g.regionCode, regionName: g.regionName,
       spot: { plotId: null, geometry: null, center: g.center || null, areaMu: g.areaMu || 0 },
       subjectId: null, subjectName: '待核实',
@@ -419,7 +420,7 @@ export const importBatch = (id, operator) =>
     b.outputSpots.slice(0, 2).forEach((s) => {
       const eid = `EVT-2026-${String(FSR_EVENTS.length + 1).padStart(4, '0')}`
       FSR_EVENTS.unshift({
-        id: eid, code: eid.replace('EVT-', 'FSR-'), type: b.problemType || 'feilianghua', source: 'remote', risk: 'medium',
+        id: eid, code: eid.replace('EVT-', 'FSR-'), type: b.problemType || 'qita', source: 'remote', risk: 'medium',
         regionCode: s.regionCode, regionName: s.regionName,
         spot: { plotId: null, geometry: null, center: s.center || null, areaMu: s.areaMu || 0 },
         subjectId: null, subjectName: '待核实',

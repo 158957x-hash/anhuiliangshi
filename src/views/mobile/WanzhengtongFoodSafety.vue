@@ -89,7 +89,7 @@
 
     <el-dialog v-model="historyVisible" title="历史填报记录" width="92%" class="scroll-dialog"><div v-for="item in history" :key="item.id + item.time" class="dialog-history"><b>{{ item.code }} · {{ item.conclusion }}</b><p>{{ item.desc || '暂无描述' }}</p><small>{{ item.time }} · 定位 {{ item.gps || (item.longitude && item.latitude ? item.longitude + ', ' + item.latitude : '未采集') }} · 核查人 {{ item.checker || '—' }} · 现场证据 {{ (item.attachments || []).length }} 项</small><EvidenceThumbs v-if="(item.attachments || []).length" :items="item.attachments" :size="48" /></div><el-empty v-if="!history.length" description="暂无历史填报记录" /></el-dialog>
 
-    <!-- 网格巡查上报（可研 5.5.3.9.2：基层干部巡查发现毁麦毁粮/撂荒等问题，必须关联地块） -->
+    <!-- 网格巡查上报（可研 5.5.3.9.2：基层干部巡查发现割青毁粮/撂荒等问题，必须关联地块） -->
     <el-dialog v-model="patrolVisible" title="粮食安全巡查上报" width="92%" class="scroll-dialog">
       <el-alert type="info" :closable="false" style="margin-bottom: 10px" title="巡查上报必须选择对应地块（可研'按图选地'口径）；线索提交后进入省粮食安全综合监管系统，由省级研判是否转入核查。" />
       <el-form label-width="80px">
@@ -102,7 +102,7 @@
           <el-input v-model="patrolForm.plotName" placeholder="按图选地或输入地块名称（如：税镇镇张楼村东地块）" />
         </el-form-item>
         <el-form-item label="情况描述" required>
-          <el-input v-model="patrolForm.desc" type="textarea" :rows="3" placeholder="描述现场情况（毁麦毁粮/撂荒/非粮化等）" />
+          <el-input v-model="patrolForm.desc" type="textarea" :rows="3" placeholder="描述现场情况（割青毁粮/撂荒等）" />
         </el-form-item>
         <el-form-item label="现场证据">
           <el-button size="small" plain @click="patrolForm.evidence++">＋ 拍照/录像取证（{{ patrolForm.evidence }}项）</el-button>

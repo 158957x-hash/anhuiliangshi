@@ -58,8 +58,9 @@ export const saveDisasterEvent = (input, role) => result(()=>{
   if(!input.files?.length) throw new Error('请上传专家评估材料')
   const ids=[...new Set(input.plotIds||[])], plots=allPlots().filter(row=>ids.includes(row.id))
   if(!ids.length || plots.length!==ids.length || plots.some(row=>row.subjectId!==subject.id || !row.geometry)) throw new Error('请选择该种植主体有边界的整块受灾地块')
-  const experts=(input.experts||[]).map(row=>({name:String(row.name||'').trim(),unit:String(row.unit||'').trim(),field:String(row.field||'').trim(),signedAt:''}))
-  if(experts.length!==3 || experts.some(row=>!row.name||!row.unit||!row.field) || new Set(experts.map(row=>row.name)).size!==3) throw new Error('请填写三名不同专家的姓名、单位和领域')
+  // 专家会签为非必填：可留空，也可先填部分专家信息；已填写行仍需完整且不重复。
+  const experts=(input.experts||[]).filter(row=>String(row.name||'').trim()||String(row.unit||'').trim()||String(row.field||'').trim()).map(row=>({name:String(row.name||'').trim(),unit:String(row.unit||'').trim(),field:String(row.field||'').trim(),signedAt:''}))
+  if(experts.length && (experts.length!==3 || experts.some(row=>!row.name||!row.unit||!row.field) || new Set(experts.map(row=>row.name)).size!==experts.length)) throw new Error('如录入专家信息，需为三名不同专家且姓名、单位、领域完整；也可整体留空跳过会签')
   const data=db(), event={id:uid('DZ'),number:uid('受灾认定'),subjectId:subject.id,subjectName:subject.name,regionCode:String(subject.regionCode).slice(0,6),year:Number(input.year),disasterType:input.disasterType,occurredAt:input.occurredAt,plots:clone(plots),plotIds:ids,affectedArea:area(plots),lostArea:num(input.lostArea,'损失面积'),assessment:input.assessment,files:input.files,experts,status:'signing',createdAt:now(),auditTrail:[trail('登记受灾范围及专家评估材料',role)]}
   if(event.lostArea!==null && event.lostArea>event.affectedArea) throw new Error('损失面积不能超过受灾地块总面积')
   data.events.unshift(event);write(data);return{success:true,id:event.id}
@@ -77,13 +78,15 @@ export const signDisasterEvent = (id, index, role) => result(()=>{
 export const submitDisasterReport = (input, role) => result(()=>{
   const data=db(),event=data.events.find(row=>row.id===input.eventId)
   if(!canReportDisaster(role)||!event||!inScope(event,role)) throw new Error('仅本人种植主体或所属县级用户可补充上报')
-  if(event.status!=='confirmed'||!event.experts.every(row=>row.signedAt)) throw new Error('受灾范围尚未完成三名专家会签')
+  // 专家会签为非必填：未完成会签也可直接补充上报，上报后均免审生效；如后续完成会签，认定自动转生效。
   const ids=[...new Set(input.plotIds||[])],plots=event.plots.filter(row=>ids.includes(row.id))
-  if(!ids.length||plots.length!==ids.length) throw new Error('请从已会签受灾围栏内选择整块地')
+  if(!ids.length||plots.length!==ids.length) throw new Error('请从已登记受灾围栏内选择整块地')
   const duplicate=data.reports.find(row=>row.eventId===event.id&&row.plotIds.some(id=>ids.includes(id)))
   if(duplicate) throw new Error('同一受灾认定下地块已上报：'+duplicate.number+'，请核对原记录')
   if(!input.crop||!String(input.contact||'').trim()||!String(input.phone||'').trim()) throw new Error('请填写作物、联系人和联系方式')
-  const report={id:uid('DZ-REPORT'),number:uid('补充上报'),eventId:event.id,eventNumber:event.number,subjectId:event.subjectId,subjectName:event.subjectName,regionCode:event.regionCode,year:event.year,plots:clone(plots),plotIds:ids,area:area(plots),estimatedWeight:num(input.estimatedWeight,'预计收储重量'),crop:input.crop,variety:input.variety||'',contact:input.contact,phone:input.phone,files:input.files||[],promise:input.promise||null,applicant:{code:role.code,name:role.name,unit:role.unit,roleName:role.roleName},status:'effective',exemptAudit:true,createdAt:now(),auditTrail:[trail('提交补充上报，引用三名专家会签结果，免再审核生效',role)]}
+  if(event.status==='signing'&&event.experts.length&&event.experts.every(row=>row.signedAt)){event.status='confirmed';event.confirmedAt=now()}
+  const expertsSigned=event.experts.length>0&&event.experts.every(row=>row.signedAt)
+  const report={id:uid('DZ-REPORT'),number:uid('补充上报'),eventId:event.id,eventNumber:event.number,subjectId:event.subjectId,subjectName:event.subjectName,regionCode:event.regionCode,year:event.year,plots:clone(plots),plotIds:ids,area:area(plots),estimatedWeight:num(input.estimatedWeight,'预计收储重量'),crop:input.crop,variety:input.variety||'',contact:input.contact,phone:input.phone,files:input.files||[],promise:input.promise||null,applicant:{code:role.code,name:role.name,unit:role.unit,roleName:role.roleName},status:'effective',exemptAudit:true,expertsSigned,createdAt:now(),auditTrail:[trail(expertsSigned?'提交补充上报，引用三名专家会签结果，免审生效':'提交补充上报（专家会签非必填，未完成会签），免审生效',role)]}
   data.reports.unshift(report);write(data);return{success:true,id:report.id}
 })
 export const publishDisasterDemand = (input, role) => result(()=>{

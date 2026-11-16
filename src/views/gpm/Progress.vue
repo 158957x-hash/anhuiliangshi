@@ -20,62 +20,69 @@
     <div class="page-header">
       <div>
         <h2>播种进度调度</h2>
-        <p>播种进度以已下达的种植计划为基准，主体按计划任务上报已播面积。</p>
+        <p>播种进度以已下达的种植计划为基准，主体按计划任务上报已播面积（免审直接生效），乡镇、县、市逐级上报审核至省级。</p>
       </div>
       <div class="scope-label">当前范围：{{ userStore.regionName }}</div>
     </div>
 
-    <div class="panel list-panel">
-      <div class="toolbar">
-        <el-breadcrumb separator="/">
-          <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.code">
-            <span class="breadcrumb-link" @click="goToLevel(item)">{{ item.name }}</span>
-          </el-breadcrumb-item>
-        </el-breadcrumb>
-        <span class="record-count">共 {{ currentRows.length }} 条记录</span>
-      </div>
+    <el-tabs v-model="activeTab" class="content-tabs">
+      <el-tab-pane label="进度总览" name="overview">
+        <div class="panel list-panel">
+          <div class="toolbar">
+            <el-breadcrumb separator="/">
+              <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.code">
+                <span class="breadcrumb-link" @click="goToLevel(item)">{{ item.name }}</span>
+              </el-breadcrumb-item>
+            </el-breadcrumb>
+            <span class="record-count">共 {{ currentRows.length }} 条记录</span>
+          </div>
 
-      <div v-if="isSubjectLevel" class="detail-tip">
-        {{ currentRegionName }}种植主体播种进度上报明细
-      </div>
+          <div v-if="isSubjectLevel" class="detail-tip">
+            {{ currentRegionName }}种植主体播种进度上报明细
+          </div>
 
-      <el-table :data="currentRows" stripe border height="calc(100vh - 260px)">
-        <el-table-column type="index" label="序号" width="65" align="center" />
-        <el-table-column :label="isSubjectLevel ? '主体/地区' : currentChildLabel" min-width="190">
-          <template #default="{ row }">
-            <span v-if="isSubjectLevel">{{ row.subjectName || row.regionName }}</span>
-            <el-button v-else link type="primary" @click="openLevel(row)">{{ row.name }}</el-button>
-          </template>
-        </el-table-column>
-        <el-table-column v-if="isSubjectLevel" prop="cropName" label="作物" width="100" />
-        <el-table-column v-if="isSubjectLevel" prop="planName" label="下达计划" min-width="220" show-overflow-tooltip />
-        <el-table-column v-if="isSubjectLevel" prop="cropName" label="计划作物" width="100" />
-        <el-table-column prop="planArea" label="下达面积（亩）" width="140" align="right" />
-        <el-table-column prop="sownArea" label="已播面积（亩）" width="140" align="right" />
-        <el-table-column label="播种进度" width="190">
-          <template #default="{ row }">
-            <div class="progress-cell">
-              <el-progress :percentage="row.sowProgress" :stroke-width="10" />
-              <span>{{ row.sowProgress }}%</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column v-if="isSubjectLevel" prop="updatedAt" label="填报日期" width="120" />
-        <el-table-column v-if="isSubjectLevel" label="操作" width="130" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="viewSubjectReport(row)">查看上报</el-button>
-          </template>
-        </el-table-column>
-        <el-table-column v-else label="操作" width="100" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="openLevel(row)">查看下级</el-button>
-          </template>
-        </el-table-column>
-        <template #empty>
-          <el-empty description="暂无上报进度记录" />
-        </template>
-      </el-table>
-    </div>
+          <el-table :data="currentRows" stripe border max-height="calc(100vh - 320px)">
+            <el-table-column type="index" label="序号" width="65" align="center" />
+            <el-table-column :label="isSubjectLevel ? '主体/地区' : currentChildLabel" min-width="190">
+              <template #default="{ row }">
+                <span v-if="isSubjectLevel">{{ row.subjectName || row.regionName }}</span>
+                <el-button v-else link type="primary" @click="openLevel(row)">{{ row.name }}</el-button>
+              </template>
+            </el-table-column>
+            <el-table-column v-if="isSubjectLevel" prop="cropName" label="作物" width="100" />
+            <el-table-column v-if="isSubjectLevel" prop="planName" label="下达计划" min-width="220" show-overflow-tooltip />
+            <el-table-column v-if="isSubjectLevel" prop="cropName" label="计划作物" width="100" />
+            <el-table-column prop="planArea" label="下达面积（亩）" width="140" align="right" />
+            <el-table-column prop="sownArea" label="已播面积（亩）" width="140" align="right" />
+            <el-table-column label="播种进度" width="190">
+              <template #default="{ row }">
+                <div class="progress-cell">
+                  <el-progress :percentage="row.sowProgress" :stroke-width="10" />
+                  <span>{{ row.sowProgress }}%</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column v-if="isSubjectLevel" prop="updatedAt" label="填报日期" width="120" />
+            <el-table-column v-if="isSubjectLevel" label="操作" width="130" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="viewSubjectReport(row)">查看上报</el-button>
+              </template>
+            </el-table-column>
+            <el-table-column v-else label="操作" width="100" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="openLevel(row)">查看下级</el-button>
+              </template>
+            </el-table-column>
+            <template #empty>
+              <el-empty description="暂无上报进度记录" />
+            </template>
+          </el-table>
+        </div>
+      </el-tab-pane>
+      <el-tab-pane label="上报与审核" name="report">
+        <ProgressReportPanel type="sow" />
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
@@ -84,12 +91,14 @@ import { computed, onMounted, ref } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { fetchSowingProgress } from '@/api/gpm'
 import { getRegion } from '@/mock/common/regions'
+import ProgressReportPanel from './ProgressReportPanel.vue'
 const userStore = useUserStore()
 const records = ref([])
 const reportVisible = ref(false)
 const selectedReport = ref(null)
 const currentCode = ref('')
 const breadcrumbs = ref([])
+const activeTab = ref('overview')
 
 const roleLevel = computed(() => userStore.role?.code || 'province')
 const currentRegion = computed(() => getRegion(currentCode.value))
@@ -97,12 +106,14 @@ const currentLevel = computed(() => breadcrumbs.value.length - 1)
 const subjectLevel = computed(() => ({ province: 3, city: 2, county: 1, town: 0 }[roleLevel.value] ?? 3))
 const isSubjectLevel = computed(() => currentLevel.value >= subjectLevel.value || !currentRegion.value?.children?.length)
 const currentRegionName = computed(() => currentRegion.value?.name || userStore.regionName || '本区域')
-const currentChildLabel = computed(() => {
-  if (currentLevel.value === 0) return '市级地区'
-  if (currentLevel.value === 1) return '县级地区'
-  if (currentLevel.value === 2) return '乡镇地区'
-  return '种植主体'
-})
+// 按区划编码判断下级层级（省→市、市→县、县→乡镇、乡镇→主体）
+const childLevelOf = (code) => {
+  if (!code || code === '340000') return 'city'
+  if (String(code).length === 6 && String(code).endsWith('00')) return 'county'
+  if (String(code).length === 6) return 'town'
+  return 'subject'
+}
+const currentChildLabel = computed(() => ({ city: '市级地区', county: '县级地区', town: '乡镇地区', subject: '种植主体' }[childLevelOf(currentCode.value)] || '下级地区'))
 
 const sumRows = rows => {
   const planArea = rows.reduce((sum, item) => sum + Number(item.planArea || 0), 0)
@@ -145,7 +156,7 @@ const currentRows = computed(() => {
       .map(item => ({ ...item, subjectName: item.subjectName || item.regionName }))
   }
 
-  const level = ['city', 'county', 'town'][currentLevel.value]
+  const level = childLevelOf(currentCode.value)
   return (currentRegion.value?.children || []).map(region => ({
     ...region,
     ...sumRows(rowsInRegion(region.code).filter(item => item.level === level))
@@ -181,7 +192,19 @@ onMounted(load)
 <style lang="scss" scoped>
 .progress-page {
   gap: 12px;
-  overflow: hidden;
+  overflow: auto;
+}
+
+.content-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  :deep(.el-tabs__content) {
+    flex: 1;
+    overflow: auto;
+  }
 }
 
 .page-header {
