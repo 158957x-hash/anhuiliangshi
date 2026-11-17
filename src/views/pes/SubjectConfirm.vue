@@ -24,7 +24,7 @@
         </el-descriptions-item>
       </el-descriptions>
       <div style="margin-top: 16px">
-        <el-button v-if="!confirmed" type="primary" icon="CircleCheck" @click="doConfirm">确认本主体信息无误</el-button>
+        <el-button v-if="!confirmed" type="primary" icon="CircleCheck" @click="doConfirm">确认信息</el-button>
         <el-alert v-else type="success" :closable="false" show-icon
           :title="`已确认 · 确认人 ${myConfirm?.userName || '-'} · ${myConfirm?.confirmTime || '-'}`" />
       </div>

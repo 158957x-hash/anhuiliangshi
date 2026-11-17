@@ -5,6 +5,7 @@
       <div><b>灾情上报</b><span>填报灾情信息，提交现场图文</span></div>
       <el-button size="small" type="primary" @click="fillDisaster">填报灾情信息</el-button>
     </div>
+    <MobileFunctionEntry title="灾情上报工作台" subtitle="新建灾情、查看本人上报和处理反馈" role-label="县级移动端" :items="entryItems" @select="selectEntry" />
     <section ref="reportCard" class="report-card">
       <h3>发现问题，随时上报</h3>
       <el-form label-position="top">
@@ -20,7 +21,7 @@
     </section>
     <section class="disaster-card">
       <div class="section-title"><b>我的上报记录</b><span class="record-count">共 {{ disasters.length }} 条</span><el-button link type="primary" @click="load">刷新</el-button></div>
-      <div v-for="item in disasters" :key="item.id" class="disaster-row" @click="view(item)"><div class="row-top"><span>{{ item.foundTime || item.createdAt || '最新' }}</span></div><b>{{ issueLabel(item.type) }}</b><p>{{ item.subjectName || '未关联主体' }} · {{ item.plotName || '未关联地块' }}</p><p>{{ item.regionName || item.regionCode }} · {{ item.description || item.desc || '暂无描述' }}</p><div class="row-bottom">编号 {{ item.id }} <span>查看上报详情 ›</span></div></div>
+      <div v-for="item in disasters" :key="item.id" class="disaster-row" @click="view(item)"><div class="row-top"><span>{{ item.foundTime || item.createdAt || '最新' }}</span></div><b>{{ issueLabel(item.type) }}</b><p>{{ item.subjectName || '未关联主体' }} · {{ item.plotName || '未关联地块' }}</p><p>{{ item.regionName || item.regionCode }} · {{ item.description || item.desc || '暂无描述' }}</p><div class="row-bottom">编号 {{ item.id }} <span>查看上报 ›</span></div></div>
       <el-empty v-if="!disasters.length" description="暂无上报记录" />
     </section>
     <el-dialog v-model="detailVisible" title="我的上报记录详情" width="92%">
@@ -37,6 +38,7 @@ import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { addDisaster, fetchDisasters, fetchPlanSubjects } from '@/api/gpm'
 import { PLOTS } from '@/mock/geo/plot-gen'
+import MobileFunctionEntry from '@/components/mobile/MobileFunctionEntry.vue'
 
 const userStore = useUserStore()
 const disasterTypes = [{ label: '重大病虫害', value: 'pest' }, { label: '严重干旱', value: 'drought' }, { label: '洪涝渍害', value: 'flood' }, { label: '其他农情问题', value: 'other' }]
@@ -46,6 +48,8 @@ const subjects = ref([])
 const active = ref(null)
 const detailVisible = ref(false)
 const reportCard = ref(null)
+const entryItems = [{ key: 'new', label: '新建灾情上报', description: '填写现场图文并提交', tone: 'red' }, { key: 'records', label: '我的上报记录', description: '查看历史上报和详情', tone: 'blue' }]
+const selectEntry = item => item.key === 'new' ? fillDisaster() : document.querySelector('.disaster-card')?.scrollIntoView({ behavior: 'smooth' })
 const form = reactive({ type: 'pest', subjectId: '', plotId: '', region: ['阜阳市', '太和县', '旧县镇'], location: '安徽省太和县（定位待更新）', description: '', photos: [] })
 const subjectPlots = computed(() => PLOTS.filter(item => item.subjectId === form.subjectId))
 const issueLabel = item => disasterTypes.find(type => type.value === item)?.label || item

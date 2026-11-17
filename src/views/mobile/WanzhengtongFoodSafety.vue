@@ -3,6 +3,8 @@
     <header class="mobile-header"><button class="back-button" @click="$router.back()">‹</button><div><b>粮食安全综合监管</b><span>{{ userStore.role?.roleName || roleLevel }} · {{ online ? '在线' : '离线' }}</span></div><button class="refresh-button" @click="load">刷新</button></header>
     <p class="demo-note">环节时限与风险规则为演示规则，待业务确认</p>
 
+    <MobileFunctionEntry title="粮食安全工作台" subtitle="按业务任务进入，不把悬浮按钮作为唯一入口" :role-label="roleLevel" note="巡查上报提交后先进入我的巡查记录；研判通过后再进入事件和核查任务流程。" :items="foodEntryItems" @select="handleEntry" />
+
     <nav class="tab-nav"><button v-for="tab in tabs" :key="tab.key" :class="{ active: activeTab === tab.key }" @click="activeTab = tab.key">{{ tab.label }}</button></nav>
 
     <template v-if="activeTab === 'overview'">
@@ -10,8 +12,9 @@
       <section class="panel"><div class="section-title"><i></i><b>风险分布</b></div><div class="risk-bars"><div v-for="item in riskDistribution" :key="item.label"><span>{{ item.label }}</span><b><i :style="{ width: `${item.percent}%` }"></i></b><em>{{ item.count }}</em></div></div></section>
       <section class="panel"><div class="section-title"><i></i><b>任务提醒</b></div><div class="reminder-box"><strong>{{ pendingCount }}</strong><span>条任务等待处理</span><el-button link type="primary" @click="activeTab = 'tasks'">立即处理</el-button></div></section>
       <section class="panel"><div class="section-title"><i></i><b>最近任务</b><span class="count">{{ recentTasks.length }} 条</span></div><div v-for="event in recentTasks" :key="event.id" class="task-card" :class="`task-${event.status}`" @click="selectTask(event)"><div class="task-head"><b>{{ event.code }}</b><el-tag size="small" :type="statusType(event.status)">{{ statusName(event.status) }}</el-tag></div><p>{{ event.regionName }} · {{ event.subjectName || '待核实主体' }}</p><div class="task-foot"><span>{{ event.deadline || '截止时间待定' }}</span><span>{{ riskName(event.risk) }} ›</span></div></div><el-empty v-if="!recentTasks.length" description="暂无最近任务" /></section>
-      <section class="panel"><div class="section-title"><i></i><b>快速入口</b></div><div class="quick-entry"><button @click="activeTab = 'tasks'">核查任务<span>现场核查与提交</span></button><button @click="patrolVisible = true">巡查上报<span>发现问题线索直报</span></button><button @click="activeTab = 'offline'">离线中心<span>缓存与批量上传</span></button><button @click="activeTab = 'audit'">审核抽查<span>审核与随机抽查</span></button></div></section>
     </template>
+
+    <template v-if="activeTab === 'patrol-records'"><section class="panel"><div class="section-title"><i></i><b>我的巡查记录</b><span class="count">{{ patrolReports.length }} 条</span></div><p class="cache-tip">当前按{{ roleLevel }}组织范围展示网格巡查上报，包含尚未完成省级研判的线索。</p><div v-for="event in patrolReports" :key="event.id" class="task-card rich-task" :class="`task-${event.status}`" @click="selectTask(event)"><div class="task-head"><b>{{ event.code }}</b><el-tag size="small" :type="statusType(event.status)">{{ statusName(event.status) }}</el-tag></div><div class="task-meta"><span>问题：{{ event.desc || '—' }}</span><span>地点：{{ event.regionName || event.location || '—' }}</span><span>关联地块：{{ event.spot?.plotName || '—' }}</span><span>上报时间：{{ event.foundTime || '—' }}</span><span>证据：{{ event.reportAttachments?.length || 0 }} 项</span></div><div class="task-foot"><span>查看上报详情</span><span>›</span></div></div><el-empty v-if="!patrolReports.length" description="暂无巡查上报记录" /></section></template>
 
     <template v-if="activeTab === 'tasks'"><section ref="taskSection" class="panel"><div class="section-title"><i></i><b>核查任务</b><span class="count">{{ filteredTasks.length }} 条</span></div><div class="filter-tabs"><button v-for="filter in statusTabs" :key="filter.key" :class="{ active: taskFilter === filter.key }" @click="taskFilter = filter.key">{{ filter.label }}</button></div><div v-for="event in filteredTasks" :key="event.id" class="task-card rich-task" :class="`task-${event.status}`" @click="selectTask(event)"><div class="task-head"><b>{{ event.code }}</b><el-tag size="small" :type="statusType(event.status)">{{ statusName(event.status) }}</el-tag></div><p v-if="event.conflictFlag" class="conflict-tip">该任务在其他设备已修改，上传前需合并（演示占位）</p><div class="task-meta"><span>问题：{{ event.desc || '待核实问题' }}</span><span>位置：{{ event.regionName }}</span><span>面积：{{ event.spot?.areaMu || 0 }} 亩</span><span>风险：{{ riskName(event.risk) }}</span><span>截止：{{ event.deadline || '待定' }}</span><span>责任人：{{ event.assignee || event.owner || '待分派' }}</span></div><div class="task-foot"><span>点击查看详情/现场核查</span><span>›</span></div></div><el-empty v-if="!filteredTasks.length" description="暂无符合条件的任务" /></section></template>
 
@@ -69,48 +72,21 @@
     <template v-if="activeTab === 'audit'">
       <section v-if="canAudit" class="panel"><div class="section-title"><i></i><b>市级待审核列表</b><span class="count">{{ reviewingTasks.length }} 条</span></div><div v-for="event in reviewingTasks" :key="event.id" class="audit-row"><div><b>{{ event.code }}</b><span>{{ event.regionName }} · {{ event.subjectName || '待核实主体' }}</span></div><div><el-button size="small" @click="selectTask(event)">详情</el-button><el-button size="small" type="success" @click="doAudit(event, 'pass')">审核通过</el-button><el-button size="small" type="danger" plain @click="doAudit(event, 'reject')">打回重核</el-button></div></div><el-empty v-if="!reviewingTasks.length" description="暂无待审核任务" /></section>
       <section v-if="canAudit" class="panel"><div class="section-title"><i></i><b>市级需复查列表（复核整改情况）</b><span class="count">{{ recheckTasks.length }} 条</span></div><div v-for="event in recheckTasks" :key="event.id" class="audit-row"><div><b>{{ event.code }}</b><span>{{ event.regionName }} · {{ event.subjectName || '待核实主体' }}</span></div><div><el-button size="small" @click="selectTask(event)">整改详情</el-button><el-button size="small" type="success" @click="doRecheck(event, 'pass')">复核通过</el-button><el-button size="small" type="danger" plain @click="doRecheck(event, 'reject')">复核退回整改</el-button></div></div><el-empty v-if="!recheckTasks.length" description="暂无需复查任务" /></section>
-      <section v-else-if="isProvince" class="panel">
-        <div class="section-title"><i></i><b>省级随机抽查</b><span class="count">全省地块</span></div>
-        <p class="audit-tip">随机抽取全省地块，查看当前遥感影像与历史事件后，决定是否纳入变化图斑库。</p>
-        <el-button type="warning" @click="randomInspect">随机抽取地块</el-button>
-        <div v-if="inspectionPlot" class="inspection-plot-detail">
-          <div class="task-head"><b>{{ inspectionPlot.name }}</b><el-tag size="small" type="info">{{ inspectionPlot.id }}</el-tag></div>
-          <p><b>所属区域：</b>{{ inspectionPlot.regionName || inspectionPlot.unitName || '待确认' }}</p>
-          <p><b>作物/面积：</b>{{ cropName(inspectionPlot.crop) }} / {{ inspectionPlot.areaMu }}亩</p>
-          <p><b>地块中心：</b>{{ inspectionPlot.center?.join(', ') || '暂无坐标' }}</p>
-          <div class="inspection-images">
-            <div><span>当前遥感影像</span><img :src="inspectionPlot.currentImage" alt="当前遥感影像" /></div>
-            <div><span>历史遥感影像</span><img :src="inspectionPlot.historyImage" alt="历史遥感影像" /></div>
-          </div>
-          <div class="history-box">
-            <b>历史事件记录</b>
-            <p v-for="item in inspectionPlot.historyEvents" :key="item.code">{{ item.code }} · {{ item.type }} · {{ item.status }}</p>
-            <p v-if="!inspectionPlot.historyEvents.length" class="text-muted">暂无历史事件记录</p>
-          </div>
-          <div class="inspection-form">
-            <el-form label-position="top">
-              <el-form-item label="抽查结论">
-                <el-radio-group v-model="inspectionForm.conclusion">
-                  <el-radio value="暂不纳入变化图斑库">暂不纳入</el-radio>
-                  <el-radio value="纳入变化图斑库">纳入变化图斑库</el-radio>
-                </el-radio-group>
-              </el-form-item>
-              <el-form-item v-if="inspectionForm.conclusion === '纳入变化图斑库'" label="疑似问题类型">
-                <el-select v-model="inspectionForm.type" style="width:100%"><el-option v-for="t in EVENT_TYPES" :key="t.code" :label="t.name" :value="t.code" /></el-select>
-              </el-form-item>
-              <el-form-item label="抽查说明"><el-input v-model="inspectionForm.desc" type="textarea" :rows="3" placeholder="请填写查看遥感影像和历史记录后的抽查判断" /></el-form-item>
-            </el-form>
-            <div class="form-actions">
-              <el-button @click="inspectionPlot = null">重新抽取</el-button>
-              <el-button type="primary" :loading="inspectionSubmitting" @click="saveInspection">保存抽查记录</el-button>
-            </div>
-          </div>
+      <section v-else-if="isProvince" class="panel"><div class="section-title"><i></i><b>省级随机抽查</b></div><p class="audit-tip">从已核查上报的任务中随机抽取，先查看完整核查详情，再形成抽查结论。</p><el-button type="warning" @click="randomInspect">随机抽查</el-button>
+        <div v-if="randomTask" class="random-detail">
+          <p><b>{{ randomTask.code }} · {{ randomTask.regionName }}</b><el-tag size="small" :type="statusType(randomTask.status)" style="margin-left:6px">{{ statusName(randomTask.status) }}</el-tag></p>
+          <p><b>问题：</b>{{ randomTask.desc || '待核实' }}</p>
+          <p><b>核查结论：</b>{{ randomTask.checkReport?.conclusion || '—' }}</p>
+          <p><b>核查描述：</b>{{ randomTask.checkReport?.desc || '—' }}</p>
+          <p><b>核查定位：</b>{{ randomTask.checkReport?.gps || (randomTask.checkReport?.longitude ? randomTask.checkReport.longitude + ', ' + randomTask.checkReport.latitude : '未采集') }}</p>
+          <p><b>核查人：</b>{{ randomTask.checkReport?.checker || '—' }}<template v-if="randomTask.checkResponsibleUnit">（{{ randomTask.checkResponsibleUnit }}）</template></p>
+          <p><b>现场证据（{{ (randomTask.checkReport?.attachments || []).length }} 项）：</b></p>
+          <EvidenceThumbs v-if="(randomTask.checkReport?.attachments || []).length" :items="randomTask.checkReport.attachments" :size="48" />
+          <p v-else>未上传证据</p>
+          <p><b>上传状态：</b>{{ randomTask.checkReport?.uploadStatus || '已上传' }}</p>
         </div>
-        <div v-if="inspections.length" class="inspection-history">
-          <div class="section-title"><i></i><b>抽查记录</b><span class="count">{{ inspections.length }} 条</span></div>
-          <div v-for="item in inspections.slice(0, 5)" :key="item.inspectionId || item.time" class="history-row"><b>{{ item.plotName || item.code }}</b><span>{{ item.conclusion }}</span><small>{{ item.inspectedAt || item.time }}</small></div>
-        </div>
-      </section>
+        <div v-if="randomTask" class="random-form"><p><b>抽查结论登记</b></p><el-form label-position="top"><el-form-item label="抽查结论"><el-select v-model="randomForm.conclusion" style="width:100%"><el-option label="通过" value="通过" /><el-option label="发现问题" value="发现问题" /><el-option label="需补充材料" value="需补充材料" /></el-select></el-form-item><el-form-item label="问题描述"><el-input v-model="randomForm.desc" type="textarea" /></el-form-item><div class="two-col"><el-form-item label="经度"><el-input v-model="randomForm.longitude" /></el-form-item><el-form-item label="纬度"><el-input v-model="randomForm.latitude" /></el-form-item></div></el-form><el-button type="primary" @click="saveInspection">保存抽查记录</el-button></div>
+        <div v-for="item in inspections" :key="item.time" class="history-row"><b>{{ item.code }}</b><span>{{ item.conclusion }}</span><small>{{ item.time }}</small></div></section>
       <section v-else class="panel"><div class="section-title"><i></i><b>核查上报</b></div><p class="audit-tip">当前角色请通过核查任务完成现场填报并上报，提交后由市级统一审核。</p><el-button type="primary" @click="activeTab = 'tasks'">进入核查任务</el-button></section>
     </template>
 
@@ -118,29 +94,29 @@
 
     <!-- 网格巡查上报（可研 5.5.3.9.2：基层干部巡查发现割青毁粮/撂荒等问题，必须关联地块） -->
     <el-dialog v-model="patrolVisible" title="粮食安全巡查上报" width="92%" class="scroll-dialog">
-      <el-alert type="info" :closable="false" style="margin-bottom: 10px" title="巡查上报必须选择对应地块（可研'按图选地'口径）；线索提交后进入省粮食安全综合监管系统，由省级研判是否转入核查。" />
-      <el-form label-width="80px">
+      <el-alert type="info" :closable="false" style="margin-bottom: 10px" title="网格员巡查上报与随手拍字段保持一致；网格员使用实名账号，不展示匿名选项。关联地块为巡查线索必填项，提交后进入省级研判。" />
+      <el-form label-position="top">
+        <el-form-item label="上报身份"><el-input :model-value="`${userStore.role?.name || '当前网格员'}（网格员实名）`" disabled /><p class="id-tip">网格员使用实名账号上报，不提供匿名选项；该字段用于记录责任人。</p></el-form-item>
         <el-form-item label="问题类型" required>
-          <el-radio-group v-model="patrolForm.type">
-            <el-radio v-for="t in EVENT_TYPES" :key="t.code" :value="t.code">{{ t.name }}</el-radio>
-          </el-radio-group>
+          <el-select v-model="patrolForm.type" style="width:100%" placeholder="请选择问题类型"><el-option v-for="t in EVENT_TYPES" :key="t.code" :label="t.name" :value="t.code" /></el-select>
         </el-form-item>
-        <el-form-item label="关联地块" required>
-          <el-input v-model="patrolForm.plotName" placeholder="按图选地或输入地块名称（如：税镇镇张楼村东地块）" />
-        </el-form-item>
-        <el-form-item label="情况描述" required>
-          <el-input v-model="patrolForm.desc" type="textarea" :rows="3" placeholder="描述现场情况（割青毁粮/撂荒等）" />
-        </el-form-item>
-        <el-form-item label="现场证据">
-          <el-button size="small" plain @click="patrolForm.evidence++">＋ 拍照/录像取证（{{ patrolForm.evidence }}项）</el-button>
-          <span class="watermark-tip" style="margin-left: 8px">自动附时间水印与GPS定位（演示）</span>
+        <el-form-item label="发生地点" required><el-cascader v-model="patrolForm.region" :options="patrolRegionOptions" style="width:100%" placeholder="请选择发生地点" /></el-form-item>
+        <el-form-item label="关联地块（必填）" required><el-select v-model="patrolForm.plotId" filterable style="width:100%" placeholder="请选择巡查地块"><el-option v-for="plot in patrolPlots" :key="plot.id" :label="`${plot.name}（${plot.areaMu}亩）`" :value="plot.id" /></el-select><p class="id-tip">网格员巡查必须选择关联地块；随手拍可不选，由省级研判确认归属。</p></el-form-item>
+        <el-form-item label="现场定位" required><div class="location"><el-input v-model="patrolForm.location" /><el-button @click="locatePatrol">重新定位</el-button></div><p v-if="patrolForm.center" class="id-tip">GPS坐标：{{ patrolForm.center.join(', ') }}（随上报记录，用于后台落图）</p></el-form-item>
+        <el-form-item label="问题描述" required><el-input v-model="patrolForm.desc" type="textarea" :rows="4" maxlength="180" show-word-limit placeholder="请描述现场问题、影响范围和处置建议" /></el-form-item>
+        <el-form-item label="现场证据（拍照/录像）">
+          <div class="evidence-actions"><el-button size="small" @click="addPatrolEvidence('photo')">拍照</el-button><el-button size="small" @click="addPatrolEvidence('video')">录像</el-button></div>
+          <div v-for="(item, idx) in patrolForm.attachments" :key="item.name" class="evidence-row"><EvidenceThumbs :items="[item]" :size="56" /><el-button link type="danger" size="small" @click="removePatrolEvidence(idx)">删除</el-button></div>
+          <p v-if="patrolForm.attachments.length" class="upload-state">上传状态：已上传（{{ patrolForm.attachments.length }}项）</p><p class="watermark-tip">证据自动添加“时间 + 位置”水印（演示记录）</p>
         </el-form-item>
       </el-form>
       <template #footer>
+        <el-button @click="savePatrolDraft">暂存草稿</el-button>
         <el-button @click="patrolVisible = false">取消</el-button>
-        <el-button type="primary" :loading="patrolSubmitting" @click="submitPatrol">提交线索</el-button>
+        <el-button type="primary" :loading="patrolSubmitting" @click="submitPatrol">提交巡查上报</el-button>
       </template>
     </el-dialog>
+    <button class="patrol-fab" type="button" aria-label="巡查上报" title="巡查上报" @click="patrolVisible = true">＋</button>
   </div>
 </template>
 
@@ -148,29 +124,42 @@
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import { auditEvent, closeEvent, createInspectionEvent, fetchEvent, fetchEvents, fetchInspectionPlots, fetchProvinceInspections, saveProvinceInspection, submitCheckReport, submitPatrolReport, submitRectify } from '@/api/fsr'
+import { auditEvent, closeEvent, fetchEvent, fetchEvents, fetchMyPatrolReports, submitCheckReport, submitPatrolReport, submitRectify } from '@/api/fsr'
+import MobileFunctionEntry from '@/components/mobile/MobileFunctionEntry.vue'
 import { EVENT_STATUS, EVENT_STATUS_FLOW, EVENT_TYPES } from '@/mock/common/dict'
 import { EVIDENCE_IMAGES } from '@/mock/common/evidenceImages'
+import { PLOTS } from '@/mock/geo/plot-gen'
 import EvidenceThumbs from '@/components/common/EvidenceThumbs.vue'
 import TaskDetailContent from '@/views/fsr/TaskDetailContent.vue'
 
 const userStore = useUserStore()
-const events = ref([]); const activeTask = ref(null); const taskSection = ref(null)
+const events = ref([]); const patrolReports = ref([]); const activeTask = ref(null); const taskSection = ref(null)
 // 任务详情弹窗（点列表卡片/最近任务打开，不再堆叠展示）
 const detailVisible = ref(false)
 // 网格巡查上报（线索 → 待省级研判）
 const patrolVisible = ref(false); const patrolSubmitting = ref(false)
-const patrolForm = reactive({ type: 'piaohuang', plotName: '', desc: '', evidence: 0 })
+const patrolRegionOptions = [{ value: '阜阳市', label: '阜阳市', children: [{ value: '太和县', label: '太和县', children: [{ value: '旧县镇', label: '旧县镇' }, { value: '大新镇', label: '大新镇' }] }] }]
+const patrolForm = reactive({ type: 'piaohuang', region: ['阜阳市', '太和县', '旧县镇'], plotId: '', plotName: '', location: '安徽省太和县（定位待更新）', center: null, desc: '', attachments: [] })
+const patrolPlots = computed(() => { const prefix = String(userStore.role?.regionCode || '341222'); const matched = PLOTS.filter((plot) => String(plot.regionCode || '').startsWith(prefix)); return (matched.length ? matched : PLOTS).slice(0, 12) })
+const patrolDraftKey = 'wzt-food-patrol-draft'
+function patrolStamp() { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}` }
+function locatePatrol() { patrolForm.location = '安徽省太和县旧县镇（GPS定位已更新）'; patrolForm.center = [Number((115.58 + Math.random() * 0.12).toFixed(6)), Number((33.18 + Math.random() * 0.1).toFixed(6))]; ElMessage.success('定位已更新') }
+function addPatrolEvidence(type) { if (patrolForm.attachments.length >= 9) return ElMessage.warning('现场证据最多9项'); const photo = type === 'photo'; patrolForm.attachments.push({ name: `${photo ? 'IMG' : 'VID'}_${patrolStamp()}.${photo ? 'jpg' : 'mp4'}`, type, time: new Date().toLocaleString('zh-CN'), location: patrolForm.location || '未定位', watermark: '已加水印（时间+位置）', url: photo ? EVIDENCE_IMAGES.wheatField : EVIDENCE_IMAGES.videoCover }); ElMessage.success(photo ? '照片已添加' : '视频已添加') }
+function removePatrolEvidence(index) { patrolForm.attachments.splice(index, 1) }
+function savePatrolDraft() { localStorage.setItem(patrolDraftKey, JSON.stringify({ ...patrolForm, attachments: patrolForm.attachments.map((a) => ({ ...a })) })); ElMessage.success('巡查上报草稿已暂存') }
 async function submitPatrol() {
+  const selectedPlot = patrolPlots.value.find((plot) => plot.id === patrolForm.plotId)
+  if (selectedPlot) patrolForm.plotName = selectedPlot.name
   if (!patrolForm.plotName.trim()) return ElMessage.warning('巡查上报必须关联地块')
   if (!patrolForm.desc.trim()) return ElMessage.warning('请填写情况描述')
   patrolSubmitting.value = true
   try {
-    const r = await submitPatrolReport({ ...patrolForm, regionCode: userStore.role?.regionCode || '', regionName: userStore.role?.regionName || '', reporter: userStore.role?.name || '网格员' })
+    const r = await submitPatrolReport({ ...patrolForm, attachments: patrolForm.attachments.map((a) => ({ ...a })), regionCode: userStore.role?.regionCode || '', regionName: patrolForm.region?.join(' / ') || userStore.role?.regionName || '', reporter: userStore.role?.name || '网格员', reporterType: 'grid' })
     if (!r.success) return ElMessage.error(r.message || '上报失败')
     ElMessageBox.alert(`线索已上报（${r.code}），进入省系统待省级研判，研判通过后将下发核查任务。`, '上报成功', { type: 'success', confirmButtonText: '知道了' })
     patrolVisible.value = false
-    patrolForm.plotName = ''; patrolForm.desc = ''; patrolForm.evidence = 0
+    Object.assign(patrolForm, { plotId: '', plotName: '', location: '安徽省太和县（定位待更新）', center: null, desc: '', attachments: [] })
+    localStorage.removeItem(patrolDraftKey)
     load()
   } finally {
     patrolSubmitting.value = false
@@ -178,7 +167,14 @@ async function submitPatrol() {
 }
 const online = ref(navigator.onLine); const historyVisible = ref(false)
 const activeTab = ref('overview'); const taskFilter = ref('all')
-const tabs = [{ key: 'overview', label: '态势总览' }, { key: 'tasks', label: '核查任务' }, { key: 'offline', label: '离线中心' }, { key: 'audit', label: '审核抽查' }]
+const tabs = [{ key: 'overview', label: '工作台' }, { key: 'tasks', label: '核查任务' }, { key: 'patrol-records', label: '我的巡查' }, { key: 'offline', label: '离线中心' }, { key: 'audit', label: '审核抽查' }]
+const foodEntryItems = computed(() => [
+  { key: 'tasks', label: '核查任务', description: '现场核查与结果提交', tone: 'blue', badge: pendingCount.value },
+  { key: 'patrol', label: '巡查上报', description: '发现问题线索直报', tone: 'red' },
+  { key: 'patrol-records', label: '我的巡查', description: '查看上报与研判状态', tone: 'green', badge: patrolReports.value.length },
+  { key: 'offline', label: '离线中心', description: '缓存任务与待上传记录', tone: 'orange' },
+  { key: 'audit', label: '审核抽查', description: '按角色显示可用功能', tone: 'purple', visible: ['province', 'city'].includes(userStore.role?.code) }
+])
 // 状态页签与七状态字典统一（EVENT_STATUS）；页签按角色可见状态收敛（待研判仅省级、待派发仅省/市，与 api 层过滤口径一致）
 const visibleStatuses = computed(() => {
   const code = userStore.role?.code
@@ -188,13 +184,13 @@ const visibleStatuses = computed(() => {
   return list
 })
 const statusTabs = computed(() => [{ key: 'all', label: '全部' }, ...visibleStatuses.value.map((k) => ({ key: k, label: EVENT_STATUS[k].name }))])
-const cachedTasks = ref(read('wzt-food-tasks')); const cachedReports = ref(read('wzt-food-reports')); const history = ref(read('wzt-food-history')); const inspections = ref([]); const inspectionPlot = ref(null); const inspectionSubmitting = ref(false)
+const cachedTasks = ref(read('wzt-food-tasks')); const cachedReports = ref(read('wzt-food-reports')); const history = ref(read('wzt-food-history')); const inspections = ref(read('wzt-food-inspections')); const randomTask = ref(null)
 const emptyCheckForm = () => ({ conclusion: '问题属实', desc: '', longitude: '', latitude: '', attachments: [] })
 const checkForm = reactive(emptyCheckForm())
 // 整改提交表单（audited → recheck，属地县局经办；流程断点修复 2026-11-12）
 const emptyRectifyForm = () => ({ desc: '', responsible: '', attachments: [] })
 const rectifyForm = reactive(emptyRectifyForm())
-const inspectionForm = reactive({ conclusion: '暂不纳入变化图斑库', type: 'piaohuang', desc: '' })
+const randomForm = reactive({ conclusion: '通过', desc: '', longitude: '', latitude: '' })
 const submitting = ref(false); const uploading = ref(false)
 
 const roleLevel = computed(() => { const r = userStore.role || {}; const raw = `${r.role || ''}${r.code || ''}${r.roleName || ''}`.toLowerCase(); if (r.regionCode === '340000' || raw.includes('province') || raw.includes('省')) return '省级'; if (raw.includes('city') || raw.includes('市')) return '市级'; if (raw.includes('town') || raw.includes('township') || raw.includes('乡') || raw.includes('镇')) return '乡镇'; return '县级' })
@@ -218,9 +214,15 @@ const centerText = (e) => e?.spot?.center?.join?.(', ') || e?.checkReport?.gps |
 const canCheck = (e) => e?.status === 'checking' && canReceive.value
 const canRectify = (e) => e?.status === 'audited' && canReceive.value
 
+function handleEntry(item) {
+  if (item.key === 'patrol') return (patrolVisible.value = true)
+  activeTab.value = item.key
+}
+
 async function load() {
-  const result = await fetchEvents(userStore.role, {})
+  const [result, patrolResult] = await Promise.all([fetchEvents(userStore.role, {}), fetchMyPatrolReports(userStore.role)])
   events.value = Array.isArray(result) ? result : []
+  patrolReports.value = Array.isArray(patrolResult) ? patrolResult : []
   // 演示占位：模拟任务在其他设备被修改产生的离线冲突标记（真实多端同步待接入）
   const conflictDemo = events.value.find((e) => e.status === 'checking')
   if (conflictDemo) conflictDemo.conflictFlag = true
@@ -386,48 +388,11 @@ async function doRecheck(e, action) {
   } catch { /* 用户取消 */ }
 }
 
-const cropName = (code) => ({ wheat: '小麦', rice: '水稻', corn: '玉米', soybean: '大豆', silage_corn: '青贮玉米' }[code] || code || '待确认')
-const buildInspectionPlot = (plot, allEvents) => ({
-  ...plot,
-  currentImage: EVIDENCE_IMAGES.wheatField,
-  historyImage: EVIDENCE_IMAGES.cornField,
-  historyEvents: allEvents.filter((e) => e.spot?.plotId === plot.id).map((e) => ({ code: e.code, type: e.type, status: statusName(e.status) }))
-})
-
-// 省级抽查：全省地块随机抽取，先查看遥感与历史事件，再决定是否纳入变化图斑库。
-async function randomInspect() {
-  const plots = await fetchInspectionPlots()
-  if (!plots?.length) return ElMessage.info('暂无可抽查地块')
-  const index = Math.floor(Math.random() * plots.length)
-  inspectionPlot.value = buildInspectionPlot(plots[index], events.value)
-  Object.assign(inspectionForm, { conclusion: '暂不纳入变化图斑库', type: 'piaohuang', desc: '' })
-}
-
-async function saveInspection() {
-  if (!inspectionPlot.value) return ElMessage.warning('请先随机抽取地块')
-  if (!inspectionForm.desc.trim()) return ElMessage.warning('请填写抽查说明')
-  if (inspectionSubmitting.value) return
-  inspectionSubmitting.value = true
-  try {
-    const role = userStore.role
-    const base = await saveProvinceInspection(inspectionPlot.value, inspectionForm, role)
-    if (!base?.success) return ElMessage.error(base?.message || '抽查记录保存失败')
-    let result = base
-    if (inspectionForm.conclusion === '纳入变化图斑库') {
-      result = await createInspectionEvent(inspectionPlot.value, { ...inspectionForm, inspectionId: base.inspection.inspectionId }, role)
-      if (!result?.success) return ElMessage.error(result?.message || '纳入变化图斑库失败')
-      ElMessage.success(`抽查记录已保存，已生成待研判图斑 ${result.code}`)
-    } else {
-      ElMessage.success('抽查记录已保存，地块暂不纳入变化图斑库')
-    }
-    inspections.value = await fetchProvinceInspections()
-    inspectionPlot.value = null
-    load()
-  } finally { inspectionSubmitting.value = false }
-}
-
+// 抽查范围限定"已核查上报"的任务（抽查对象是核查记录，待核查无意义）；抽中先看完整详情再登记结论（用户确认 2026-11-12）
+function randomInspect() { const pool = events.value.filter((e) => e.checkReport); if (!pool.length) return ElMessage.info('暂无已核查上报的任务可抽查'); randomTask.value = pool[Math.floor(Math.random() * pool.length)]; const c = centerText(randomTask.value).split(','); Object.assign(randomForm, { conclusion: '通过', desc: '', longitude: String(c[0] || '').trim(), latitude: String(c[1] || '').trim() }) }
+function saveInspection() { if (!randomTask.value) return; inspections.value.unshift({ eventId: randomTask.value.id, code: randomTask.value.code, ...randomForm, inspector: userStore.role?.name, time: new Date().toLocaleString('zh-CN') }); save('wzt-food-inspections', inspections.value.slice(0, 30)); randomTask.value = null; ElMessage.success('抽查记录已保存') }
 function syncOnline() { online.value = navigator.onLine }
-onMounted(async () => { addEventListener('online', syncOnline); addEventListener('offline', syncOnline); await load(); inspections.value = await fetchProvinceInspections() })
+onMounted(() => { addEventListener('online', syncOnline); addEventListener('offline', syncOnline); try { const draft = JSON.parse(localStorage.getItem(patrolDraftKey) || 'null'); if (draft) Object.assign(patrolForm, draft) } catch { /* 忽略损坏的演示草稿 */ } load() })
 onUnmounted(() => { removeEventListener('online', syncOnline); removeEventListener('offline', syncOnline) })
 </script>
 
@@ -435,7 +400,6 @@ onUnmounted(() => { removeEventListener('online', syncOnline); removeEventListen
 /* 弹窗在手机壳内展示：宽度不超壳、内容超高滚动（用户反馈 2026-11-12） */
 :deep(.scroll-dialog){max-width:calc(100% - 20px);margin-top:40px !important}
 :deep(.scroll-dialog .el-dialog__body){max-height:560px;overflow-y:auto}
-.inspection-plot-detail{margin-top:12px;background:#f7faf9;border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.8}.inspection-plot-detail p{margin:2px 0}.inspection-images{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.inspection-images div{background:#fff;border:1px solid #e8eef2;border-radius:6px;padding:6px}.inspection-images span{display:block;color:#64748b;font-size:11px;margin-bottom:4px}.inspection-images img{display:block;width:100%;height:86px;object-fit:cover;border-radius:4px}.history-box{background:#fff;border:1px solid #e8eef2;border-radius:6px;padding:8px;margin:8px 0}.history-box p{color:#64748b}.text-muted{color:#98a2b3!important}.inspection-history{margin-top:12px;border-top:1px solid #edf0f5;padding-top:10px}.inspection-history .section-title{margin-bottom:8px}.inspection-form{border-top:1px solid #edf0f5;margin-top:10px;padding-top:10px}
 .random-detail{background:#f7faf9;border-radius:8px;padding:10px 12px;margin:10px 0;font-size:13px;line-height:1.9}
 .random-detail p{margin:0}
 .mobile-page{min-height:100%;box-sizing:border-box;background:#f5f7fa;padding:12px 12px 30px;color:#243b5a}
@@ -466,9 +430,8 @@ onUnmounted(() => { removeEventListener('online', syncOnline); removeEventListen
 .reminder-box{display:flex;align-items:center;gap:8px;background:#fff8e8;padding:12px;border-radius:8px}
 .reminder-box strong{font-size:24px;color:#d97706}
 .reminder-box span{font-size:12px;color:#64748b;flex:1}
-.quick-entry{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.quick-entry button{border:1px solid #d9e8f4;background:#f7fbff;color:#35678f;border-radius:8px;padding:11px 4px;font-size:12px}
-.quick-entry span{display:block;color:#98a2b3;font-size:10px;margin-top:4px}
+.patrol-fab{position:fixed;right:22px;bottom:76px;width:54px;height:54px;border:0;border-radius:50%;background:#2f8c76;color:#fff;font-size:32px;line-height:1;box-shadow:0 8px 18px rgba(47,140,118,.35);z-index:20;cursor:pointer}
+.patrol-fab:active{transform:scale(.96)}
 .filter-tabs{display:flex;gap:4px;overflow:auto;margin-bottom:8px}
 .rich-task{padding-bottom:12px}
 .task-meta{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:8px 0;color:#667085;font-size:11px}

@@ -12,10 +12,10 @@
         <button class="quick-item plan" @click="$router.push('/mobile/wzt-gpm')">
           <strong>粮食计划管理</strong>
         </button>
-        <button class="quick-item system" @click="$router.push('/mobile/wzt-silage')">
+        <button v-if="isCounty" class="quick-item system" @click="$router.push('/mobile/wzt-silage')">
           <strong>青贮饲料管理</strong>
         </button>
-        <button class="quick-item system" @click="$router.push('/mobile/wzt-food-safety')">
+        <button v-if="isCounty" class="quick-item system" @click="$router.push('/mobile/wzt-food-safety')">
           <strong>粮食安全综合监管</strong>
         </button>
         <button class="quick-item system" @click="showUnavailable('农药数字监督管理')">
@@ -27,8 +27,12 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 
+const userStore = useUserStore()
+const isCounty = computed(() => userStore.role?.code === 'county')
 const showUnavailable = name => ElMessage.info(`${name}移动端功能待接入`)
 </script>
 

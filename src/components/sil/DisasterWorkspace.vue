@@ -15,19 +15,19 @@
       <article v-for="event in filtered(data.events)" :key="event.id" class="record-card">
         <div class="record-title"><b>{{ event.subjectName }}</b><el-tag :type="event.status==='confirmed'?'success':'warning'">{{ event.status==='confirmed'?'会签已生效':'会签非必填，可上报' }}</el-tag></div>
         <small>{{ event.number }}</small><p>{{ regionName(event.regionCode) }} · {{ event.disasterType }} · {{ event.plots.length }} 块地 · 受灾 {{ event.affectedArea }} 亩</p><p>三名专家已签 {{ event.experts.filter(e=>e.signedAt).length }}/3（未完成也可直接上报）</p>
-        <div class="record-actions"><el-button link type="primary" @click="view(event,'event')">查看认定与材料</el-button><el-button v-if="isCounty && event.status==='signing'" link type="warning" @click="openSign(event)">专家会签</el-button><el-button v-if="canReport" link type="success" @click="newReport(event.id)">{{ isCounty?'代受灾主体上报':'补充上报' }}</el-button></div>
+        <div class="record-actions"><el-button link type="primary" @click="view(event,'event')">查看认定</el-button><el-button v-if="isCounty && event.status==='signing'" link type="warning" @click="openSign(event)">专家会签</el-button><el-button v-if="canReport" link type="success" @click="newReport(event.id)">{{ isCounty?'代受灾主体上报':'补充上报' }}</el-button></div>
       </article><el-empty v-if="!filtered(data.events).length" description="暂无可查看的受灾认定" :image-size="65"/>
     </div>
     <div v-else-if="tab==='reports'" class="record-list">
       <article v-for="report in filtered(data.reports)" :key="report.id" class="record-card">
         <div class="record-title"><b>{{ report.subjectName }}</b><el-tag type="success">免审已生效</el-tag></div><small>{{ report.number }}</small><p>{{ report.crop }} · {{ report.plots.length }} 块地 · 补充面积 {{ report.area }} 亩</p><p>申报单位：{{ report.applicant.unit }} · {{ report.applicant.name }}</p>
-        <div class="record-actions"><el-button link type="primary" @click="view(report,'report')">查看上报详情</el-button><el-button link type="primary" @click="mapLink(report)">查看围栏 / 一张图</el-button><el-button v-if="isCounty" link type="success" :disabled="data.demands.some(d=>d.reportId===report.id)" @click="newDemand(report)">{{ data.demands.some(d=>d.reportId===report.id)?'已发布需求':'发布临时需求' }}</el-button></div>
+        <div class="record-actions"><el-button link type="primary" @click="view(report,'report')">查看上报</el-button><el-button link type="primary" @click="mapLink(report)">查看围栏</el-button><el-button v-if="isCounty" link type="success" :disabled="data.demands.some(d=>d.reportId===report.id)" @click="newDemand(report)">{{ data.demands.some(d=>d.reportId===report.id)?'已发布需求':'发布临时需求' }}</el-button></div>
       </article><el-empty v-if="!filtered(data.reports).length" description="暂无补充上报；请先完成受灾范围认定（专家会签非必填）" :image-size="65"/>
     </div>
     <div v-else-if="tab==='demands'" class="record-list">
       <article v-for="demand in filtered(data.demands)" :key="demand.id" class="record-card">
         <div class="record-title"><b>{{ demand.subjectName }}</b><el-tag type="warning">临时收储需求</el-tag></div><small>{{ demand.number }}</small><p>{{ regionName(demand.regionCode) }} · {{ demand.crop }} · {{ demand.area }}亩 · 预计重量 {{ demand.estimatedWeight ?? '未填' }} 吨</p><p>发布单位：{{ demand.publisher }} · {{ demand.publishedAt }}</p><p>{{ demand.description || '请联系发布单位了解收储安排。' }}</p>
-        <div class="record-actions"><el-button link type="primary" @click="view(demand,'demand')">需求详情 / 联系方式</el-button><el-button v-if="isStorage" link type="success" :disabled="hasAcceptance(demand.id)" @click="newAcceptance(demand)">{{ hasAcceptance(demand.id)?'本主体已登记':'登记联系承接' }}</el-button></div>
+        <div class="record-actions"><el-button link type="primary" @click="view(demand,'demand')">需求详情</el-button><el-button v-if="isStorage" link type="success" :disabled="hasAcceptance(demand.id)" @click="newAcceptance(demand)">{{ hasAcceptance(demand.id)?'本主体已登记':'登记联系承接' }}</el-button></div>
       </article><el-empty v-if="!filtered(data.demands).length" description="暂无临时收储需求；由县级在补充上报生效后发布" :image-size="65"/>
     </div>
     <div v-else class="record-list">
@@ -71,13 +71,13 @@
       <el-form v-else-if="formType==='demand'" label-position="top" class="single-form"><el-alert :title="'来源：'+current?.number+' · '+current?.subjectName" type="success" :closable="false"/><p>{{ current?.crop }} · {{ current?.area }}亩 · 预计重量 {{ current?.estimatedWeight ?? '未填' }}吨</p><el-form-item label="需求联系人" required><el-input v-model="demandForm.contact"/></el-form-item><el-form-item label="联系方式" required><el-input v-model="demandForm.phone"/></el-form-item><el-form-item label="需求说明（选填）"><el-input v-model="demandForm.description" type="textarea" :rows="3"/></el-form-item></el-form>
       <el-form v-else-if="formType==='acceptance'" label-position="top" class="single-form"><el-alert title="登记联系意向，具体收储安排由双方联系确定。" type="info" :closable="false"/><p>收储主体：{{ userStore.role?.unit }}</p><el-form-item label="承接联系人" required><el-input v-model="acceptanceForm.contact"/></el-form-item><el-form-item label="联系方式" required><el-input v-model="acceptanceForm.phone"/></el-form-item><el-form-item label="联系说明（选填）"><el-input v-model="acceptanceForm.note" type="textarea"/></el-form-item></el-form>
       <el-form v-else label-position="top" :disabled="!isStorage" class="compact-fields"><el-form-item label="实际收储重量（吨）" required><el-input-number v-model="executionForm.weight" :min="0" :controls="false"/></el-form-item><el-form-item label="实际收储价格（元/吨，选填）"><el-input-number v-model="executionForm.price" :min="0" :controls="false"/></el-form-item><el-form-item label="实际产量（吨，选填）"><el-input-number v-model="executionForm.actualYield" :min="0" :controls="false"/></el-form-item><el-form-item label="实际收储日期（选填）"><el-date-picker v-model="executionForm.storageTime" type="date" value-format="YYYY-MM-DD"/></el-form-item></el-form>
-      <template #footer><div class="dialog-footer"><el-button :disabled="saving" @click="formVisible=false">取消</el-button><el-button v-if="step>1 && ['event','report'].includes(formType)" @click="step--">上一步</el-button><el-button v-if="step<3 && ['event','report'].includes(formType)" type="primary" @click="nextStep">下一步</el-button><template v-else-if="formType!=='execution'||isStorage"><el-button v-if="formType==='execution'" :disabled="saving" @click="save(false)">保存草稿</el-button><el-button type="primary" :loading="saving" @click="save(true)">{{ formType==='event'?'保存并进入专家会签':formType==='report'?'提交上报并免审生效':formType==='demand'?'发布临时需求':formType==='acceptance'?'登记联系承接':'保存实际收储' }}</el-button></template></div></template>
+      <template #footer><div class="dialog-footer"><el-button :disabled="saving" @click="formVisible=false">取消</el-button><el-button v-if="step>1 && ['event','report'].includes(formType)" @click="step--">上一步</el-button><el-button v-if="step<3 && ['event','report'].includes(formType)" type="primary" @click="nextStep">下一步</el-button><template v-else-if="formType!=='execution'||isStorage"><el-button v-if="formType==='execution'" :disabled="saving" @click="save(false)">保存草稿</el-button><el-button type="primary" :loading="saving" @click="save(true)">{{ formType==='event'?'保存并会签':formType==='report'?'补充上报':formType==='demand'?'发布需求':formType==='acceptance'?'登记承接':'保存收储' }}</el-button></template></div></template>
     </el-dialog>
 
     <el-dialog v-model="signVisible" title="三名专家会签（演示）" width="min(800px,96vw)" append-to-body destroy-on-close>
       <el-alert title="专家会签非必填：可逐人签字后生效，也可直接提交补充上报（免审）。" type="info" :closable="false"/>
       <div v-for="(expert,i) in current?.experts || []" :key="i" class="expert-sign"><div><b>{{ expert.name }}</b><small>{{ expert.unit }} · {{ expert.field }}</small><small>{{ expert.signedAt || '待签字' }}</small></div><el-tag v-if="expert.signedAt" type="success">已签字</el-tag><el-button v-else type="primary" :loading="saving" @click="sign(i)">模拟 {{ expert.name }} 签字</el-button></div>
-      <template #footer><el-button @click="signVisible=false">关闭</el-button><el-button v-if="canReport" type="primary" @click="signVisible=false;newReport(current.id)">{{ current?.status==='confirmed' ? '进入补充上报' : '跳过会签，直接上报' }}</el-button></template>
+      <template #footer><el-button @click="signVisible=false">关闭</el-button><el-button v-if="canReport" type="primary" @click="signVisible=false;newReport(current.id)">{{ current?.status==='confirmed' ? '进入补充上报' : '直接上报' }}</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="detailVisible" :title="detailTitle" width="min(1000px,96vw)" class="disaster-dialog" top="3vh" append-to-body destroy-on-close>
@@ -89,7 +89,7 @@
         <template v-if="current.promise"><h4>电子承诺书</h4><p>{{ current.promise.content }}</p><small>{{ current.promise.signer }} · {{ current.promise.signedAt }} · {{ current.promise.version }}</small></template>
         <h4>操作记录</h4><div v-for="(item,i) in current.auditTrail || []" :key="i" class="trail">{{ item.time }} · {{ item.user }} · {{ item.action }}</div><el-empty v-if="!current.auditTrail?.length" description="预置演示记录" :image-size="45"/>
       </div>
-      <template #footer><el-button @click="detailVisible=false">关闭</el-button><el-button v-if="detailType==='report'" type="primary" @click="mapLink(current)">查看围栏与一张图</el-button></template>
+      <template #footer><el-button @click="detailVisible=false">关闭</el-button><el-button v-if="detailType==='report'" type="primary" @click="mapLink(current)">查看围栏</el-button></template>
     </el-dialog>
   </div>
 </template>

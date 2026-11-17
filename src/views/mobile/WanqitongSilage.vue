@@ -1,6 +1,7 @@
 <template>
   <div class="mobile-silage">
     <header><el-button link @click="router.push('/mobile/wanqitong')">‹ 返回</el-button><b>青贮饲料管理</b><span/></header>
+    <MobileFunctionEntry title="青贮收储工作台" subtitle="普通收储、受灾补充和申报记录统一入口" role-label="收储/种植主体" :items="entryItems" @select="selectEntry" />
     <nav class="mobile-tabs"><button :class="{active:tab==='records'}" @click="showRecords">我的申报</button><button :class="{active:tab==='form'}" @click="newApplication">普通收储申报</button><button :class="{active:tab==='supplement'}" @click="tab='supplement'">受灾补充</button></nav>
     <template v-if="tab==='records'">
       <div class="records-head"><div><h3>青贮饲料作物收储申报</h3><p>种植计划、地块与收储信息统一报备。</p></div><el-button type="primary" size="small" @click="newApplication">新增</el-button></div>
@@ -25,8 +26,11 @@ import { useUserStore } from '@/stores/user'
 import { fetchOrdinaryApplications, isOrdinaryOwner } from '@/api/silOrdinary'
 import OrdinaryApplicationForm from '@/components/sil/OrdinaryApplicationForm.vue'
 import DisasterWorkspace from '@/components/sil/DisasterWorkspace.vue'
+import MobileFunctionEntry from '@/components/mobile/MobileFunctionEntry.vue'
 const route=useRoute(), router=useRouter(), userStore=useUserStore()
 const tab=ref('records'), editingId=ref(''), formKey=ref(0), records=ref([]), loading=ref(false)
+const entryItems=[{key:'records',label:'我的申报',description:'查看申报状态与详情',tone:'blue'},{key:'form',label:'新增普通申报',description:'填写主体、地块和材料',tone:'green'},{key:'supplement',label:'受灾补充',description:'补充受灾作物收储信息',tone:'orange'}]
+const selectEntry=item=>{if(item.key==='records')showRecords();else if(item.key==='form')newApplication();else tab.value='supplement'}
 const statusName=s=>({draft:'草稿',pending:'待审核',returned:'退回补正',rejected:'已驳回',filed:'已备案'}[s]||s)
 const statusType=s=>({filed:'success',pending:'warning',returned:'warning',rejected:'danger'}[s]||'info')
 async function showRecords(){tab.value='records';loading.value=true;try{records.value=await fetchOrdinaryApplications(userStore.role)}catch{ElMessage.error('申报记录加载失败，请重试')}finally{loading.value=false}}

@@ -114,9 +114,8 @@ const systemGroup = computed(() => {
 // 移动端演示入口：按所属系统（gpm/sil/fsr）归类，各子系统侧栏仅显示本系统入口，门户不展示
 const MOBILE_ENTRIES = [
   // 粮食计划管理
-  { title: '皖政通·计划管理任务', route: '/mobile/check/list', icon: 'Iphone', roles: ['county'], system: 'gpm' },
-  { title: '皖政通·进度上报', route: '/mobile/wzt-progress', icon: 'Upload', roles: ['county', 'town'], system: 'gpm' },
-  { title: '皖企通·主体填报', route: '/mobile/declare', icon: 'Tickets', roles: ['grower', 'storage_subject'], system: 'gpm' },
+  { title: '皖政通·粮食计划', route: '/mobile/wzt-gpm', icon: 'DataAnalysis', roles: ['county', 'town'], system: 'gpm' },
+  { title: '皖企通·主体填报', route: '/mobile/declare', icon: 'Tickets', roles: ['grower'], system: 'gpm' },
   // 青贮饲料管理
   { title: '皖企通·青贮饲料管理', route: '/mobile/wqt-silage', icon: 'Wheat', roles: ['grower', 'storage_subject'], system: 'sil' },
   { title: '皖政通·青贮饲料管理', route: '/mobile/wzt-silage', icon: 'Iphone', roles: ['county'], system: 'sil' },

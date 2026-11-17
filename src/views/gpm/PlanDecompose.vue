@@ -43,73 +43,6 @@
       <el-empty v-if="!countyIssueRows.length" description="暂无种植计划" />
     </div>
 
-    <div v-if="false" class="panel">
-      <div class="panel-title">
-        <span class="title-text">计划下钻</span>
-        <span class="title-extra">省级计划 → 市级 → 县级 → 乡镇 → 村级 → 主体 → 地块</span>
-      </div>
-
-      <el-form :inline="true" class="filters">
-        <el-form-item label="年份">
-          <el-select v-model="filters.year" clearable placeholder="全部" style="width:115px">
-            <el-option label="2026年" :value="2026" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="季度">
-          <el-select v-model="filters.quarter" clearable placeholder="全部" style="width:130px">
-            <el-option v-for="item in quarters" :key="item" :label="item" :value="item" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="行政区划">
-          <el-select v-model="filters.region" clearable placeholder="全部区域" style="width:150px">
-            <el-option v-for="item in regionOptions" :key="item" :label="item" :value="item" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="作物类型">
-          <el-select v-model="filters.cropType" clearable placeholder="全部作物" style="width:130px">
-            <el-option v-for="item in cropOptions" :key="item" :label="item" :value="item" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="主体类型">
-          <el-select v-model="filters.subjectType" clearable placeholder="全部类型" style="width:130px">
-            <el-option label="合作社" value="合作社" />
-            <el-option label="家庭农场" value="家庭农场" />
-            <el-option label="种植大户" value="种植大户" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="地块范围">
-          <el-select v-model="filters.plotRange" clearable placeholder="全部地块" style="width:130px">
-            <el-option label="已关联地块" value="linked" />
-            <el-option label="未关联地块" value="unlinked" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="关键字">
-          <el-input v-model="filters.keyword" clearable placeholder="计划、区域或主体" style="width:190px" @keyup.enter="load" />
-        </el-form-item>
-        <el-button type="primary" @click="load">查询</el-button>
-        <el-button @click="reset">重置</el-button>
-      </el-form>
-
-      <el-table v-if="hierarchy.length" :data="hierarchy" border stripe class="plan-table" @row-click="openPlan">
-        <el-table-column label="省级计划" min-width="300" show-overflow-tooltip>
-          <template #default="{ row }">
-            <div class="name-cell">
-              <span class="level-dot dot-province"></span>
-              <div><strong>{{ row.name }}</strong><small>{{ row.unit }}</small></div>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="年度" width="100"><template #default="{ row }">{{ row.year }}年</template></el-table-column>
-        <el-table-column prop="quarter" label="季度" width="110" />
-        <el-table-column prop="cropType" label="作物类型" width="120" />
-        <el-table-column label="任务数量" width="120" align="right"><template #default="{ row }">{{ row.taskCount || 0 }}</template></el-table-column>
-        <el-table-column label="计划种植面积（亩）" width="150" align="right"><template #default="{ row }">{{ Number(row.area || 0).toLocaleString() }}</template></el-table-column>
-        <el-table-column v-if="currentLevel !== 'plot'" label="状态" width="110"><template #default="{ row }"><el-tag size="small" :type="statusType(row.status)">{{ row.status }}</el-tag></template></el-table-column>
-        <el-table-column label="操作" width="130" fixed="right"><template #default="{ row }"><el-button link type="primary" @click.stop="openPlan(row)">查看市级</el-button></template></el-table-column>
-      </el-table>
-      <el-empty v-else description="暂无匹配的计划" />
-    </div>
-
     <el-dialog v-model="countyIssueVisible" title="已下达参考计划分解" width="1050px" destroy-on-close>
       <template v-if="countyIssueDetail">
         <el-descriptions :column="3" border>
@@ -129,8 +62,8 @@
           <el-table-column v-if="issueTableLevel === 'subject'" prop="subjectName" label="种植大户/主体" min-width="220" />
           <el-table-column v-if="issueTableLevel === 'subject'" prop="owner" label="负责人" width="100" />
           <el-table-column v-if="issueTableLevel === 'subject'" prop="villageName" label="村" width="110" />
-          <el-table-column prop="targetArea" :label="issueTableLevel === 'subject' ? '主体任务面积（亩）' : '计划种植面积（万亩）'" width="170" align="right" />
-          <el-table-column v-if="issueTableLevel === 'subject'" label="地块落实面积" min-width="270"><template #default="{ row }"><div v-for="plot in row.plotRows" :key="plot.plotId" class="plot-summary-row">{{ plot.plotName }}：{{ Number(plot.targetArea || 0).toFixed(1) }}亩</div></template></el-table-column>
+          <el-table-column prop="targetArea" :label="issueTableLevel === 'subject' ? '主体分配参考面积（亩）' : '下达参考面积（万亩）'" width="170" align="right" />
+          <el-table-column v-if="issueTableLevel === 'subject'" label="地块分配参考面积" min-width="270"><template #default="{ row }"><div v-for="plot in row.plotRows" :key="plot.plotId" class="plot-summary-row">{{ plot.plotName }}：{{ Number(plot.targetArea || 0).toFixed(1) }}亩</div></template></el-table-column>
           <el-table-column prop="cropType" label="作物类型" width="130" />
           <el-table-column v-if="issueTableLevel !== 'subject'" label="操作" width="100"><template #default="{ row }"><el-button link type="primary" @click.stop="openIssueRow(row)">查看下级</el-button></template></el-table-column>
         </el-table>
@@ -162,7 +95,7 @@
         <el-descriptions :column="3" border>
           <el-descriptions-item label="来源计划" :span="2">{{ detail.planName }}</el-descriptions-item>
           <el-descriptions-item label="作物类型">{{ detail.cropType }}</el-descriptions-item>
-          <el-descriptions-item label="行政路径" :span="3">安徽省 / {{ detail.cityName }} / {{ detail.countyName }} / {{ detail.townName }} / {{ detail.villageName }} / {{ detail.subjectName }}</el-descriptions-item>
+          <el-descriptions-item label="行政路径" :span="3">安徽省 / {{ detail.cityName }} / {{ detail.countyName }} / {{ detail.townName }} / {{ detail.subjectName }}</el-descriptions-item>
           <el-descriptions-item label="种植主体">{{ detail.subjectName }}</el-descriptions-item>
           <el-descriptions-item label="负责人">{{ detail.owner }}</el-descriptions-item>
           <el-descriptions-item label="计划种植面积">{{ detail.taskArea }} 亩</el-descriptions-item>
@@ -220,7 +153,7 @@ const filters = reactive({ year: '', quarter: '', region: '', cropType: '', subj
 const quarters = ['全年', '第一季度', '第二季度', '第三季度', '第四季度']
 const regionOptions = ['阜阳市', '亳州市', '合肥市']
 const cropOptions = ['小麦', '水稻', '玉米', '大豆']
-const levelLabels = { province: '省级计划', city: '市级', county: '县级', town: '乡镇', village: '村级', subject: '种植主体', plot: '地块' }
+const levelLabels = { province: '省级计划', city: '市级', county: '县级', town: '乡镇', subject: '种植主体', plot: '地块参考' }
 const levelLabel = (level) => levelLabels[level] || level
 const currentNode = computed(() => stack.value[stack.value.length - 1] || null)
 const currentRows = computed(() => currentNode.value ? currentNode.value.children || [] : hierarchy.value)
@@ -296,3 +229,4 @@ onMounted(load)
 <style lang="scss" scoped>
 .task-page{overflow:auto}.page-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}.page-head h2{margin:4px 0 5px;font-size:22px}.page-head p{color:var(--ah-text-secondary);font-size:13px}.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}.metric-card{padding:14px 16px;background:#fff;border-left:4px solid #8a97a8;border-radius:8px;box-shadow:0 1px 4px rgba(15,62,120,.06)}.metric-card.blue{border-color:var(--ah-primary)}.metric-card.green{border-color:var(--ah-success)}.metric-card.orange{border-color:var(--ah-warning)}.metric-card span,.metric-card small{display:block;color:var(--ah-text-secondary);font-size:12px}.metric-card strong{display:block;margin:5px 0 2px;font-size:23px}.filters{display:flex;align-items:center;flex-wrap:nowrap}.filters :deep(.el-form-item){margin-bottom:12px;margin-right:10px}.county-issue-panel{min-height:260px}.county-filters{display:flex;align-items:center;flex-wrap:nowrap}.county-filters :deep(.el-form-item){margin-bottom:12px;margin-right:12px}.county-issue-table{margin-top:4px}.breadcrumb-bar{display:flex;align-items:center;gap:16px;min-height:38px;margin:2px 0 10px;padding:8px 12px;background:#f7f9fc;border-radius:4px}.breadcrumb-link{cursor:pointer;color:var(--ah-primary)}.drill-header{display:flex;align-items:center;justify-content:space-between;margin:12px 0;padding-bottom:10px;border-bottom:1px solid #e8edf3}.drill-header>div{display:flex;align-items:center;gap:10px}.drill-header strong{font-size:16px}.drill-tip{color:var(--ah-text-secondary);font-size:12px}.level-badge{display:inline-flex;align-items:center;justify-content:center;min-width:64px;padding:4px 8px;border-radius:4px;background:#e8f1ff;color:var(--ah-primary);font-size:12px}.level-badge.level-county{background:#eef4ff;color:#5b8ff9}.level-badge.level-town{background:#eaf8f1;color:var(--ah-success)}.level-badge.level-village{background:#fff5e7;color:#c77a12}.level-badge.level-subject{background:#f5edff;color:#8257c7}.level-badge.level-plot{background:#f1f3f5;color:#606b7a}.drill-table{cursor:pointer}.name-cell{display:flex;align-items:center;gap:10px}.name-cell>div{display:flex;flex-direction:column;gap:4px}.name-cell small{color:var(--ah-text-secondary);font-size:12px}.level-dot{width:9px;height:9px;border-radius:50%;background:var(--ah-primary)}.dot-county{background:#5b8ff9}.dot-town{background:var(--ah-success)}.dot-village{background:#d9942d}.dot-subject{background:#8257c7}.dot-plot{background:#606b7a}.detail-title{display:flex;align-items:center;justify-content:space-between;margin:20px 0 12px}.path-flow{display:flex;align-items:stretch;justify-content:space-between;overflow-x:auto}.flow-node{display:flex;flex:1;min-width:120px;flex-direction:column;gap:6px;padding:14px;background:#f5f8fc;border-top:3px solid var(--ah-primary);border-radius:6px}.flow-node span,.flow-node small{color:var(--ah-text-secondary);font-size:12px}.flow-node strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.flow-node.level-1{border-color:#5b8ff9}.flow-node.level-2{border-color:var(--ah-success)}.flow-node.level-3{border-color:#d9942d}.flow-node.level-4{border-color:#8257c7}.flow-node.level-5{border-color:#606b7a}.flow-node .el-tag{align-self:flex-start}.flow-arrow{display:flex;align-items:center;padding:0 6px;color:var(--ah-primary);font-size:22px}@media(max-width:1000px){.metric-grid{grid-template-columns:repeat(2,1fr)}.filters{flex-wrap:wrap}.path-flow{overflow-x:auto}.flow-node{min-width:150px}}
 </style>
+

@@ -43,7 +43,7 @@
         <el-table-column prop="cropType" label="作物类型" width="130" show-overflow-tooltip />
         <el-table-column prop="countyCount" label="县级计划数" width="105" align="center" />
         <el-table-column prop="totalArea" label="计划种植面积（万亩）" width="145" align="right" />
-        <el-table-column prop="actualArea" label="实际种植面积（万亩）" width="145" align="right" />
+        <el-table-column prop="actualArea" label="本级上报计划面积（万亩）" width="165" align="right" />
         <el-table-column prop="submitter" label="提交单位" min-width="160" />
         <el-table-column :prop="readonlyMode ? 'issuedAt' : 'submittedAt'" :label="readonlyMode ? '下达时间' : '提交时间'" width="110" />
         <el-table-column v-if="!readonlyMode" label="状态" width="95">
@@ -77,11 +77,11 @@
           <el-descriptions-item label="提交单位">{{ current.submitter }}</el-descriptions-item>
           <el-descriptions-item :label="readonlyMode ? '下达时间' : '提交时间'">{{ readonlyMode ? (current.issuedAt || current.submittedAt) : current.submittedAt }}</el-descriptions-item>
           <el-descriptions-item :label="userStore.role?.code === 'city' ? '县级任务面积' : '市级计划种植面积'">{{ current.totalArea }} 万亩</el-descriptions-item>
-          <el-descriptions-item :label="userStore.role?.code === 'city' ? '县级落实面积' : '市级实际种植面积'">
+          <el-descriptions-item :label="userStore.role?.code === 'city' ? '县级上报计划面积' : '市级上报计划面积'">
             <span>{{ current.actualArea ?? current.totalArea }} 万亩</span>
           </el-descriptions-item>
           <el-descriptions-item :label="userStore.role?.code === 'city' ? '提交县数' : '县级计划数量'">{{ current.countyCount }} 个</el-descriptions-item>
-          <el-descriptions-item v-if="!readonlyMode" :label="userStore.role?.code === 'city' ? '县级任务面积合计' : '县级计划种植面积合计'">
+          <el-descriptions-item v-if="!readonlyMode" :label="userStore.role?.code === 'city' ? '县级上报面积合计' : '县级计划面积合计'">
             <span>{{ countyTotal }} 万亩</span>
           </el-descriptions-item>
           <el-descriptions-item label="计划说明" :span="3">{{ current.planDescription }}</el-descriptions-item>
@@ -101,8 +101,8 @@
             <el-table-column prop="owner" label="负责人" width="95" />
             <el-table-column prop="townName" label="乡镇" width="105" />
             <el-table-column prop="villageName" label="村" width="105" />
-            <el-table-column prop="taskArea" label="主体任务面积（亩）" width="145" align="right" />
-            <el-table-column label="地块落实面积" min-width="280">
+            <el-table-column prop="taskArea" label="主体分配参考面积（亩）" width="145" align="right" />
+            <el-table-column label="地块分配参考面积" min-width="280">
               <template #default="{ row }">
                 <div v-for="plot in row.plots" :key="plot.id" class="plot-summary-row">
                   {{ plot.name }}：{{ Number(plot.targetArea ?? plot.areaMu ?? 0).toFixed(1) }}亩
@@ -121,7 +121,7 @@
             </template>
           </el-table-column>
           <el-table-column prop="area" label="计划种植面积（万亩）" width="145" align="right" />
-          <el-table-column label="落实面积（万亩）" width="160" align="right"><template #default="{ row }"><span>{{ row.actualArea ?? row.area }}</span></template></el-table-column>
+          <el-table-column label="本级上报计划面积（万亩）" width="180" align="right"><template #default="{ row }"><span>{{ row.actualArea ?? row.area }}</span></template></el-table-column>
           <el-table-column prop="cropType" label="作物类型" width="120" />
           <el-table-column prop="description" label="县级计划说明" min-width="200" show-overflow-tooltip />
           <el-table-column v-if="!readonlyMode" label="审核状态" width="105"><template #default="{ row }"><el-tag size="small" :type="tagType(row.status)">{{ statusName(row.status) }}</el-tag></template></el-table-column>
@@ -134,7 +134,7 @@
         <el-button @click="visible = false">关闭</el-button>
         <template v-if="!readonlyMode && current?.status === 'pending'">
           <el-button type="danger" @click="audit('rejected')">退回修改</el-button>
-          <el-button type="primary" :disabled="!areaMatched" @click="audit('approved')">审核通过</el-button>
+          <el-button type="primary" @click="audit('approved')">审核通过</el-button>
         </template>
       </template>
     </el-dialog>
@@ -149,7 +149,7 @@
           <el-descriptions-item label="县级任务面积">{{ countyDetail.area }} 万亩</el-descriptions-item>
           <el-descriptions-item label="主体数量">{{ countySubjectRows.length }} 个</el-descriptions-item>
           <el-descriptions-item label="地块数量">{{ countySubjectRows.reduce((sum, row) => sum + (row.plots?.length || 0), 0) }} 个</el-descriptions-item>
-          <el-descriptions-item label="地块落实面积">{{ countySubjectRows.reduce((sum, row) => sum + (row.plots || []).reduce((area, plot) => area + Number(plot.targetArea ?? plot.areaMu ?? 0), 0), 0).toFixed(1) }} 亩</el-descriptions-item>
+          <el-descriptions-item label="主体分配参考面积">{{ countySubjectRows.reduce((sum, row) => sum + (row.plots || []).reduce((area, plot) => area + Number(plot.targetArea ?? plot.areaMu ?? 0), 0), 0).toFixed(1) }} 亩</el-descriptions-item>
         </el-descriptions>
         <div class="detail-title"><b>种植主体及地块落实明细</b></div>
         <el-table :data="countySubjectRows" border stripe max-height="410">
@@ -158,8 +158,8 @@
           <el-table-column prop="owner" label="负责人" width="95" />
           <el-table-column prop="townName" label="乡镇" width="105" />
           <el-table-column prop="villageName" label="村" width="110" />
-          <el-table-column prop="taskArea" label="主体任务面积（亩）" width="145" align="right" />
-          <el-table-column label="地块落实面积" min-width="300">
+          <el-table-column prop="taskArea" label="主体分配参考面积（亩）" width="145" align="right" />
+          <el-table-column label="地块分配参考面积" min-width="300">
             <template #default="{ row }">
               <div v-for="plot in row.plots" :key="plot.id" class="plot-summary-row">
                 <b>{{ plot.name }}</b>：{{ Number(plot.targetArea ?? plot.areaMu ?? 0).toFixed(1) }}亩
@@ -198,7 +198,6 @@ const countyDetail = ref(null)
 const countySubjectRows = ref([])
 const pendingCount = computed(() => rows.value.filter((item) => item.status === 'pending').length)
 const countyTotal = computed(() => Number((current.value?.countyPlans || []).reduce((sum, item) => sum + Number(item.area || 0), 0).toFixed(2)))
-const areaMatched = computed(() => userStore.role?.code !== 'city' || !current.value || current.value.type !== '县级计划提交市级审核' || countyTotal.value === Number(current.value.totalArea))
 const statusName = (status) => ({ pending: '待审核', approved: '已通过', rejected: '已退回' }[status] || status)
 const tagType = (status) => ({ pending: 'warning', approved: 'success', rejected: 'danger' }[status] || 'info')
 
@@ -281,7 +280,6 @@ const showOpinion = (row) => {
 
 const audit = async (status) => {
   if (!current.value || current.value.status !== 'pending') return ElMessage.warning('当前记录不可重复审核')
-  if (status === 'approved' && !areaMatched.value) return ElMessage.warning('县级计划种植面积合计与上级计划不一致，不能审核通过')
   if (status === 'rejected' && !opinion.value.trim()) return ElMessage.warning('退回时必须填写审核意见')
   try {
     await ElMessageBox.confirm(`确认${status === 'approved' ? '通过' : '退回'}“${current.value.targetName}”？`, '审核确认', { type: status === 'approved' ? 'success' : 'warning' })
@@ -301,3 +299,5 @@ onMounted(load)
 <style lang="scss" scoped>
 .gpm-page{gap:12px;overflow:auto}.page-head{display:flex;justify-content:space-between}.page-head h2{margin:4px 0;color:var(--ah-text);font-size:22px}.page-head p{color:var(--ah-text-secondary);font-size:13px}.filters{display:flex;align-items:center;flex-wrap:nowrap}.filters :deep(.el-form-item){margin-bottom:12px}.action-buttons{display:flex;align-items:center;flex-wrap:nowrap;white-space:nowrap}.action-buttons :deep(.el-button){margin-left:0;margin-right:8px}.detail-title{display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px}.county-drilldown{padding:12px 20px;background:#f8fafc;border-left:3px solid #2f73c8}.county-drilldown-title{margin-bottom:10px;color:#1f3b5b;font-weight:700}.county-drilldown :deep(.el-descriptions){margin-bottom:0}.plot-summary-row{line-height:1.6;white-space:normal}.opinion-input{margin-top:16px}.area-error{color:var(--el-color-danger);font-weight:700}.readonly-text{color:#98a2b3;font-size:12px}
 </style>
+
+

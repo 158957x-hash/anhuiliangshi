@@ -185,7 +185,7 @@
                   </el-select>
                 </el-form-item>
               </el-form>
-              <el-button type="primary" class="submit-btn" :loading="saving" @click="submitRecycle">登记并进入待核验</el-button>
+              <el-button type="primary" class="submit-btn" :loading="saving" @click="submitRecycle">登记待核验</el-button>
               <el-alert title="登记后由县级农业农村部门核验一次（通过/不通过），核验状态在「登记记录」与监管端一致展示" type="info" :closable="false" show-icon style="margin-top: 12px" />
             </div>
           </el-tab-pane>
@@ -241,7 +241,7 @@
             <p>登记证号 {{ scanResult.product.regNo }} · {{ scanResult.product.toxAName }}</p>
             <p>生产企业 {{ scanResult.product.producerName }}</p>
             <p>批次 {{ scanResult.batch.batchNo }} · 生产日期 {{ scanResult.batch.produceDate }}</p>
-            <el-button link type="primary" @click="toggleFlow">{{ flowOpen ? '收起流向链路' : '查看流向链路' }}</el-button>
+            <el-button link type="primary" @click="toggleFlow">{{ flowOpen ? '收起链路' : '查看链路' }}</el-button>
             <div v-if="flowOpen && flowData" class="flow-mini">
               <el-tag v-if="hasBreakPoint" size="small" type="warning" effect="plain" style="margin-bottom: 6px">存在追溯断点</el-tag>
               <div class="fm-batch">{{ flowData.product.name }} · 批次 {{ flowData.batch.batchNo }}</div>

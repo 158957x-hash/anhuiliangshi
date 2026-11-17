@@ -1,6 +1,7 @@
 <template>
   <div class="mobile-page">
     <div class="mobile-head"><div><b>皖事通</b><span>随手拍·农情直报</span></div><el-tag size="small" type="success">直连省粮食安全综合监管系统</el-tag></div>
+    <MobileFunctionEntry title="随手拍工作台" subtitle="新建线索、查看我的上报和处置反馈" role-label="社会公众" :items="entryItems" @select="selectEntry" />
     <nav class="tab-nav">
       <button type="button" :class="{ active: tab === 'report' }" @click="tab = 'report'">随手拍</button>
       <button type="button" :class="{ active: tab === 'list' }" @click="tab = 'list'">我的上报{{ reports.length ? `（${reports.length}）` : '' }}</button>
@@ -43,7 +44,7 @@
       </el-form>
       <div class="actions"><el-button :disabled="submitting" @click="saveDraft">暂存草稿</el-button><el-button type="primary" :loading="submitting" @click="submit">提交农情直报</el-button></div>
     </div>
-    <div v-show="tab === 'list'" class="list-card"><div class="list-title"><b>我的上报记录</b><span class="record-count">共 {{ reports.length }} 条</span></div><p class="list-tip">提交后线索进入省粮食安全综合监管系统统一研判流转，可在此跟踪处理状态（对应可研“我的上传”模块）</p><div v-for="item in reports" :key="item.id" class="report-item"><div class="report-top"><span>{{ item.time }}</span></div><b>{{ item.type }}</b><p>{{ item.regionName }} · {{ item.description }}</p><div class="report-bottom"><span>编号 {{ item.code || item.id }}</span><el-button link type="primary" @click="viewReport(item)">查看上报详情</el-button></div></div><el-empty v-if="!reports.length" description="暂无记录" /></div>
+    <div v-show="tab === 'list'" class="list-card"><div class="list-title"><b>我的上报记录</b><span class="record-count">共 {{ reports.length }} 条</span></div><p class="list-tip">提交后线索进入省粮食安全综合监管系统统一研判流转，可在此跟踪处理状态（对应可研“我的上传”模块）</p><div v-for="item in reports" :key="item.id" class="report-item"><div class="report-top"><span>{{ item.time }}</span></div><b>{{ item.type }}</b><p>{{ item.regionName }} · {{ item.description }}</p><div class="report-bottom"><span>编号 {{ item.code || item.id }}</span><el-button link type="primary" @click="viewReport(item)">查看上报</el-button></div></div><el-empty v-if="!reports.length" description="暂无记录" /></div>
     <el-dialog v-model="detailVisible" title="农情直报详情" width="92%" class="scroll-dialog" align-center><template v-if="activeReport"><el-descriptions :column="1" border><el-descriptions-item label="问题类型">{{ activeReport.type }}</el-descriptions-item><el-descriptions-item label="所在地区">{{ activeReport.regionName }}</el-descriptions-item><el-descriptions-item label="关联地块">{{ plotText(activeReport) }}</el-descriptions-item><el-descriptions-item label="现场定位">{{ activeReport.location || '—' }}</el-descriptions-item><el-descriptions-item label="问题描述">{{ activeReport.description || '暂无描述' }}</el-descriptions-item><el-descriptions-item :label="`现场证据（${reportEvidence(activeReport).length} 项）`"><EvidenceThumbs v-if="reportEvidence(activeReport).length" :items="reportEvidence(activeReport)" :size="56" /><span v-else>未上传照片/视频</span></el-descriptions-item><el-descriptions-item label="举报身份">{{ activeReport.reporterType === 'realname' ? `实名（${activeReport.reporterName || '—'} · ${maskPhone(activeReport.reporterPhone)}）` : '匿名' }}</el-descriptions-item><el-descriptions-item label="上报时间">{{ activeReport.time || activeReport.foundTime || '—' }}</el-descriptions-item><el-descriptions-item label="当前状态">{{ progress?.statusName || activeReport.statusName }}</el-descriptions-item></el-descriptions>
       <div v-if="progress?.success" class="snap-progress">
         <b>处置进度</b>
@@ -91,6 +92,7 @@ import { PLOTS } from '@/mock/geo/plot-gen'
 import { EVENT_STATUS, EVENT_TYPES } from '@/mock/common/dict'
 import { EVIDENCE_IMAGES } from '@/mock/common/evidenceImages'
 import EvidenceThumbs from '@/components/common/EvidenceThumbs.vue'
+import MobileFunctionEntry from '@/components/mobile/MobileFunctionEntry.vue'
 
 const userStore = useUserStore()
 // 事件类型锁定粮食安全事件字典（与变化图斑库同源，可研"随手拍=粮食监管专项"口径，自查修复 2026-11-12）
@@ -110,6 +112,8 @@ const receipt = ref(null)
 const submitting = ref(false)
 // 分入口：随手拍（上报）/ 我的上报（记录跟踪），对应可研“随手拍/我的上传”模块划分
 const tab = ref('report')
+const entryItems = [{ key: 'report', label: '新建随手拍', description: '实名或匿名提交线索', tone: 'red' }, { key: 'list', label: '我的上报', description: '查看处理状态和结果', tone: 'blue', badge: reports.value.length }]
+const selectEntry = item => { tab.value = item.key }
 // 处置进度与评分评价（可研 5.5.3.9.3）
 const progress = ref(null)
 const rateForm = reactive({ score: 0, comment: '' })

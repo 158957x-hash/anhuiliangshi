@@ -29,7 +29,7 @@
         <el-table-column label="预计收储重量（吨）" width="160" align="right"><template #default="{ row }">{{ row.weight === null || row.weight === undefined || row.weight === '' ? '未填' : Number(row.weight).toFixed(1) }}</template></el-table-column>
         <el-table-column label="状态" width="110"><template #default="{ row }"><el-tag :type="statusType(row.status)" size="small">{{ statusLabels[row.status] || row.status }}</el-tag></template></el-table-column>
         <el-table-column label="提交时间" min-width="165"><template #default="{ row }">{{ row.submittedAt || '尚未提交' }}</template></el-table-column>
-        <el-table-column label="操作" width="210" fixed="right"><template #default="{ row }"><el-button link type="primary" @click="openDetail(row)">查看详情</el-button><el-button v-if="canEdit(row)" link type="primary" @click="edit(row)">{{ row.status === 'returned' ? '补正重提' : '继续填写' }}</el-button><el-button v-if="canFill(row)" link type="primary" @click="edit(row)">补齐信息</el-button></template></el-table-column>
+        <el-table-column label="操作" width="210" fixed="right"><template #default="{ row }"><el-button link type="primary" @click="openDetail(row)">查看</el-button><el-button v-if="canEdit(row)" link type="primary" @click="edit(row)">{{ row.status === 'returned' ? '补正重提' : '继续填写' }}</el-button><el-button v-if="canFill(row)" link type="primary" @click="edit(row)">补齐信息</el-button></template></el-table-column>
         <template #empty><el-empty :description="loading ? '正在加载申报记录' : '暂无匹配的收储申报'" /></template>
       </el-table>
     </section>

@@ -40,6 +40,14 @@ export const fetchEvents = (role, filters = {}) =>
     })
   )
 
+// 我的巡查记录：与核查任务分离；县/乡镇按本组织区划范围查看，保留待研判记录
+export const fetchMyPatrolReports = (role) =>
+  mockRequest(() => {
+    if (!role || role.subjectId) return []
+    const scope = String(role.regionCode || '')
+    return FSR_EVENTS.filter((e) => e.source === 'grid' && (!scope || scope === '340000' || String(e.regionCode || '').startsWith(scope)))
+  }, 300)
+
 export const fetchEvent = (id) => mockRequest(() => FSR_EVENTS.find((e) => e.id === id))
 
 let taskSeq = 30
@@ -72,10 +80,13 @@ export const submitPatrolReport = (payload) =>
     FSR_EVENTS.unshift({
       id, code: id.replace('EVT-', 'FSR-'), type: payload.type, source: 'grid', risk: null,
       regionCode: payload.regionCode || '', regionName: payload.regionName || '',
-      spot: { plotId: null, geometry: null, center: payload.center || null, areaMu: payload.areaMu || 0, plotName: payload.plotName },
+      spot: { plotId: payload.plotId || null, geometry: null, center: payload.center || null, areaMu: payload.areaMu || 0, plotName: payload.plotName },
       subjectId: null, subjectName: payload.subjectName || '待核实',
-      foundTime: time.slice(0, 10), desc: payload.desc,
+      foundTime: time.slice(0, 10), desc: payload.desc, location: payload.location || '未定位', regionPath: payload.region || [],
+      reporterRegion: payload.regionName || '',
       reporterName: payload.reporter || '',
+      reporterPhone: payload.reporterPhone || '',
+      reporterType: 'grid', reportAttachments: payload.attachments || [],
       status: 'to_review', deadline: null, taskId: null,
       trail: [{ time, action: '网格巡查上报', user: `${payload.reporter || '网格员'}（皖政通）`, extra: `关联地块：${payload.plotName}，附现场证据${(payload.attachments || []).length}项，待省级研判` }]
     })

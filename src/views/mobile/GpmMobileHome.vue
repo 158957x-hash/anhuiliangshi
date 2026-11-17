@@ -11,7 +11,7 @@
     <div class="quick-grid">
       <button class="quick-item plan" @click="$router.push('/mobile/plans')">
         <strong>计划列表</strong>
-        <span>查看本年度下达计划，填报播种与收获进度</span>
+        <span>查看本年度参考计划，维护主体自报计划和进度</span>
       </button>
       <button class="quick-item progress" @click="$router.push('/mobile/progress')">
         <strong>播种与收获</strong>
@@ -22,6 +22,17 @@
         <span>病虫害、干旱、洪涝等问题随时上报</span>
       </button>
     </div>
+
+    <section class="card issued-plan-card">
+      <div class="section-title"><b>上级下达计划</b><el-tag size="small" type="info">仅作参考</el-tag></div>
+      <template v-if="currentTask">
+        <b class="plan-name">{{ currentTask.planName }}</b>
+        <p class="plan-path">{{ currentTask.cityName }} · {{ currentTask.countyName }} · {{ currentTask.townName }}</p>
+        <div class="plan-line"><span>参考面积</span><strong>{{ Number(currentTask.taskAreaMu || 0).toLocaleString() }} 亩</strong></div>
+        <el-button type="primary" plain class="full-button" @click="$router.push('/mobile/plans')">查看计划</el-button>
+      </template>
+      <el-empty v-else description="暂无上级下达计划" :image-size="45" />
+    </section>
 
     <section class="card weather-card">
       <div class="section-title">
@@ -52,22 +63,28 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { fetchPolicies, fetchWeatherAlerts } from '@/api/gpm'
+import { fetchPolicies, fetchWeatherAlerts, fetchSubjectPlanTasks } from '@/api/gpm'
 
 const userStore = useUserStore()
 const policies = ref([])
 const alerts = ref([])
+const currentTask = ref(null)
 
 onMounted(async () => {
-  const [policyRows, weatherRows] = await Promise.all([
+  const [policyRows, weatherRows, taskRows] = await Promise.all([
     fetchPolicies(),
-    fetchWeatherAlerts(userStore.role)
+    fetchWeatherAlerts(userStore.role),
+    fetchSubjectPlanTasks(userStore.role)
   ])
   policies.value = (policyRows || []).filter(item => item.active !== false && item.status !== '已下线' && item.status !== 'offline')
   alerts.value = weatherRows || []
+  const currentYearTasks = (taskRows || []).filter(item => Number(item.year) === 2026)
+  const order = { '第一季度': 1, '第二季度': 2, '第三季度': 3, '第四季度': 4, '全年': 5 }
+  currentTask.value = [...currentYearTasks].sort((a, b) => (order[b.quarter] || 0) - (order[a.quarter] || 0))[0] || currentYearTasks[0] || null
 })
 </script>
 
 <style lang="scss" scoped>
 .mobile-page{width:100%;min-width:0;min-height:100%;box-sizing:border-box;background:#f4f7fb;padding:14px;overflow-x:hidden}.brand-card{background:linear-gradient(135deg,#176b58,#249477);color:#fff;border-radius:16px;padding:20px 18px;margin-bottom:14px}.brand-row,.section-title{display:flex;align-items:center;justify-content:space-between;gap:10px}.brand-row b{font-size:25px;margin-right:10px}.brand-row span{opacity:.85;font-size:13px}.brand-card p{margin:14px 0 0;font-size:13px;opacity:.9}.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.quick-item{border:0;border-radius:14px;padding:16px;text-align:left;min-height:112px;color:#fff;cursor:pointer}.quick-item strong,.quick-item span{display:block}.quick-item strong{font-size:17px;margin-bottom:9px}.quick-item span{font-size:12px;line-height:1.5;opacity:.9}.quick-item.plan{background:#3d78c4}.quick-item.progress{background:#2d8c72}.quick-item.report{background:#c8564d;grid-column:span 2}.card{background:#fff;border-radius:14px;padding:16px;margin-top:12px}.section-title{color:#243b5a;margin-bottom:12px}.section-note{font-size:12px;color:#98a2b3;font-weight:400}.weather-row{width:100%;display:flex;align-items:flex-start;gap:10px;text-align:left;background:none;border:0;border-top:1px solid #edf0f5;padding:12px 0;color:#344054}.weather-row b{font-size:14px}.weather-row p{margin:5px 0 0;color:#667085;font-size:12px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.policy-row{width:100%;display:flex;justify-content:space-between;gap:10px;text-align:left;background:none;border:0;border-top:1px solid #edf0f5;padding:13px 0;color:#344054}.policy-row b{font-size:14px}.policy-row p{margin:5px 0 0;color:#667085;font-size:12px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.policy-row>span{color:#98a2b3;font-size:22px;line-height:1.5}
+.issued-plan-card{border:1px solid #d6eee5;background:#fbfefc}.plan-name{display:block;color:#176b58;font-size:15px}.plan-path{margin:6px 0 10px;color:#667085;font-size:12px}.plan-line{display:flex;justify-content:space-between;padding:10px;background:#f4f8fb;border-radius:8px;color:#667085;font-size:12px}.plan-line strong{color:#176b58}.full-button{width:100%;margin-top:10px}
 </style>

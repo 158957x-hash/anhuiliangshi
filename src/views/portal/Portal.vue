@@ -159,15 +159,14 @@ const eventChartOption = computed(() => {
 const quickEntries = computed(() => {
   const base = [
     { label: '粮食生产一张图', route: '/onemap/production', icon: 'MapLocation', color: '#0f5eb5' },
-    { label: '计划分解下达', route: '/gpm/decompose', icon: 'Share', color: '#2e9e5b' },
+    { label: '计划下达参考', route: '/gpm/decompose', icon: 'Share', color: '#2e9e5b', roles: ['province', 'city', 'county'] },
     { label: '青贮备案审核', route: '/sil/audit', icon: 'Wheat', color: '#26a69a' },
     { label: '事件中心', route: '/fsr/events', icon: 'Warning', color: '#e64545' },
     { label: '流向追溯', route: '/pes/trace', icon: 'Aim', color: '#c2571a' },
-    { label: '移动核查演示', route: '/mobile/check/list', icon: 'Iphone', color: '#6a4fa3' },
-    { label: '进度调度', route: '/gpm/progress', icon: 'TrendCharts', color: '#8a6d3b' },
+    { label: '进度调度', route: '/gpm/progress', icon: 'TrendCharts', color: '#8a6d3b', roles: ['province', 'city', 'county'] },
     { label: '惠农政策', route: '/gpm/policy', icon: 'Reading', color: '#4a6fa5' }
   ]
-  return base
+  return base.filter(item => !item.roles || item.roles.includes(userStore.role?.code))
 })
 
 onMounted(async () => {

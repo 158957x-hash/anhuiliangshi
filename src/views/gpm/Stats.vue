@@ -4,7 +4,7 @@
       <div>
         <div class="eyebrow">数据自动汇总 · 减负增效</div>
         <h2>种植统计分析</h2>
-        <p>系统自动汇总各市、县年度种植数据，减少基层重复填报和人工汇总。</p>
+        <p>按各市、县已提交的正式进度上报数据汇总；乡镇和主体数据仅作参考。</p>
       </div>
       <div class="head-actions">
         <el-select v-model="selectedYear" style="width: 130px" @change="load">
@@ -19,7 +19,7 @@
       <div class="stat-card blue"><span>年度播种面积</span><strong>{{ format(totalSownArea) }}</strong><small>亩</small></div>
       <div class="stat-card green"><span>年度收获面积</span><strong>{{ format(totalHarvestedArea) }}</strong><small>亩</small></div>
       <div class="stat-card orange"><span>估算粮食产量</span><strong>{{ format(totalYield) }}</strong><small>吨</small></div>
-      <div class="stat-card purple"><span>任务完成率</span><strong>{{ taskRate }}%</strong><small>按年度计划面积计算</small></div>
+      <div class="stat-card purple"><span>本级上报进度</span><strong>{{ taskRate }}%</strong><small>按本级上报计划面积计算</small></div>
     </div>
 
     <div class="analysis-grid">
@@ -47,7 +47,7 @@
     <div class="panel report-panel">
       <div class="panel-title">
         <span class="title-text">市县种植分析报表</span>
-        <span class="title-extra">数据由播种、收获进度自动汇总生成</span>
+        <span class="title-extra">只汇总市、县正式上报数据，主体数据不纳入正式口径</span>
       </div>
       <el-table :data="cityRows" stripe border>
         <el-table-column type="index" label="序号" width="65" align="center" />
@@ -57,7 +57,7 @@
         <el-table-column prop="harvestedArea" label="收获面积(亩)" align="right" />
         <el-table-column prop="yield" label="估算产量(吨)" align="right" />
         <el-table-column prop="subjectCount" label="主体数" width="90" align="right" />
-        <el-table-column prop="sowingRate" label="任务完成率" width="110" align="center"><template #default="{ row }">{{ row.sowingRate }}%</template></el-table-column>
+        <el-table-column prop="sowingRate" label="本级上报进度" width="110" align="center"><template #default="{ row }">{{ row.sowingRate }}%</template></el-table-column>
         <el-table-column label="操作" width="110" fixed="right"><template #default="{ row }"><el-button link type="primary" @click="openCounty(row)">查看县级</el-button></template></el-table-column>
       </el-table>
     </div>
@@ -71,7 +71,7 @@
         <el-table-column prop="harvestedArea" label="收获面积(亩)" align="right" />
         <el-table-column prop="yield" label="估算产量(吨)" align="right" />
         <el-table-column prop="subjectCount" label="主体数" width="90" align="right" />
-        <el-table-column prop="sowingRate" label="任务完成率" width="110" align="center"><template #default="{ row }">{{ row.sowingRate }}%</template></el-table-column>
+        <el-table-column prop="sowingRate" label="本级上报进度" width="110" align="center"><template #default="{ row }">{{ row.sowingRate }}%</template></el-table-column>
       </el-table>
     </el-drawer>
   </div>
@@ -81,7 +81,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import BaseChart from '@/components/charts/BaseChart.vue'
-import { fetchSowingProgress, fetchHarvestProgress } from '@/api/gpm'
+import { fetchProgressReportRows } from '@/api/gpm'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()
@@ -98,8 +98,8 @@ const cropYield = { wheat: 0.48, rice: 0.56, corn: 0.62, soybean: 0.19, silage_c
 
 const format = (value) => Number(value || 0).toLocaleString('zh-CN', { maximumFractionDigits: 1 })
 const aggregate = (regionCode, regionName, level) => {
-  const sowing = sowingRows.value.filter(item => item.level === level && String(item.regionCode) === String(regionCode))
-  const harvest = harvestRows.value.filter(item => item.level === level && String(item.regionCode) === String(regionCode))
+  const sowing = sowingRows.value.filter(item => !item.isDraft && item.level === level && String(item.regionCode) === String(regionCode))
+  const harvest = harvestRows.value.filter(item => !item.isDraft && item.level === level && String(item.regionCode) === String(regionCode))
   const planArea = sowing.reduce((sum, item) => sum + Number(item.planArea || 0), 0)
   const sownArea = sowing.reduce((sum, item) => sum + Number(item.sownArea || 0), 0)
   const harvestedArea = harvest.reduce((sum, item) => sum + Number(item.harvestedArea || 0), 0)
@@ -125,7 +125,7 @@ const subjectOption = computed(() => ({ tooltip: { trigger: 'item' }, grid: { le
 
 const load = async () => {
   const role = { ...userStore.role, code: 'province', regionCode: '340000' }
-  const [sowing, harvest] = await Promise.all([fetchSowingProgress(role, { year: selectedYear.value }), fetchHarvestProgress(role, { year: selectedYear.value })])
+  const [sowing, harvest] = await Promise.all([fetchProgressReportRows(role, { type: 'sow', year: selectedYear.value }), fetchProgressReportRows(role, { type: 'harvest', year: selectedYear.value })])
   sowingRows.value = sowing
   harvestRows.value = harvest
   const cities = new Map()
@@ -159,3 +159,4 @@ onMounted(load)
 @media (max-width: 1000px) { .stat-grid, .analysis-grid, .analysis-grid.secondary { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 700px) { .page-head { flex-direction: column; }.head-actions { flex-wrap: wrap; }.stat-grid, .analysis-grid, .analysis-grid.secondary { grid-template-columns: 1fr; } }
 </style>
+

@@ -1,6 +1,6 @@
 <template>
   <div class="report-panel">
-    <el-alert class="flow-alert" type="info" :closable="false" title="进度依据审核通过的本级上报计划填报。县级、市级正式上报并接受上级审核；乡镇和主体数据有则查看，无则不影响县级、市级上报。" />
+    <el-alert class="flow-alert" type="info" :closable="false" title="进度按本级上报计划维护。下发计划只作参考；县级、市级上报后由上级审核，乡镇和主体数据有则查看，无则不影响本级上报。" />
 
     <div class="panel toolbar-panel">
       <el-form :inline="true" class="filters">
@@ -12,10 +12,10 @@
     </div>
 
     <div class="metric-grid">
-      <div class="metric-card"><span>计划面积</span><strong>{{ summary.planArea.toLocaleString() }}</strong><small>亩（{{ filters.year }}年{{ filters.quarter }}）</small></div>
-      <div class="metric-card blue"><span>{{ isSow ? '已播面积' : '已收获面积' }}</span><strong>{{ summary.doneArea.toLocaleString() }}</strong><small>亩（当前上报数据）</small></div>
-      <div class="metric-card green"><span>{{ isSow ? '播种' : '收获' }}进度</span><strong>{{ summary.progress }}%</strong><small>已完成 / 计划</small></div>
-      <div class="metric-card orange"><span>上报主体数</span><strong>{{ summary.subjectCount }}</strong><small>辖区内种植主体</small></div>
+      <div class="metric-card"><span>本级维护计划面积</span><strong>{{ summary.planArea.toLocaleString() }}</strong><small>亩（{{ filters.year }}年{{ filters.quarter }}）</small></div>
+      <div class="metric-card blue"><span>{{ isSow ? '已播面积' : '已收获面积' }}</span><strong>{{ summary.doneArea.toLocaleString() }}</strong><small>本级维护数据</small></div>
+      <div class="metric-card green"><span>{{ isSow ? '播种' : '收获' }}维护进度</span><strong>{{ summary.progress }}%</strong><small>已完成 / 本级计划</small></div>
+      <div class="metric-card orange"><span>涉及主体数</span><strong>{{ summary.subjectCount }}</strong><small>辖区内参考主体</small></div>
     </div>
 
     <div class="panel">
@@ -33,7 +33,7 @@
         </el-table-column>
         <el-table-column v-if="currentDrillLevel === 'subject'" prop="subjectName" label="种植主体" min-width="200" show-overflow-tooltip />
         <el-table-column v-if="currentDrillLevel === 'subject'" prop="cropName" :label="isSow ? '已播作物' : '收获作物'" width="100" />
-        <el-table-column prop="planArea" label="计划面积（亩）" width="140" align="right" />
+        <el-table-column prop="planArea" label="本级上报计划面积（亩）" width="170" align="right" />
         <el-table-column prop="doneArea" :label="isSow ? '已播面积（亩）' : '已收获面积（亩）'" width="150" align="right" />
         <el-table-column label="进度" width="180">
           <template #default="{ row }"><div class="progress-cell"><el-progress :percentage="Number(row.progress || 0)" :stroke-width="10" /><span>{{ Number(row.progress || 0) }}%</span></div></template>
@@ -47,9 +47,9 @@
     <div v-if="canReport" class="panel">
       <div class="panel-title">
         <span class="title-text">上报管理（{{ levelNameMap[roleCode] || '' }} → {{ parentName }}）</span>
-        <el-button type="primary" @click="submit">向{{ parentName }}上报</el-button>
+        <el-button type="primary" @click="submit">上报</el-button>
       </div>
-      <el-alert type="info" :closable="false" class="report-tip" title="当前上报数据由本级按已审核通过的本级上报计划填报；下级数据仅作查看和参考，不作为本级上报前置条件。" />
+      <el-alert type="info" :closable="false" class="report-tip" title="保存本级进度后即可上报；已上报数据进入跟进口径，退回数据不计入汇总但可修改重提。下级数据仅作查看和参考。" />
       <el-table :data="myOrders" stripe border max-height="260">
         <el-table-column prop="year" label="年份" width="80"><template #default="{ row }">{{ row.year }}年</template></el-table-column>
         <el-table-column prop="quarter" label="周期" width="100" />
@@ -58,9 +58,21 @@
         <el-table-column prop="reportedAt" label="上报时间" width="110" />
         <el-table-column label="状态" width="100"><template #default="{ row }"><el-tag size="small" :type="orderTagType(row.status)">{{ row.status }}</el-tag></template></el-table-column>
         <el-table-column label="审核意见" min-width="180" show-overflow-tooltip><template #default="{ row }">{{ row.auditOpinion || '—' }}</template></el-table-column>
-        <el-table-column label="操作" width="130" fixed="right"><template #default="{ row }"><el-button v-if="row.status === '已驳回'" link type="primary" @click="submit">重新上报</el-button><el-button link type="primary" @click="openDetail(row)">查看详情</el-button></template></el-table-column>
+        <el-table-column label="操作" width="110" fixed="right"><template #default="{ row }"><el-button v-if="row.status === '已驳回'" link type="primary" @click="submit">重提</el-button><el-button link type="primary" @click="openDetail(row)">详情</el-button></template></el-table-column>
         <template #empty><el-empty :description="`尚未上报${filters.year}年${filters.quarter}${isSow ? '播种' : '收获'}进度`" /></template>
       </el-table>
+    </div>
+
+    <div v-if="canReport" class="panel">
+      <div class="panel-title"><span class="title-text">维护本级{{ isSow ? '播种' : '收获' }}进度</span><span class="title-extra">保存后可继续修改，再提交本级上报单</span></div>
+      <el-form :inline="true" :model="progressForm" class="progress-form">
+        <el-form-item label="区域"><el-select v-model="progressForm.regionCode" placeholder="选择本级区域" style="width:180px"><el-option v-for="item in editableRows" :key="item.regionCode" :label="item.regionName" :value="item.regionCode" /></el-select></el-form-item>
+        <el-form-item label="作物"><el-input v-model="progressForm.crop" placeholder="如：小麦" style="width:140px" /></el-form-item>
+        <el-form-item label="计划面积（亩）"><el-input-number v-model="progressForm.planArea" :min="0" :precision="1" controls-position="right" /></el-form-item>
+        <el-form-item :label="isSow ? '已播面积（亩）' : '已收获面积（亩）'"><el-input-number v-model="progressForm.doneArea" :min="0" :precision="1" controls-position="right" /></el-form-item>
+        <el-button type="primary" @click="saveProgress">保存</el-button>
+      </el-form>
+      <el-alert type="info" :closable="false" title="下级乡镇和种植主体数据只作参考，不会自动汇总替代本级填报。" />
     </div>
 
     <div v-if="canAudit" class="panel">
@@ -73,7 +85,7 @@
         <el-table-column label="汇总数据" min-width="220"><template #default="{ row }">计划 {{ row.summary.planArea.toLocaleString() }} 亩 · {{ isSow ? '已播' : '已收获' }} {{ row.summary.doneArea.toLocaleString() }} 亩（{{ row.summary.progress }}%）</template></el-table-column>
         <el-table-column prop="reportedAt" label="上报时间" width="110" />
         <el-table-column label="状态" width="100"><template #default="{ row }"><el-tag size="small" :type="orderTagType(row.status)">{{ row.status }}</el-tag></template></el-table-column>
-        <el-table-column label="操作" width="90" fixed="right"><template #default="{ row }"><el-button link type="primary" @click="openDetail(row)">{{ row.canAudit ? '审核' : '查看' }}</el-button></template></el-table-column>
+        <el-table-column label="操作" width="80" fixed="right"><template #default="{ row }"><el-button link type="primary" @click="openDetail(row)">{{ row.canAudit ? '审核' : '查看' }}</el-button></template></el-table-column>
         <template #empty><el-empty description="暂无待审核的上报单" /></template>
       </el-table>
     </div>
@@ -86,7 +98,7 @@
           <el-descriptions-item label="上报对象">{{ currentOrder.auditLevelName }}</el-descriptions-item>
           <el-descriptions-item label="上报单位" :span="2">{{ currentOrder.reporter }}</el-descriptions-item>
           <el-descriptions-item label="上报时间">{{ currentOrder.reportedAt }}</el-descriptions-item>
-          <el-descriptions-item label="计划面积">{{ currentOrder.summary.planArea.toLocaleString() }} 亩</el-descriptions-item>
+          <el-descriptions-item label="本级上报计划面积">{{ currentOrder.summary.planArea.toLocaleString() }} 亩</el-descriptions-item>
           <el-descriptions-item :label="isSow ? '已播面积' : '已收获面积'">{{ currentOrder.summary.doneArea.toLocaleString() }} 亩</el-descriptions-item>
           <el-descriptions-item label="进度">{{ currentOrder.summary.progress }}%</el-descriptions-item>
           <el-descriptions-item label="状态"><el-tag size="small" :type="orderTagType(currentOrder.status)">{{ currentOrder.status }}</el-tag></el-descriptions-item>
@@ -106,7 +118,7 @@
           </el-table-column>
           <el-table-column v-if="auditDrillLevel === 'subject'" prop="subjectName" label="种植主体" min-width="200" show-overflow-tooltip />
           <el-table-column v-if="auditDrillLevel === 'subject'" prop="cropName" label="作物" width="100" />
-          <el-table-column prop="planArea" label="计划面积（亩）" width="140" align="right" />
+          <el-table-column prop="planArea" label="本级上报计划面积（亩）" width="170" align="right" />
           <el-table-column prop="doneArea" :label="isSow ? '已播面积（亩）' : '已收获面积（亩）'" width="150" align="right" />
           <el-table-column label="进度" width="170"><template #default="{ row }"><span>{{ Number(row.progress || 0) }}%</span></template></el-table-column>
           <el-table-column v-if="auditDrillLevel === 'subject'" prop="updatedAt" label="填报日期" width="110" />
@@ -125,8 +137,8 @@
           <div class="detail-title"><b>审核操作</b></div>
           <el-input v-model="auditOpinion" type="textarea" :rows="3" maxlength="200" show-word-limit placeholder="请填写审核意见（驳回时必填）" />
           <div class="audit-actions">
-            <el-button type="success" @click="audit(true)">审核通过</el-button>
-            <el-button type="danger" @click="audit(false)">驳回</el-button>
+            <el-button type="success" @click="audit(true)">通过</el-button>
+            <el-button type="danger" @click="audit(false)">退回</el-button>
           </div>
         </template>
       </template>
@@ -138,7 +150,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { fetchProgressReportRows, fetchProgressReportOrders, submitProgressReport, auditProgressReport } from '@/api/gpm'
+import { fetchProgressReportRows, fetchProgressReportOrders, submitProgressReport, auditProgressReport, saveSowingProgress, saveHarvestProgress } from '@/api/gpm'
 import { getRegion } from '@/mock/common/regions'
 import { useUserStore } from '@/stores/user'
 
@@ -153,6 +165,7 @@ const quarters = ['全年', '第一季度', '第二季度', '第三季度', '第
 const filters = reactive({ year: 2026, quarter: '第三季度' })
 const rows = ref([])
 const orders = ref([])
+const progressForm = reactive({ regionCode: '', crop: '', planArea: 0, doneArea: 0 })
 const levelNameMap = { town: '乡镇', county: '县级', city: '市级' }
 
 const canReport = computed(() => ['town', 'county', 'city'].includes(roleCode.value))
@@ -164,13 +177,15 @@ const orderTagType = (status) => ({ 待审核: 'warning', 审核通过: 'success
 const quarterMatch = (item) => !filters.quarter || filters.quarter === '全年' || item.quarter === filters.quarter
 const scopedRows = computed(() => rows.value.filter((item) => Number(item.year) === Number(filters.year) && quarterMatch(item) && String(item.regionCode || '').startsWith(String(regionCode.value))))
 const summary = computed(() => {
-  const planArea = scopedRows.value.reduce((sum, item) => sum + Number(item.planArea || 0), 0)
-  const doneArea = scopedRows.value.reduce((sum, item) => sum + Number((isSow.value ? item.sownArea : item.harvestedArea) || 0), 0)
+  const formalLevel = ({ city: 'city', county: 'county', town: 'town', province: 'city' })[roleCode.value] || roleCode.value
+  const formalRows = scopedRows.value.filter((item) => item.level === formalLevel && item.isFormal)
+  const planArea = formalRows.reduce((sum, item) => sum + Number(item.planArea || 0), 0)
+  const doneArea = formalRows.reduce((sum, item) => sum + Number((isSow.value ? item.sownArea : item.harvestedArea) || 0), 0)
   return {
     planArea: Number(planArea.toFixed(1)),
     doneArea: Number(doneArea.toFixed(1)),
     progress: planArea ? Number((doneArea / planArea * 100).toFixed(1)) : 0,
-    subjectCount: new Set(scopedRows.value.filter((item) => item.level === 'subject').map((item) => item.subjectId || item.subjectName)).size
+    subjectCount: new Set(formalRows.map((item) => item.subjectId || item.subjectName).filter(Boolean)).size
   }
 })
 
@@ -188,7 +203,7 @@ const sumOf = (list) => {
   const doneArea = list.reduce((sum, item) => sum + Number((isSow.value ? item.sownArea : item.harvestedArea) || 0), 0)
   return { planArea: Number(planArea.toFixed(1)), doneArea: Number(doneArea.toFixed(1)), progress: planArea ? Number((doneArea / planArea * 100).toFixed(1)) : 0 }
 }
-const rowsIn = (code) => scopedRows.value.filter((item) => String(item.regionCode || '').startsWith(String(code)))
+const rowsIn = (code) => scopedRows.value.filter((item) => !item.isDraft && String(item.regionCode || '').startsWith(String(code)))
 const currentDrillLevel = computed(() => childLevelOf(drillCode.value || regionCode.value))
 const childLabel = computed(() => ({ city: '市级地区', county: '县级地区', town: '乡镇地区', subject: '种植主体' }[currentDrillLevel.value]))
 const drillRows = computed(() => {
@@ -211,9 +226,10 @@ const goToLevel = (item) => {
 // ===== 上报单 =====
 const myOrders = computed(() => orders.value.filter((item) => item.regionCode === regionCode.value && item.level === roleCode.value))
 const auditOrders = computed(() => orders.value.filter((item) => item.level === ({ county: 'town', city: 'county', province: 'city' }[roleCode.value] || '')))
+const editableRows = computed(() => rows.value.filter((item) => item.level === roleCode.value && item.regionCode).reduce((list, item) => list.some((row) => row.regionCode === item.regionCode && row.crop === item.crop) ? list : [...list, item], []))
 const submit = async () => {
   try {
-    await ElMessageBox.confirm(`确认将 ${filters.year}年${filters.quarter} ${isSow.value ? '播种' : '收获'}进度向${parentName.value}上报吗？上报数据将作为本级正式进度记录。`, '上报确认', { type: 'warning' })
+    await ElMessageBox.confirm(`确认将 ${filters.year}年${filters.quarter} ${isSow.value ? '播种' : '收获'}进度向${parentName.value}上报吗？审核通过后才进入正式进度口径。`, '上报确认', { type: 'warning' })
   } catch { return }
   const result = await submitProgressReport(role.value, { type: props.type, year: filters.year, quarter: filters.quarter })
   if (!result.success) return ElMessage.error(result.message)
@@ -279,6 +295,31 @@ const loadAll = async () => {
   const root = { code: regionCode.value, name: role.value.regionName || '安徽省' }
   breadcrumbs.value = [root]
   drillCode.value = root.code
+  const first = editableRows.value[0]
+  if (first) {
+    progressForm.regionCode = first.regionCode
+    progressForm.crop = first.cropName || first.crop || ''
+    progressForm.planArea = Number(first.planArea || 0)
+    progressForm.doneArea = Number((isSow.value ? first.sownArea : first.harvestedArea) || first.reportedArea || 0)
+  } else if (['city', 'county'].includes(roleCode.value)) {
+    progressForm.regionCode = role.value.regionCode || ''
+    progressForm.crop = ''
+    progressForm.planArea = 0
+    progressForm.doneArea = 0
+  }
+}
+const saveProgress = async () => {
+  if (!progressForm.regionCode || !progressForm.crop) return ElMessage.warning('请选择区域并填写作物')
+  if (Number(progressForm.planArea) <= 0) return ElMessage.warning('计划面积必须大于0')
+  if (Number(progressForm.doneArea) < 0 || Number(progressForm.doneArea) > Number(progressForm.planArea)) return ElMessage.warning('已完成面积不能小于0或超过计划面积')
+  const region = editableRows.value.find((item) => item.regionCode === progressForm.regionCode)
+  const payload = { ...progressForm, regionName: region?.regionName || role.value.regionName, year: filters.year, quarter: filters.quarter }
+  const result = isSow.value
+    ? await saveSowingProgress({ ...payload, sownArea: Number(progressForm.doneArea) }, role.value)
+    : await saveHarvestProgress({ ...payload, harvestedArea: Number(progressForm.doneArea) }, role.value)
+  if (!result.success) return ElMessage.error(result.message)
+  ElMessage.success('本级进度已保存')
+  await loadAll()
 }
 onMounted(loadAll)
 </script>
@@ -315,3 +356,4 @@ onMounted(loadAll)
 .audit-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:12px}
 @media (max-width:900px){.metric-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
+

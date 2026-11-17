@@ -3,12 +3,12 @@ import { getRegion, listCities } from '@/mock/common/regions'
 import { GROW_SUBJECTS, PLOTS } from '@/mock/geo/plot-gen'
 
 export const PLANTING_PLAN_LIST = [
-  { id: 'PLANT-2026-FULL', year: 2026, quarter: '全年', area: 10920, cropType: '小麦、水稻、玉米、大豆', description: '2026年全年粮食生产总体安排，统筹四季种植结构与面积任务，作为年度总纲逐级分解下达。', attachmentName: '2026年全年粮食生产种植计划.pdf', status: '已分解' },
+  { id: 'PLANT-2026-FULL', year: 2026, quarter: '全年', area: 10920, cropType: '粮食', description: '2026年全年粮食生产总体安排，统筹四季种植结构与面积任务，作为年度总纲逐级分解下达。', attachmentName: '2026年全年粮食生产种植计划.pdf', status: '已分解' },
   { id: 'PLANT-2026-Q1', year: 2026, quarter: '第一季度', area: 2184, cropType: '小麦', description: '稳定夏粮播种面积，重点保障小麦生产任务落实。', attachmentName: '2026年第一季度小麦种植计划.pdf', status: '已分解' },
   { id: 'PLANT-2026-Q2', year: 2026, quarter: '第二季度', area: 3822, cropType: '水稻', description: '统筹早中晚稻生产布局，推进水稻绿色高质高效生产。', attachmentName: '2026年第二季度水稻种植计划.docx', status: '已分解' },
-  { id: 'PLANT-2026-Q3', year: 2026, quarter: '第三季度', area: 3276, cropType: '玉米、大豆', description: '落实玉米大豆带状复合种植，稳定秋粮生产面积。', attachmentName: '', status: '待分解' },
-  { id: 'PLANT-2026-Q4', year: 2026, quarter: '第四季度', area: 1638, cropType: '小麦、油菜', description: '做好秋冬种安排，提前落实冬小麦及轮作任务。', attachmentName: '', status: '待分解' },
-  { id: 'PLANT-2025-Q4', year: 2025, quarter: '第四季度', area: 1580, cropType: '小麦、油菜', description: '2025年第四季度秋冬种植任务。', attachmentName: '2025年第四季度种植计划.pdf', status: '已分解' }
+  { id: 'PLANT-2026-Q3', year: 2026, quarter: '第三季度', area: 3276, cropType: '玉米', description: '落实玉米大豆带状复合种植，稳定秋粮生产面积。', attachmentName: '', status: '已下达', issuedAt: '2026-09-10' },
+  { id: 'PLANT-2026-Q4', year: 2026, quarter: '第四季度', area: 1638, cropType: '小麦', description: '做好秋冬种安排，提前落实冬小麦及轮作任务。', attachmentName: '', status: '待分解' },
+  { id: 'PLANT-2025-Q4', year: 2025, quarter: '第四季度', area: 1580, cropType: '小麦', description: '2025年第四季度秋冬种植任务。', attachmentName: '2025年第四季度种植计划.pdf', status: '已分解' }
 ]
 
 export const PLANTING_PLAN_CITY_TASKS = []
@@ -139,6 +139,7 @@ const SOWING_TOWN_PLANS = [...TOWN_PLANS, ...ALL_TOWN_PLANS]
 const sowingCropKeys = ['wheat', 'rice', 'corn', 'soybean']
 // 按作物农时推断进度所属季度（演示数据用）
 const cropQuarter = { wheat: '第一季度', rice: '第二季度', corn: '第三季度', soybean: '第三季度' }
+const quarterPlanId = (year, quarter) => ({ '第一季度': `PLANT-${year}-Q1`, '第二季度': `PLANT-${year}-Q2`, '第三季度': `PLANT-${year}-Q3`, '第四季度': `PLANT-${year}-Q4` }[quarter] || `PLANT-${year}-FULL`)
 const sowingRowsFromPlans = (plans, level) => plans.flatMap((plan) => sowingCropKeys.map((crop, index) => {
   const planArea = Number(plan[crop] || 0)
   const sownArea = Number((planArea * (0.58 + ((index + String(plan.id).length) % 25) / 100)).toFixed(1))
@@ -146,6 +147,7 @@ const sowingRowsFromPlans = (plans, level) => plans.flatMap((plan) => sowingCrop
   const regionName = level === 'city' ? plan.cityName : level === 'county' ? plan.countyName : plan.townName
   return {
     id: `SOW-${level}-${regionCode}-${crop}`,
+    planId: quarterPlanId(plan.year, cropQuarter[crop] || '第一季度'),
     year: plan.year,
     quarter: cropQuarter[crop] || '第一季度',
     level,
@@ -257,7 +259,8 @@ export const TASK_PATH_DETAILS = [
   { id: 'PATH-003', planName: '2026年第一季度小麦种植计划', year: 2026, quarter: '第一季度', cropType: '小麦', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', townCode: '341222103', townName: '大新镇', subjectId: 'SUB-0001', subjectName: '太和县丰乐种植专业合作社', owner: '陈勇', taskArea: 620, issuedAt: '2026-02-27', status: '落实中', progress: 76 },
   { id: 'PATH-004', planName: '2026年第二季度水稻种植计划', year: 2026, quarter: '第二季度', cropType: '水稻', cityCode: '341200', cityName: '阜阳市', countyCode: '341226', countyName: '颍上县', townCode: '341226106', townName: '润河镇', subjectId: 'SUB-0101', subjectName: '颍上县润河合作社', owner: '周明', taskArea: 760, issuedAt: '2026-04-18', status: '已下达', progress: 35 },
   { id: 'PATH-005', planName: '2026年第一季度小麦种植计划', year: 2026, quarter: '第一季度', cropType: '小麦', cityCode: '341600', cityName: '亳州市', countyCode: '341622', countyName: '涡阳县', townCode: '341622105', townName: '义门镇', subjectId: 'SUB-0007', subjectName: '涡阳县丰收种植合作社', owner: '马丰', taskArea: 850, issuedAt: '2026-02-28', status: '落实中', progress: 71 },
-  { id: 'PATH-006', planName: '2026年第二季度水稻种植计划', year: 2026, quarter: '第二季度', cropType: '水稻', cityCode: '340100', cityName: '合肥市', countyCode: '340123', countyName: '肥西县', townCode: '340123101', townName: '三河镇', subjectId: 'SUB-0009', subjectName: '肥西县三河现代农业公司', owner: '张三河', taskArea: 1100, issuedAt: '2026-04-20', status: '已落实', progress: 100 }
+  { id: 'PATH-006', planName: '2026年第二季度水稻种植计划', year: 2026, quarter: '第二季度', cropType: '水稻', cityCode: '340100', cityName: '合肥市', countyCode: '340123', countyName: '肥西县', townCode: '340123101', townName: '三河镇', subjectId: 'SUB-0009', subjectName: '肥西县三河现代农业公司', owner: '张三河', taskArea: 1100, issuedAt: '2026-04-20', status: '已落实', progress: 100 },
+  { id: 'PATH-007', planName: '2026年第三季度玉米种植计划', year: 2026, quarter: '第三季度', cropType: '玉米', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', townCode: '341222103', townName: '大新镇', subjectId: 'SUB-0001', subjectName: '太和县丰乐种植专业合作社', owner: '陈勇', taskArea: 580, issuedAt: '2026-09-10', status: '已下达', progress: 35 }
 ].map((item) => ({
   ...item,
   path: `${item.cityName} / ${item.countyName} / ${item.townName} / ${item.subjectName}`,
@@ -328,9 +331,9 @@ export const PLAN_AUDITS = auditCities.map((city, cityIndex) => {
   })
   return {
     id: `AUDIT-CITY-${plan.id}-${city.code}`,
-    type: '市级分解计划',
+    type: '市级计划提交省级审核',
     targetId: plan.id,
-    targetName: `${city.name}${plan.year}年${plan.quarter}县级任务分解计划`,
+    targetName: `${city.name}${plan.year}年${plan.quarter}市级上报计划`,
     planYear: plan.year,
     quarter: plan.quarter,
     cropType: plan.cropType,
@@ -344,13 +347,18 @@ export const PLAN_AUDITS = auditCities.map((city, cityIndex) => {
     countyCount: countyPlans.length,
     countyPlans,
     status: cityIndex % 3 === 0 ? 'pending' : cityIndex % 3 === 1 ? 'approved' : 'rejected',
-    opinion: cityIndex % 3 === 2 ? '县级任务面积合计与市级领取任务不一致，请核实后重新提交' : ''
+    opinion: cityIndex % 3 === 2 ? '市级上报计划面积请核实后重新提交' : ''
   }
-})
+}).concat([
+  { id: 'AUDIT-COUNTY-PLANT-2026-Q1-341222', type: '县级计划提交市级审核', targetId: 'PLANT-2026-Q1', targetName: '太和县2026年第一季度县级上报计划', planYear: 2026, quarter: '第一季度', cropType: '小麦', planDescription: '太和县第一季度小麦县级上报计划', regionCode: '341222', regionName: '太和县', submitter: '太和县农业农村局', submittedAt: '2026-10-08', totalArea: 302, actualArea: 302, countyCount: 1, countyPlans: [{ id: 'COUNTY-341222-Q1', countyCode: '341222', countyName: '太和县', area: 302, actualArea: 302, cropType: '小麦', description: '太和县第一季度小麦县级上报计划', status: 'approved', cityAuditStatus: 'approved' }], status: 'approved', auditLevel: '市级审核', auditTrail: [] },
+  { id: 'AUDIT-COUNTY-PLANT-2026-Q2-340123', type: '县级计划提交市级审核', targetId: 'PLANT-2026-Q2', targetName: '肥西县2026年第二季度县级上报计划', planYear: 2026, quarter: '第二季度', cropType: '水稻', planDescription: '肥西县第二季度水稻县级上报计划', regionCode: '340123', regionName: '肥西县', submitter: '肥西县农业农村局', submittedAt: '2026-10-09', totalArea: 186, actualArea: 186, countyCount: 1, countyPlans: [{ id: 'COUNTY-340123-Q2', countyCode: '340123', countyName: '肥西县', area: 186, actualArea: 186, cropType: '水稻', description: '肥西县第二季度水稻县级上报计划', status: 'pending', cityAuditStatus: 'pending' }], status: 'pending', auditLevel: '市级审核', auditTrail: [] },
+  { id: 'AUDIT-COUNTY-PLANT-2026-Q3-341222', type: '县级计划提交市级审核', targetId: 'PLANT-2026-Q3', targetName: '太和县2026年第三季度县级上报计划', planYear: 2026, quarter: '第三季度', cropType: '玉米', planDescription: '太和县第三季度玉米县级上报计划', regionCode: '341222', regionName: '太和县', submitter: '太和县农业农村局', submittedAt: '2026-11-10', totalArea: 302, actualArea: 302, countyCount: 1, countyPlans: [{ id: 'COUNTY-341222-Q3', countyCode: '341222', countyName: '太和县', area: 302, actualArea: 302, cropType: '玉米', description: '太和县第三季度玉米县级上报计划', status: 'approved', cityAuditStatus: 'approved' }], status: 'approved', auditLevel: '市级审核', auditTrail: [] },
+  { id: 'AUDIT-CITY-PLANT-2026-Q3-341200', type: '市级计划提交省级审核', targetId: 'PLANT-2026-Q3', targetName: '阜阳市2026年第三季度市级上报计划', planYear: 2026, quarter: '第三季度', cropType: '玉米', planDescription: '阜阳市第三季度玉米市级上报计划', regionCode: '341200', regionName: '阜阳市', submitter: '阜阳市农业农村局', submittedAt: '2026-11-11', totalArea: 1480, actualArea: 1480, countyCount: 4, countyPlans: [], status: 'approved', auditLevel: '省级审核', auditTrail: [] }
+])
 
 export const PLAN_SUPERVISE = [
   { id: 'SUP-001', targetId: 'PLANT-2026-Q1', taskId: 'PLAN-2026-341222', targetName: '2026年第一季度小麦种植计划', regionCode: '341222', regionName: '太和县', supervisor: '省农业农村厅计划处', deadline: '2026-10-30', progress: 78, taskProgress: 78, sowingProgress: 82, harvestProgress: 36, completionRate: 78, unreportedSubjects: 3, abnormalArea: 126, logicIssues: 1, status: '监督中', issue: '任务落实进度滞后，仍有 3 个主体未填报，存在面积异常', lastFollowUp: '2026-10-10' },
-  { id: 'SUP-002', targetId: 'PLANT-2026-Q3', taskId: 'PLAN-2026-341622', targetName: '2026年第三季度玉米、大豆种植计划', regionCode: '341622', regionName: '涡阳县', supervisor: '阜阳市农业农村局', deadline: '2026-10-25', progress: 92, taskProgress: 92, sowingProgress: 96, harvestProgress: 88, completionRate: 92, unreportedSubjects: 0, abnormalArea: 0, logicIssues: 0, status: '已完成', issue: '各项进度正常', lastFollowUp: '2026-10-08' },
+  { id: 'SUP-002', targetId: 'PLANT-2026-Q3', taskId: 'PLAN-2026-341622', targetName: '2026年第三季度玉米种植计划', regionCode: '341622', regionName: '涡阳县', supervisor: '阜阳市农业农村局', deadline: '2026-10-25', progress: 92, taskProgress: 92, sowingProgress: 96, harvestProgress: 88, completionRate: 92, unreportedSubjects: 0, abnormalArea: 0, logicIssues: 0, status: '已完成', issue: '各项进度正常', lastFollowUp: '2026-10-08' },
   { id: 'SUP-003', targetId: 'PLANT-2026-Q2', taskId: 'PLAN-2026-340123', targetName: '2026年第二季度水稻种植计划', regionCode: '340123', regionName: '肥西县', supervisor: '合肥市农业农村局', deadline: '2026-10-28', progress: 64, taskProgress: 64, sowingProgress: 72, harvestProgress: 42, completionRate: 64, unreportedSubjects: 5, abnormalArea: 268, logicIssues: 2, status: '逾期预警', issue: '收获进度低于序时进度，存在未填报主体和数据逻辑异常', lastFollowUp: '2026-10-09' }
 ]
 
@@ -393,7 +401,7 @@ export const POLICIES = [
 ]
 
 export const WEATHER_ALERTS = [
-  { id: 'WA-001', kind: 'warning', type: '暴雨', level: '橙色', regionName: '太和县', region: '太和县', regionCode: '341222', content: '预计未来24小时太和县有大到暴雨，局部大暴雨，请注意防范农田渍涝。', advice: '及时疏通沟渠，做好田间排水。', publishTime: '2026-09-28 16:00', crops: '玉米、大豆', status: 'active', source: '气象部门' },
+  { id: 'WA-001', kind: 'warning', type: '暴雨', level: '橙色', regionName: '太和县', region: '太和县', regionCode: '341222', content: '预计未来24小时太和县有大到暴雨，局部大暴雨，请注意防范农田渍涝。', advice: '及时疏通沟渠，做好田间排水。', publishTime: '2026-09-28 16:00', crops: '玉米', status: 'active', source: '气象部门' },
   { id: 'WA-002', kind: 'forecast', type: '大风', level: '黄色', regionName: '涡阳县', region: '涡阳县', regionCode: '341622', content: '预计未来12小时涡阳县平均风力可达6级以上，阵风7-8级，秋收作业请注意安全。', advice: '暂停高空和露天农事作业，加固农业设施。', publishTime: '2026-09-28 10:30', crops: '玉米', status: 'active', source: '气象部门' },
   { id: 'WA-003', kind: 'warning', type: '寒潮', level: '蓝色', regionName: '全省', region: '全省', regionCode: '340000', content: '10月2日起全省自北向南平均气温下降6-8℃，请防范晚秋作物低温冷害。', advice: '加强田间巡查，做好保温和防冻措施。', publishTime: '2026-09-27 09:00', crops: '水稻', status: 'active', source: '气象部门' }
 ]
@@ -432,4 +440,12 @@ export const PROGRESS_REPORT_ORDERS = [
   { id: 'PRO-HARVEST-2026-Q3-341222104', year: 2026, quarter: '第三季度', type: 'harvest', level: 'town', regionCode: '341222104', regionName: '旧县镇', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', status: '审核通过', reporter: '旧县镇人民政府', reportedAt: '2026-10-15', auditor: '太和县农业农村局', auditedAt: '2026-10-16', auditOpinion: '收获进度正常，同意通过。', timeline: [{ time: '2026-10-15 14:10', operator: '旧县镇人民政府', action: '乡镇向县级上报第三季度收获进度' }, { time: '2026-10-16 09:00', operator: '太和县农业农村局', action: '县级审核通过' }] },
   { id: 'PRO-HARVEST-2026-Q3-341222112', year: 2026, quarter: '第三季度', type: 'harvest', level: 'town', regionCode: '341222112', regionName: '皮条孙镇', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', status: '待审核', reporter: '皮条孙镇人民政府', reportedAt: '2026-11-13', auditor: '', auditedAt: '', auditOpinion: '', timeline: [{ time: '2026-11-13 16:25', operator: '皮条孙镇人民政府', action: '乡镇向县级上报第三季度收获进度' }] },
   { id: 'PRO-HARVEST-2026-Q3-341222', year: 2026, quarter: '第三季度', type: 'harvest', level: 'county', regionCode: '341222', regionName: '太和县', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', status: '审核通过', reporter: '太和县农业农村局', reportedAt: '2026-10-18', auditor: '阜阳市农业农村局', auditedAt: '2026-10-19', auditOpinion: '同意通过。', timeline: [{ time: '2026-10-18 10:30', operator: '太和县农业农村局', action: '县级向市级上报第三季度收获进度' }, { time: '2026-10-19 11:00', operator: '阜阳市农业农村局', action: '市级审核通过' }] }
-]
+  ,{ id: 'PRO-HARVEST-2026-Q3-341200', year: 2026, quarter: '第三季度', type: 'harvest', level: 'city', regionCode: '341200', regionName: '阜阳市', cityCode: '341200', cityName: '阜阳市', countyCode: '', countyName: '', status: '待审核', reporter: '阜阳市农业农村局', reportedAt: '2026-11-14', auditor: '', auditedAt: '', auditOpinion: '', timeline: [{ time: '2026-11-14 09:40', operator: '阜阳市农业农村局', action: '市级向省级上报第三季度收获进度' }] }
+].map((item) => ({
+  ...item,
+  planId: item.planId || quarterPlanId(item.year, item.quarter),
+  planName: item.planName || `${item.year}年${item.quarter}粮食生产上报计划`
+}))
+
+
+

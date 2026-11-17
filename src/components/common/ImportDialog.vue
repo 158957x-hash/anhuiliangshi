@@ -14,7 +14,7 @@
         </el-descriptions-item>
       </el-descriptions>
       <div class="imp-actions">
-        <el-button type="primary" icon="Download" @click="downloadTemplate">下载导入模板（CSV）</el-button>
+        <el-button type="primary" icon="Download" @click="downloadTemplate">下载模板</el-button>
         <el-button icon="Right" @click="step = 1">下一步</el-button>
       </div>
     </div>

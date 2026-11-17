@@ -16,7 +16,7 @@
     <el-drawer v-model="drawer" title="普通收储申报详情" size="96%" append-to-body><template v-if="current">
       <OrdinaryDetail :application="current" />
       <section class="execution-card"><h3>实际执行摘要</h3><el-descriptions v-if="ledgerFor(current)" :column="1" border size="small"><el-descriptions-item label="执行状态">{{ ledgerFor(current).status || '已填报' }}</el-descriptions-item><el-descriptions-item label="实际面积">{{ showValue(ledgerFor(current).actualArea,'亩') }}</el-descriptions-item><el-descriptions-item label="实际产量">{{ showValue(ledgerFor(current).actualYield,'吨') }}</el-descriptions-item><el-descriptions-item label="实际收储重量">{{ showValue(ledgerFor(current).weight,'吨') }}</el-descriptions-item><el-descriptions-item label="实际收储价格">{{ showValue(ledgerFor(current).price,'元/吨') }}</el-descriptions-item></el-descriptions><el-empty v-else description="尚未填报执行台账" :image-size="50" /></section>
-      <div class="drawer-actions"><el-button v-if="current.status==='filed'" @click="router.push({path:'/onemap/silage',query:{id:current.id}})">查看备案一张图</el-button><el-button v-if="current.status==='filed'" @click="router.push({path:'/sil/fence',query:{id:current.id}})">查看精确围栏</el-button></div>
+      <div class="drawer-actions"><el-button v-if="current.status==='filed'" @click="router.push({path:'/onemap/silage',query:{id:current.id}})">查看备案图</el-button><el-button v-if="current.status==='filed'" @click="router.push({path:'/sil/fence',query:{id:current.id}})">查看精确围栏</el-button></div>
     </template></el-drawer>
   </div>
 </template>

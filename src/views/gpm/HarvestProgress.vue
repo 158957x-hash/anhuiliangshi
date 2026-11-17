@@ -48,10 +48,9 @@
                 <el-button v-else link type="primary" @click="openLevel(row)">{{ row.name }}</el-button>
               </template>
             </el-table-column>
+            <el-table-column v-if="isSubjectLevel" prop="planName" label="主体参考计划" min-width="220" show-overflow-tooltip />
             <el-table-column v-if="isSubjectLevel" prop="cropName" label="作物" width="100" />
-            <el-table-column v-if="isSubjectLevel" prop="planName" label="下达计划" min-width="220" show-overflow-tooltip />
-            <el-table-column v-if="isSubjectLevel" prop="cropName" label="计划作物" width="100" />
-            <el-table-column prop="planArea" label="下达面积（亩）" width="140" align="right" />
+            <el-table-column prop="planArea" :label="isSubjectLevel ? '主体参考面积（亩）' : '本级上报计划面积（亩）'" width="170" align="right" />
             <el-table-column prop="harvestedArea" label="已收获面积（亩）" width="150" align="right" />
             <el-table-column label="收获进度" width="190">
               <template #default="{ row }">
@@ -63,10 +62,10 @@
             </el-table-column>
             <el-table-column v-if="isSubjectLevel" prop="updatedAt" label="填报日期" width="120" />
             <el-table-column v-if="isSubjectLevel" label="操作" width="130" fixed="right">
-              <template #default="{ row }"><el-button link type="primary" @click="viewSubjectReport(row)">查看上报</el-button></template>
+              <template #default="{ row }"><el-button link type="primary" @click="viewSubjectReport(row)">详情</el-button></template>
             </el-table-column>
             <el-table-column v-else label="操作" width="100" fixed="right">
-              <template #default="{ row }"><el-button link type="primary" @click="openLevel(row)">查看下级</el-button></template>
+              <template #default="{ row }"><el-button link type="primary" @click="openLevel(row)">下级</el-button></template>
             </el-table-column>
             <template #empty"><el-empty description="暂无上报进度记录" /></template>
           </el-table>

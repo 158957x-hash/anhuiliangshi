@@ -3,9 +3,9 @@
     <div class="page-head">
       <div>
         <h2>长势对比库</h2>
-        <p>基于独立长势监测记录进行研判、对比与预警推送（数据不由事件派生；长势异常经预警推送进入变化图斑库统一流转）。</p>
+        <p>基于独立长势监测记录进行展示与对比分析，页面只读呈现监测结果和研判状态。</p>
+        <el-tag size="small" type="info" effect="plain">只读展示 · 无业务操作</el-tag>
       </div>
-      <el-button type="primary" :loading="loading" @click="load">刷新记录</el-button>
     </div>
 
     <!-- 顶部指标卡：全部基于独立长势记录统计 -->
@@ -55,10 +55,9 @@
       </el-form>
 
       <el-alert v-if="error" type="error" :title="error" show-icon :closable="false" class="mb-12">
-        <el-button size="small" type="primary" plain @click="load">重试加载</el-button>
       </el-alert>
 
-      <el-table v-loading="loading" :data="rows" stripe border empty-text="暂无长势记录，请调整筛选条件或点击刷新">
+      <el-table v-loading="loading" :data="rows" stripe border empty-text="暂无长势记录，请调整筛选条件">
         <el-table-column prop="id" label="记录ID" width="130" />
         <el-table-column prop="monitorPeriod" label="监测期" min-width="200" show-overflow-tooltip />
         <el-table-column prop="regionName" label="区域" width="100" />
@@ -87,119 +86,34 @@
             <div class="cell-sub">{{ row.judgeAt || '—' }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="230" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="openDetail(row)">详情</el-button>
-            <el-button v-if="canJudge(row)" link type="warning" @click="openJudge(row)">人工研判</el-button>
-            <el-button v-if="canGenerate(row)" link type="success" @click="pushWarning(row)">推送预警</el-button>
-            <span v-if="row.warningPushed" class="generated-no">已推送 {{ row.warningPushed }}</span>
-          </template>
-        </el-table-column>
       </el-table>
     </div>
 
-    <!-- 详情抽屉 -->
-    <el-drawer v-model="detailVisible" :title="current ? `长势记录详情 ${current.id}` : '长势记录详情'" size="520px">
-      <template v-if="current">
-        <el-alert
-          v-if="current.judgeStatus === 'model_failed'"
-          type="error" show-icon :closable="false" class="mb-12"
-          title="模型失败不得生成结论"
-          :description="current.modelFailReason || '模型研判失败，禁止据此生成结论或推送预警'"
-        />
-        <el-descriptions :column="1" border>
-          <el-descriptions-item label="监测期">{{ current.monitorPeriod }}</el-descriptions-item>
-          <el-descriptions-item label="区域">{{ current.regionName }}（{{ current.regionCode }}）</el-descriptions-item>
-          <el-descriptions-item label="作物">{{ current.cropName }}</el-descriptions-item>
-          <el-descriptions-item label="品种">{{ current.variety || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="数据来源">{{ current.dataSourceType }} · {{ current.dataSourceName }}</el-descriptions-item>
-          <el-descriptions-item label="数据批次">{{ current.dataBatchNo }}</el-descriptions-item>
-          <el-descriptions-item label="基线引用">{{ current.baselineRef || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="长势等级">{{ levelName(current.growthLevel) }}</el-descriptions-item>
-          <el-descriptions-item label="产量趋势">{{ trendName(current.yieldTrend) }}</el-descriptions-item>
-          <el-descriptions-item label="NDVI偏差">{{ current.ndviDeviation || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="置信度">{{ current.confidence == null ? '—' : Number(current.confidence).toFixed(2) }}</el-descriptions-item>
-          <el-descriptions-item label="研判状态">{{ judgeName(current.judgeStatus) }}</el-descriptions-item>
-          <el-descriptions-item label="研判人/时间">{{ current.judgePerson || '—' }} / {{ current.judgeAt || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="田管措施">{{ current.measure || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="区域建议">{{ current.suggestion || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="预警推送">{{ current.warningPushed || '未推送' }}</el-descriptions-item>
-        </el-descriptions>
-      </template>
-    </el-drawer>
 
-    <!-- 人工研判弹窗 -->
-    <el-dialog v-model="judgeVisible" title="人工研判" width="520px">
-      <el-form label-width="90px">
-        <el-form-item label="记录ID">
-          <span>{{ current?.id }}</span>
-        </el-form-item>
-        <el-form-item label="长势等级" required>
-          <el-select v-model="judgeForm.level" placeholder="请选择长势等级" style="width: 100%">
-            <el-option v-for="i in levelOptions" :key="i.value" :label="i.label" :value="i.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="产量趋势" required>
-          <el-select v-model="judgeForm.trend" placeholder="请选择产量趋势" style="width: 100%">
-            <el-option v-for="i in trendOptions" :key="i.value" :label="i.label" :value="i.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="田管措施">
-          <el-input v-model="judgeForm.measure" type="textarea" :rows="2" placeholder="请填写田管措施" />
-        </el-form-item>
-        <el-form-item label="区域建议">
-          <el-input v-model="judgeForm.suggestion" type="textarea" :rows="2" placeholder="请填写区域建议" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="judgeVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitJudge">提交研判</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { fetchGrowthRecords, judgeGrowth, pushGrowthWarning } from '@/api/fsr'
+import { fetchGrowthRecords } from '@/api/fsr'
 import BaseChart from '@/components/charts/BaseChart.vue'
 import { GROWTH_JUDGE_STATUS } from '@/mock/common/dict'
 import StatusTag from '@/components/common/StatusTag.vue'
 import { listCities } from '@/mock/common/regions'
 import { useUserStore } from '@/stores/user'
 
-const router = useRouter()
 const userStore = useUserStore()
 
 // 展示映射：等级/趋势取值与研判弹窗选项一致，不涉及事件类型映射
 const LEVEL_MAP = { good: '良好', normal: '正常', weak: '偏弱', need_attention: '需关注' }
 const TREND_MAP = { up: '稳中有增', stable: '基本稳定', down_risk: '下降风险' }
-const levelOptions = [
-  { value: 'good', label: '良好' },
-  { value: 'normal', label: '正常' },
-  { value: 'weak', label: '偏弱' },
-  { value: 'need_attention', label: '需关注' }
-]
-const trendOptions = [
-  { value: 'up', label: '稳中有增' },
-  { value: 'stable', label: '基本稳定' },
-  { value: 'down_risk', label: '下降风险' }
-]
 const levelName = (v) => LEVEL_MAP[v] || v || '—'
 const trendName = (v) => TREND_MAP[v] || v || '—'
-const judgeName = (v) => GROWTH_JUDGE_STATUS[v]?.name || v || '—'
 
 const allRows = ref([])
 const loading = ref(false)
 const error = ref('')
-const submitting = ref(false)
 const filters = reactive({ judgeStatus: '', regionCode: '', dataSourceType: '' })
-const detailVisible = ref(false)
-const judgeVisible = ref(false)
-const current = ref(null)
-const judgeForm = reactive({ level: '', trend: '', measure: '', suggestion: '' })
 
 const judgeOptions = Object.entries(GROWTH_JUDGE_STATUS).map(([value, i]) => ({ value, label: i.name }))
 // 区域下拉：按记录 regionCode 前4位去重，展示对应地市名称
@@ -226,9 +140,6 @@ const stats = computed(() => ({
   done: allRows.value.filter((r) => ['model_done', 'manual_done'].includes(r.judgeStatus)).length,
   downRisk: allRows.value.filter((r) => r.yieldTrend === 'down_risk').length
 }))
-
-const canJudge = (row) => ['pending', 'model_failed'].includes(row.judgeStatus)
-const canGenerate = (row) => ['model_done', 'manual_done'].includes(row.judgeStatus) && !row.warningPushed && row.growthLevel !== 'good' && row.growthLevel !== 'normal'
 
 // 长势同比对比（演示数据；分品种/分区域 今年vs去年，颜色区分，对应评标演示口径）
 const compareDim = ref('crop')
@@ -270,55 +181,6 @@ const load = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const openDetail = (row) => {
-  current.value = row
-  detailVisible.value = true
-}
-
-const openJudge = (row) => {
-  current.value = row
-  judgeForm.level = ''
-  judgeForm.trend = ''
-  judgeForm.measure = row.measure || ''
-  judgeForm.suggestion = row.suggestion || ''
-  judgeVisible.value = true
-}
-
-const submitJudge = async () => {
-  if (!judgeForm.level) return ElMessage.warning('请选择长势等级')
-  if (!judgeForm.trend) return ElMessage.warning('请选择产量趋势')
-  submitting.value = true
-  try {
-    const r = await judgeGrowth(current.value.id, {
-      level: judgeForm.level,
-      trend: judgeForm.trend,
-      measure: judgeForm.measure,
-      suggestion: judgeForm.suggestion,
-      judgePerson: userStore.role?.name ? `${userStore.role.name}（演示）` : '研判人（演示）'
-    })
-    if (!r.success) return ElMessage.error(r.message || '人工研判失败')
-    ElMessage.success('人工研判已提交')
-    judgeVisible.value = false
-    load()
-  } finally {
-    submitting.value = false
-  }
-}
-
-const pushWarning = async (row) => {
-  const r = await pushGrowthWarning(row.id)
-  if (!r.success) return ElMessage.error(r.message || '预警推送失败')
-  try {
-    await ElMessageBox.confirm(`预警已推送至属地，事件已登记至变化图斑库（${r.code}，待派发）。是否前往事件库查看？`, '推送成功', {
-      confirmButtonText: '前往事件库',
-      cancelButtonText: '留在本页',
-      type: 'success'
-    })
-    router.push('/fsr/events')
-  } catch (e) { /* 留在本页 */ }
-  load()
 }
 
 onMounted(load)

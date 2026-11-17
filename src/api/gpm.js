@@ -8,6 +8,12 @@ import { FARM_SERVICES, OFFLINE_REPORTS, SMART_REFERENCES } from '@/mock/gpm/ext
 
 const PLANTING_PLAN_VERSIONS = []
 const PLANTING_PLAN_SUBJECT_TASKS = []
+const TOWN_PLAN_REPORTS = [
+  { id: 'TOWN-PLAN-PLANT-2026-Q3-341222104', planId: 'PLANT-2026-Q3', year: 2026, quarter: '第三季度', cropType: '玉米', area: 6.8, countyCode: '341222', countyName: '太和县', townCode: '341222104', townName: '旧县镇', subjectReferenceArea: 6.42, remark: '按乡镇实际安排填报', status: '审核通过', submittedAt: '2026-10-08', submitter: '旧县镇人民政府', auditor: '太和县农业农村局', auditedAt: '2026-10-09', auditOpinion: '' },
+  { id: 'TOWN-PLAN-PLANT-2026-Q3-341222103', planId: 'PLANT-2026-Q3', year: 2026, quarter: '第三季度', cropType: '玉米', area: 5.9, countyCode: '341222', countyName: '太和县', townCode: '341222103', townName: '大新镇', subjectReferenceArea: 5.55, remark: '', status: '待县级审核', submittedAt: '2026-11-12', submitter: '大新镇人民政府', auditor: '', auditedAt: '', auditOpinion: '' },
+  { id: 'TOWN-PLAN-PLANT-2026-Q3-341222108', planId: 'PLANT-2026-Q3', year: 2026, quarter: '第三季度', cropType: '玉米', area: 5.2, countyCode: '341222', countyName: '太和县', townCode: '341222108', townName: '税镇镇', subjectReferenceArea: 5.35, remark: '主体分配面积仅作参考', status: '已驳回', submittedAt: '2026-11-08', submitter: '税镇镇人民政府', auditor: '太和县农业农村局', auditedAt: '2026-11-09', auditOpinion: '请按乡镇实际计划重新核对面积后提交' },
+  { id: 'TOWN-PLAN-PLANT-2026-Q3-341222112', planId: 'PLANT-2026-Q3', year: 2026, quarter: '第三季度', cropType: '玉米', area: 4.8, countyCode: '341222', countyName: '太和县', townCode: '341222112', townName: '皮条孙镇', subjectReferenceArea: 4.8, remark: '', status: '草稿', submittedAt: '', submitter: '', auditor: '', auditedAt: '', auditOpinion: '' }
+]
 
 const inRoleScope = (item, role, field = 'regionCode') => {
   if (!role) return false
@@ -268,7 +274,6 @@ export const fetchTaskPathDetail = (id) => mockRequest(() => {
       { level: '市级', name: item.cityName, unit: `${item.cityName}农业农村局`, status: '已下达' },
       { level: '县级', name: item.countyName, unit: `${item.countyName}农业农村局`, status: '已下达' },
       { level: '乡镇', name: item.townName, unit: `${item.townName}人民政府`, status: '已下达' },
-      { level: '村级', name: villageName, unit: `${villageName}村委会`, status: '已下达' },
       { level: '主体', name: item.subjectName, unit: item.owner, status: item.status }
     ]
   }
@@ -286,7 +291,8 @@ export const fetchIssuedPlantingPlans = (role, filters = {}) => mockRequest(() =
 export const savePlantingPlan = (data, role) => mockRequest(() => {
   if (!role || !['province', 'city', 'county'].includes(role.code)) return failed('当前角色无权维护种植计划')
   if (role.code !== 'province' && !data.id) return failed('市级和县级只能修改省级下达的种植计划')
-  if (!data.year || !data.quarter || Number(data.area) <= 0 || !data.cropType || !data.description) return failed('请完整填写年份、季度、计划面积、作物类型和计划说明')
+  if (!data.year || !data.quarter || Number(data.area) <= 0 || !data.cropType || !data.description) return failed('请完整填写年份、季度、计划面积、作物和计划说明')
+  if (/[、,，/]/.test(String(data.cropType))) return failed('一条计划只能选择一种作物，请拆分后分别保存')
   const sourcePlan = data.id ? PLANTING_PLAN_LIST.find((row) => row.id === data.id) : null
   if (data.id && !sourcePlan) return failed('种植计划不存在')
   const status = role.code === 'province' ? (data.status || '待下达') : role.code === 'city' ? '市级上报草稿' : '县级上报草稿'
@@ -370,7 +376,7 @@ export const fetchPlantingPlanCityTasks = (planId, role) => mockRequest(() => {
       targetArea,
       provinceActualArea: provinceTask?.actualArea ?? provinceTask?.targetArea,
       cropType: planVersionForRole(planId, role)?.cropType || plan.cropType,
-      status: level === 'province' ? '待下达' : `${level === 'city' ? '市级' : '县级'}上报草稿`,
+      status: '待下达',
       issuedAt: ''
     }, plan)
   })
@@ -548,14 +554,15 @@ export const savePlantingPlanCityTasks = (planId, rows, role) => mockRequest(() 
   let version = role.code === 'province' ? plan : planVersionForRole(planId, role)
   // 市/县级首次分解时自动确认接收计划并生成版本，避免“请先保存当前角色的计划修改”流程断点
   if (role.code !== 'province' && !version) {
-    version = { id: `${planId}-${role.code}-${role.regionCode}`, planId, roleCode: role.code, regionCode: role.regionCode, year: plan.year, quarter: plan.quarter, area: Number(plan.area), cropType: plan.cropType, description: plan.description, status: role.code === 'city' ? '市级上报草稿' : '县级上报草稿', updatedBy: role.name || role.regionName, updatedAt: new Date().toISOString().slice(0, 10) }
+    version = { id: `${planId}-${role.code}-${role.regionCode}`, planId, roleCode: role.code, regionCode: role.regionCode, year: plan.year, quarter: plan.quarter, area: Number(plan.area), cropType: plan.cropType, description: plan.description, status: '未上报', updatedBy: role.name || role.regionName, updatedAt: new Date().toISOString().slice(0, 10) }
     PLANTING_PLAN_VERSIONS.push(version)
   }
-  const nextStatus = role.code === 'province' ? '已下达' : role.code === 'city' ? '市级上报草稿' : '县级上报草稿'
-  const nextRows = rows.map((item) => ({ ...item, planId, status: nextStatus, updatedBy: role.name || role.regionName, updatedAt: new Date().toISOString().slice(0, 10) }))
+  // 分解/下达只维护下级参考目标，不改变本级正式上报状态，也不生成审核记录。
+  const nextStatus = '已下达'
+  const nextRows = rows.map((item) => ({ ...item, planId, status: nextStatus, issuedAt: new Date().toISOString().slice(0, 10), updatedBy: role.name || role.regionName, updatedAt: new Date().toISOString().slice(0, 10) }))
   const retained = PLANTING_PLAN_CITY_TASKS.filter((item) => item.planId !== planId || item.roleCode !== role.code || item.regionCode !== role.regionCode)
   PLANTING_PLAN_CITY_TASKS.splice(0, PLANTING_PLAN_CITY_TASKS.length, ...retained, ...nextRows.map((item) => ({ ...item, roleCode: role.code, regionCode: role.regionCode })))
-  Object.assign(version, { status: nextStatus, currentLevel: role.code, lastOperator: role.name || role.regionName, updatedAt: new Date().toISOString().slice(0, 10) })
+  Object.assign(version, { ...(role.code === 'province' ? { status: nextStatus } : {}), currentLevel: role.code, lastOperator: role.name || role.regionName, updatedAt: new Date().toISOString().slice(0, 10) })
   return success({ rows: nextRows })
 })
 export const submitPlantingPlan = (id, role) => mockRequest(() => {
@@ -564,6 +571,7 @@ export const submitPlantingPlan = (id, role) => mockRequest(() => {
   if (!role || !['province', 'city', 'county'].includes(role.code)) return failed('当前角色无权提交种植计划')
   const version = role.code === 'province' ? null : planVersionForRole(id, role)
   if (role.code !== 'province' && !version) return failed('请先保存当前角色的计划修改')
+  if (role.code !== 'province' && version.status === '未上报') return failed('请先编制并保存本级上报计划，再提交上报')
   const status = role.code === 'province' ? '已下达' : role.code === 'city' ? '市级待省级审核' : '县级待市级审核'
   const target = version || plan
   Object.assign(target, { status, currentLevel: role.code, submittedAt: new Date().toISOString().slice(0, 10), submitter: role.name || role.regionName })
@@ -643,6 +651,57 @@ export const submitPlantingPlan = (id, role) => mockRequest(() => {
     plan.auditLevel = '省级终审'
   }
   return success({ item: { ...plan, ...target, id } })
+})
+// 乡镇上报计划独立维护：主体分配面积仅作参考，不自动汇总为乡镇上报面积。
+export const fetchTownPlanReports = (role) => mockRequest(() => TOWN_PLAN_REPORTS.filter((item) => {
+  if (role?.code === 'town') return item.townCode === role.regionCode
+  if (role?.code === 'county') return String(item.countyCode || '').startsWith(String(role.regionCode || ''))
+  return false
+}))
+export const saveTownPlanReport = (data, role) => mockRequest(() => {
+  if (!['town'].includes(role?.code)) return failed('只有乡镇可以维护乡镇上报计划')
+  if (!data.planId || !data.cropType || !data.year || !data.quarter) return failed('计划、年度、季度和作物不能为空')
+  if (/[、,，/]/.test(String(data.cropType))) return failed('乡镇上报计划只能选择一种作物')
+  if (!Number.isFinite(Number(data.area)) || Number(data.area) < 0) return failed('乡镇上报面积必须为不小于0的数字')
+  const existing = data.id ? TOWN_PLAN_REPORTS.find((item) => item.id === data.id && item.townCode === role.regionCode) : null
+  const item = {
+    ...(existing || {}),
+    id: existing?.id || `TOWN-PLAN-${data.planId}-${role.regionCode}`,
+    planId: data.planId,
+    year: Number(data.year),
+    quarter: data.quarter,
+    cropType: data.cropType,
+    area: Number(data.area),
+    countyCode: String(role.regionCode || '').slice(0, 6),
+    countyName: getRegion(String(role.regionCode || '').slice(0, 6))?.name || '',
+    townCode: role.regionCode,
+    townName: role.regionName,
+    subjectReferenceArea: Number(data.subjectReferenceArea || 0),
+    remark: data.remark || '',
+    status: existing?.status === '已驳回' ? '草稿' : (existing?.status || '草稿'),
+    updatedBy: role.name || role.regionName,
+    updatedAt: new Date().toISOString().slice(0, 10)
+  }
+  if (existing) Object.assign(existing, item)
+  else TOWN_PLAN_REPORTS.unshift(item)
+  return success({ item: existing || item })
+})
+export const submitTownPlanReport = (id, role) => mockRequest(() => {
+  const item = TOWN_PLAN_REPORTS.find((row) => row.id === id && row.townCode === role?.regionCode)
+  if (!item) return failed('乡镇上报计划不存在')
+  if (Number(item.area) <= 0) return failed('乡镇上报面积必须大于0')
+  if (item.status === '待县级审核') return failed('当前计划已提交，请等待县级审核')
+  Object.assign(item, { status: '待县级审核', submittedAt: new Date().toISOString().slice(0, 10), submitter: role.name || role.regionName, auditOpinion: '' })
+  return success({ item })
+})
+export const auditTownPlanReport = (id, approved, opinion = '', role) => mockRequest(() => {
+  if (role?.code !== 'county') return failed('只有县级可以审核乡镇上报计划')
+  const item = TOWN_PLAN_REPORTS.find((row) => row.id === id && String(row.countyCode || '').startsWith(String(role.regionCode || '')))
+  if (!item) return failed('乡镇上报计划不存在')
+  if (item.status !== '待县级审核') return failed('当前乡镇上报计划已处理')
+  if (!approved && !String(opinion || '').trim()) return failed('退回时必须填写审核意见')
+  Object.assign(item, { status: approved ? '审核通过' : '已驳回', auditor: role.name || role.regionName, auditedAt: new Date().toISOString().slice(0, 10), auditOpinion: String(opinion || '').trim() })
+  return success({ item })
 })
 export const fetchProvincePlan = () => mockRequest(() => PROVINCE_PLAN)
 export const fetchQuarterlyPlanTargets = (year = PROVINCE_PLAN.year) => mockRequest(() => QUARTERLY_PLAN_TARGETS.filter((item) => item.year === Number(year)))
@@ -880,12 +939,19 @@ const issuedPlanProgressRows = (role, type) => {
       harvestedArea: type === 'harvest' ? reportedArea : 0,
       updatedAt: task.issuedAt
     }
-    return [
-      { ...base, id: `${type}-${task.id}-city`, level: 'city', regionCode: task.cityCode, regionName: task.cityName },
-      { ...base, id: `${type}-${task.id}-county`, level: 'county', regionCode: task.countyCode, regionName: task.countyName },
-      { ...base, id: `${type}-${task.id}-town`, level: 'town' },
-      { ...base, id: `${type}-${task.id}-subject`, level: 'subject', subjectId: task.subjectId, subjectName: task.subjectName, owner: task.owner }
-    ]
+    const hasOrder = (level, regionCode) => PROGRESS_REPORT_ORDERS.some((order) => order.type === type && order.level === level && Number(order.year) === Number(task.year) && order.quarter === base.quarter && order.regionCode === regionCode)
+    const result = [{ ...base, id: `${type}-${task.id}-subject`, level: 'subject', subjectId: task.subjectId, subjectName: task.subjectName, owner: task.owner }]
+    // 乡镇不上报时不生成“已报进度”；有乡镇上报单时才进入参考明细。
+    if (hasOrder('town', task.townCode)) {
+      const townInputs = ALL_PROGRESS_ROWS(type).filter((item) => item.level === 'town' && item.regionCode === task.townCode && Number(item.year) === Number(task.year) && quarterMatched(item.quarter, base.quarter))
+      const townPlanArea = townInputs.reduce((sum, item) => sum + Number(item.planArea || 0), 0) || base.planArea
+      const townDoneArea = townInputs.reduce((sum, item) => sum + Number((type === 'sow' ? item.sownArea : item.harvestedArea) || 0), 0)
+      result.push({ ...base, id: `${type}-${task.id}-town`, level: 'town', planArea: townPlanArea, reportedArea: townDoneArea, sownArea: type === 'sow' ? townDoneArea : 0, harvestedArea: type === 'harvest' ? townDoneArea : 0 })
+    }
+    // 县、市只要形成上报单就展示记录；是否进入正式口径由审核状态单独判断。
+    if (hasOrder('county', task.countyCode)) result.push({ ...base, id: `${type}-${task.id}-county`, level: 'county', regionCode: task.countyCode, regionName: task.countyName })
+    if (hasOrder('city', task.cityCode)) result.push({ ...base, id: `${type}-${task.id}-city`, level: 'city', regionCode: task.cityCode, regionName: task.cityName })
+    return result
   })
 
   return rows.filter((item) => {
@@ -898,7 +964,7 @@ const issuedPlanProgressRows = (role, type) => {
 const sowingRowsForRole = (role) => {
   const issuedRows = issuedPlanProgressRows(role, 'sow')
   if (issuedRows.length) return issuedRows
-  if (!role || role.code === 'province' || role.regionCode === '340000') return SOWING_PROGRESS_ROWS
+  if (!role || role.code === 'province' || role.regionCode === '340000') return []
   const regionCode = String(role.regionCode || '')
   return SOWING_PROGRESS_ROWS.filter((item) => {
     if (role.code === 'city') {
@@ -928,7 +994,7 @@ const progressSummary = (rows, areaField, rateField) => {
 const harvestRowsForRole = (role) => {
   const issuedRows = issuedPlanProgressRows(role, 'harvest')
   if (issuedRows.length) return issuedRows
-  if (!role || role.code === 'province' || role.regionCode === '340000') return HARVEST_PROGRESS_ROWS
+  if (!role || role.code === 'province' || role.regionCode === '340000') return []
   const regionCode = String(role.regionCode || '')
   return HARVEST_PROGRESS_ROWS.filter((item) => {
     if (role.code === 'city') return String(item.cityCode || '').startsWith(regionCode)
@@ -948,11 +1014,31 @@ export const saveSowingProgress = (data, role) => mockRequest(() => {
   if (!Number.isFinite(planArea) || planArea <= 0) return failed('计划面积必须大于0')
   if (!Number.isFinite(sownArea) || sownArea < 0) return failed('已播面积不能小于0')
   if (sownArea > planArea) return failed('已播面积不能超过计划面积')
-  const existing = SOWING_PROGRESS_ROWS.find((item) => item.regionCode === data.regionCode && item.crop === data.crop)
-  const next = { ...data, year: Number(data.year || 2026), planArea, sownArea, updatedAt: new Date().toISOString().slice(0, 10) }
+  const next = { ...data, year: Number(data.year || 2026), quarter: data.quarter || '第三季度', planArea, sownArea, level: role?.code || 'region', updatedAt: new Date().toISOString().slice(0, 10) }
+  // 进度必须归属于当前选择的本级上报计划；有计划编号时禁止跨计划复用旧记录。
+  const existing = SOWING_PROGRESS_ROWS.find((item) => item.regionCode === data.regionCode && item.crop === data.crop && Number(item.year) === next.year && item.quarter === next.quarter && (data.planId ? item.planId === data.planId : !item.planId))
   if (existing) Object.assign(existing, next)
   else SOWING_PROGRESS_ROWS.unshift({ id: `SOW-${Date.now()}`, level: role?.code || 'region', ...next })
   return success({ item: { ...(existing || next), sowProgress: sowingProgress(existing || next) } })
+})
+export const saveHarvestProgress = (data, role) => mockRequest(() => {
+  if (!data.regionCode || !data.regionName || !data.crop) return failed('地区和作物不能为空')
+  if (!inRoleScope({ regionCode: data.regionCode }, role)) return failed('当前角色无权填报该地区')
+  const planArea = Number(data.planArea)
+  const harvestedArea = Number(data.harvestedArea)
+  if (!Number.isFinite(planArea) || planArea <= 0) return failed('计划面积必须大于0')
+  if (!Number.isFinite(harvestedArea) || harvestedArea < 0) return failed('已收获面积不能小于0')
+  if (harvestedArea > planArea) return failed('已收获面积不能超过计划面积')
+  const next = { ...data, year: Number(data.year || 2026), quarter: data.quarter || '第三季度', harvestedArea, planArea, level: role?.code || 'region', updatedAt: new Date().toISOString().slice(0, 10) }
+  // 进度必须归属于当前选择的本级上报计划；有计划编号时禁止跨计划复用旧记录。
+  const existing = HARVEST_PROGRESS_ROWS.find((item) => item.regionCode === data.regionCode && item.crop === data.crop && Number(item.year) === next.year && item.quarter === next.quarter && (data.planId ? item.planId === data.planId : !item.planId))
+  if (existing) Object.assign(existing, next)
+  else HARVEST_PROGRESS_ROWS.unshift({ id: `HARVEST-${Date.now()}`, level: role?.code || 'region', ...next })
+  return success({ item: { ...(existing || next), harvestProgress: harvestProgress(existing || next) } })
+})
+export const fetchTownProgressDraft = (role, filters = {}) => mockRequest(() => {
+  if (role?.code !== 'town') return []
+  return ALL_PROGRESS_ROWS(filters.type || 'sow').filter((item) => item.level === 'town' && item.regionCode === role.regionCode && (!filters.year || Number(item.year) === Number(filters.year)) && quarterMatched(item.quarter, filters.quarter)).map((item) => ({ ...item, doneArea: Number((filters.type || 'sow') === 'sow' ? item.sownArea || 0 : item.harvestedArea || 0) }))
 })
 export const fetchSowingSummary = (role) => mockRequest(() => progressSummary(sowingRowsForRole(role), 'sownArea', 'sowProgress'))
 export const fetchHarvestSummary = (role) => mockRequest(() => progressSummary(harvestRowsForRole(role), 'harvestedArea', 'harvestProgress'))
@@ -982,6 +1068,7 @@ const aggregateProgressRows = (rows, type) => {
 }
 const ORDER_AUDIT_LEVEL = { town: 'county', county: 'city', city: 'province' }
 const ORDER_LEVEL_NAME = { town: '乡镇', county: '县级', city: '市级' }
+const progressPlanIdByQuarter = (year, quarter) => ({ '第一季度': `PLANT-${year}-Q1`, '第二季度': `PLANT-${year}-Q2`, '第三季度': `PLANT-${year}-Q3`, '第四季度': `PLANT-${year}-Q4` }[quarter] || `PLANT-${year}-FULL`)
 const hasApprovedReportedPlan = (role, year, quarter) => {
   if (!role || !['county', 'city'].includes(role.code)) return false
   const auditType = role.code === 'county' ? '县级计划提交市级审核' : '市级计划提交省级审核'
@@ -991,7 +1078,94 @@ const hasApprovedReportedPlan = (role, year, quarter) => {
 export const fetchProgressReportRows = (role, filters = {}) => mockRequest(() => {
   const { type = 'sow', year = '', quarter = '' } = filters
   const scope = !role?.regionCode || role.regionCode === '340000' ? '' : String(role.regionCode)
-  return ALL_PROGRESS_ROWS(type).filter((row) => (!year || Number(row.year) === Number(year)) && quarterMatched(row.quarter, quarter) && (!scope || String(row.regionCode || '').startsWith(scope)))
+  const level = ['town', 'county', 'city'].includes(role?.code) ? role.code : ''
+  const issued = issuedPlanProgressRows({ code: role?.code || 'province', regionCode: role?.regionCode || '340000' }, type).filter((row) => (!year || Number(row.year) === Number(year)) && quarterMatched(row.quarter, quarter) && (!scope || String(row.regionCode || '').startsWith(scope)))
+  if (!level) return issued
+  // 本级在首次上报前也必须能维护数据；下级/主体数据仍按已有上报单展示为参考。
+  const ownRows = progressRowsInScope(type, { year, quarter, regionCode: role.regionCode }).filter((row) => row.level === level).map((row) => {
+    const order = PROGRESS_REPORT_ORDERS.find((item) => item.type === type && Number(item.year) === Number(row.year) && quarterMatched(item.quarter, row.quarter || quarter) && item.level === level && item.regionCode === row.regionCode && (!row.planId || !item.planId || item.planId === row.planId))
+    return ({
+    ...row,
+    planName: row.planName || `${row.year}年${row.quarter || quarter || ''}${row.cropName || row.crop || ''}计划`,
+    planArea: Number(row.planArea || 0),
+    sownArea: type === 'sow' ? Number(row.sownArea || 0) : 0,
+    harvestedArea: type === 'harvest' ? Number(row.harvestedArea || 0) : 0,
+    reportedArea: type === 'sow' ? Number(row.sownArea || 0) : Number(row.harvestedArea || 0),
+    updatedAt: row.updatedAt || row.date || '',
+    // 是否展示记录只看本级是否形成上报单；审核状态仅用于正式统计口径。
+    // 计划审核不是进度记录的前置条件，避免已上报记录被错误隐藏。
+    isDraft: !order,
+    // 已上报记录进入跟进口径；被退回记录保留展示，但不计入汇总。
+    isFormal: Boolean(order && order.status !== '已驳回'),
+    reportStatus: order?.status || '未上报',
+    reportId: order?.id || ''
+  })
+  })
+  const childAndReference = issued.filter((row) => row.level !== level)
+  return [...ownRows, ...childAndReference]
+})
+
+// 移动端进度填报选项：只能选择当前角色已经形成的本级上报计划，计划面积由计划记录带出。
+export const fetchProgressPlanOptions = (role, filters = {}) => mockRequest(() => {
+  const type = filters.type || 'sow'
+  const year = filters.year || ''
+  const quarter = filters.quarter || ''
+  if (!['town', 'county', 'city'].includes(role?.code)) return []
+
+  if (role.code === 'town') {
+    const rows = ALL_PROGRESS_ROWS(type)
+    return TOWN_PLAN_REPORTS
+      .filter((item) => item.townCode === role.regionCode && ['待县级审核', '审核通过'].includes(item.status))
+      .filter((item) => (!year || Number(item.year) === Number(year)) && quarterMatched(item.quarter, quarter))
+      .map((item) => {
+        const progress = rows.find(row => row.level === 'town' && row.regionCode === item.townCode && Number(row.year) === Number(item.year) && row.quarter === item.quarter && (row.planId === item.planId || !row.planId))
+        return ({
+        id: `${item.id}-${type}`,
+        planId: item.planId,
+        reportId: item.id,
+        year: item.year,
+        quarter: item.quarter,
+        crop: item.cropType,
+        cropName: item.cropType,
+        planName: `${item.year}年${item.quarter}${item.cropType}乡镇上报计划`,
+        planArea: Number(item.area || 0) * 10000,
+        regionCode: item.townCode,
+        regionName: item.townName,
+        reportStatus: item.status,
+        subjectReferenceArea: Number(item.subjectReferenceArea || 0) * 10000,
+        doneArea: type === 'sow' ? Number(progress?.sownArea || 0) : Number(progress?.harvestedArea || 0)
+      })
+      })
+  }
+
+  const planAuditType = role.code === 'county' ? '县级计划提交市级审核' : '市级计划提交省级审核'
+  // 进度填报入口必须从“本级已上报计划”进入。计划被退回后不再作为可填报计划，待审核和已通过均可继续维护进度。
+  const submittedPlans = PLAN_AUDITS
+    .filter((item) => item.type === planAuditType && item.regionCode === role.regionCode && item.status !== 'rejected' && (!year || Number(item.planYear) === Number(year)) && quarterMatched(item.quarter, quarter))
+  const orders = PROGRESS_REPORT_ORDERS.filter((item) => item.type === type && item.level === role.code && item.regionCode === role.regionCode && item.status !== '已驳回' && (!year || Number(item.year) === Number(year)) && quarterMatched(item.quarter, quarter))
+  const rows = progressRowsInScope(type, { year, quarter, regionCode: role.regionCode }).filter((item) => item.level === role.code)
+  return submittedPlans.map((plan) => {
+    const planId = plan.targetId || plan.id
+    const planRows = rows.filter((item) => item.planId === planId)
+    const order = orders.find((item) => item.planId === planId)
+    const firstRow = planRows[0]
+    const planArea = planRows.reduce((sum, item) => sum + Number(item.planArea || 0), 0) || Number(plan.actualArea || plan.totalArea || 0)
+    return {
+      id: `${planId}-${type}-${role.regionCode}`,
+      planId,
+      reportId: order?.id || '',
+      year: Number(plan.planYear),
+      quarter: plan.quarter,
+      crop: firstRow?.crop || plan.cropType,
+      cropName: firstRow?.cropName || plan.cropType,
+      planName: plan.targetName || `${plan.planYear}年${plan.quarter}${plan.cropType || ''}本级上报计划`,
+      planArea,
+      regionCode: role.regionCode,
+      regionName: role.regionName,
+      reportStatus: order?.status || '未上报',
+      doneArea: planRows.reduce((sum, item) => sum + Number((type === 'sow' ? item.sownArea : item.harvestedArea) || 0), 0)
+    }
+  })
 })
 export const fetchProgressReportOrders = (role, filters = {}) => mockRequest(() => {
   const { type = 'sow', year = '', quarter = '' } = filters
@@ -999,12 +1173,16 @@ export const fetchProgressReportOrders = (role, filters = {}) => mockRequest(() 
     .filter((item) => item.type === type && (!year || Number(item.year) === Number(year)) && (!quarter || item.quarter === quarter))
     .filter((item) => !role?.regionCode || role.regionCode === '340000' || String(item.regionCode || '').startsWith(String(role.regionCode)))
     .map((item) => {
-      const rows = progressRowsInScope(item.type, { year: item.year, quarter: item.quarter, regionCode: item.regionCode })
+      const issuedRows = issuedPlanProgressRows({ code: 'province', regionCode: '340000' }, item.type).filter((row) => Number(row.year) === Number(item.year) && quarterMatched(row.quarter, item.quarter) && String(row.regionCode || '').startsWith(String(item.regionCode || '')))
+      const ownRows = progressRowsInScope(item.type, { year: item.year, quarter: item.quarter, regionCode: item.regionCode }).filter((row) => row.level === item.level && (!item.planId || !row.planId || row.planId === item.planId))
+      const rows = [...issuedRows.filter((row) => row.level !== item.level), ...ownRows]
+      const officialRows = rows.filter((row) => row.level === item.level)
       const subjectRows = rows.filter((row) => row.level === 'subject')
       const townRows = rows.filter((row) => row.level === 'town')
       return {
         ...item,
-        summary: aggregateProgressRows(rows, item.type),
+        planId: item.planId || progressPlanIdByQuarter(item.year, item.quarter),
+        summary: aggregateProgressRows(officialRows, item.type),
         subjectCount: new Set(subjectRows.map((row) => row.subjectId || row.subjectName)).size,
         townCount: new Set(townRows.map((row) => row.regionCode)).size,
         auditLevelName: { county: '县级', city: '市级', province: '省级' }[ORDER_AUDIT_LEVEL[item.level]],
@@ -1015,11 +1193,10 @@ export const fetchProgressReportOrders = (role, filters = {}) => mockRequest(() 
 export const submitProgressReport = (role, payload = {}) => mockRequest(() => {
   const level = { town: 'town', county: 'county', city: 'city' }[role?.code]
   if (!level) return failed('当前角色无正式进度上报权限')
-  const { type = 'sow', year = new Date().getFullYear(), quarter = '第一季度' } = payload
-  if (level !== 'town' && !hasApprovedReportedPlan(role, year, quarter)) return failed(`当前${level === 'county' ? '县级' : '市级'}暂无审核通过的本级上报计划，不能提交进度`)
-  const rows = progressRowsInScope(type, { year, quarter, regionCode: role.regionCode })
+  const { type = 'sow', year = new Date().getFullYear(), quarter = '第一季度', planId = '' } = payload
+  const rows = progressRowsInScope(type, { year, quarter, regionCode: role.regionCode }).filter((item) => item.level === level && (!planId || item.planId === planId))
   if (!rows.length) return failed('当前周期暂无可上报的进度数据')
-  const existing = PROGRESS_REPORT_ORDERS.find((item) => item.type === type && Number(item.year) === Number(year) && item.quarter === quarter && item.level === level && item.regionCode === role.regionCode)
+  const existing = PROGRESS_REPORT_ORDERS.find((item) => item.type === type && Number(item.year) === Number(year) && item.quarter === quarter && item.level === level && item.regionCode === role.regionCode && (!planId || !item.planId || item.planId === planId))
   const dateStr = new Date().toISOString().slice(0, 10)
   const timeStr = new Date().toLocaleString('zh-CN', { hour12: false })
   const operator = role.unit || role.regionName
@@ -1034,7 +1211,7 @@ export const submitProgressReport = (role, payload = {}) => mockRequest(() => {
   const countyCode = level === 'city' ? '' : String(role.regionCode).slice(0, 6)
   const order = {
     id: `PRO-${type.toUpperCase()}-${year}-${quarter}-${role.regionCode}-${Date.now()}`,
-    year: Number(year), quarter, type, level,
+    year: Number(year), quarter, type, level, planId,
     regionCode: role.regionCode, regionName: role.regionName,
     cityCode, cityName: getRegion(cityCode)?.name || '',
     countyCode, countyName: countyCode ? getRegion(countyCode)?.name || '' : '',
@@ -1400,8 +1577,8 @@ export const savePlanActualArea = (id, actualArea, countyPlans = []) => mockRequ
   const item = PLAN_AUDITS.find((row) => row.id === id) || PLAN_AUDITS.find((row) => row.id === String(id).split('::')[0])
   if (!item) return failed('审核记录不存在')
   const total = Number(actualArea)
-  if (!Number.isFinite(total) || total < 0) return failed('实际种植面积必须为不小于0的数字')
-  if (countyPlans.some((row) => !Number.isFinite(Number(row.actualArea)) || Number(row.actualArea) < 0)) return failed('县级实际种植面积必须为不小于0的数字')
+  if (!Number.isFinite(total) || total < 0) return failed('上报计划面积必须为不小于0的数字')
+  if (countyPlans.some((row) => !Number.isFinite(Number(row.actualArea)) || Number(row.actualArea) < 0)) return failed('县级上报计划面积必须为不小于0的数字')
   item.actualArea = total
   item.countyPlans = item.countyPlans.map((row, index) => ({ ...row, actualArea: Number(countyPlans[index]?.actualArea ?? row.actualArea ?? row.area) }))
   const provinceTask = PLANTING_PLAN_CITY_TASKS.find((task) => task.planId === item.targetId && task.roleCode === 'province' && task.cityCode === item.regionCode)
@@ -1436,19 +1613,14 @@ export const auditPlan = (id, status, opinion = '', operator = '', role) => mock
   const auditDate = new Date().toISOString().slice(0, 10)
   const auditor = operator || role?.name || role?.regionName || '当前审核人'
   const level = item.auditLevel || (role?.code === 'city' ? '市级审核' : '省级审核')
-  const approvedNext = role?.code === 'city' && status === 'approved' && item.type === '市级分解计划'
   Object.assign(item, {
-    status: approvedNext ? 'pending' : status,
+    status,
     opinion,
     auditedAt: auditDate,
     auditor,
-    auditLevel: approvedNext ? '省级审核' : level,
+    auditLevel: level,
     auditTrail: [...(item.auditTrail || []), { status, opinion, auditor, auditedAt: auditDate, level }]
   })
-  if (approvedNext) {
-    item.submitter = `${item.regionName}农业农村局`
-    item.submittedAt = auditDate
-  }
   if (status === 'approved' && role?.code === 'province') {
     const plan = PLANTING_PLAN_LIST.find((row) => row.id === item.targetId)
     if (plan) {
@@ -1558,7 +1730,8 @@ const buildSupervisionData = (role, filters = {}) => {
     const regionNames = [...new Set(planTasks.map((item) => item.cityName).filter(Boolean))]
     const completionStatus = harvestReportedAreaMu >= plannedAreaMu ? 'COMPLETED' : 'IN_PROGRESS'
     return {
-      planId,
+    planId,
+    planName: rows[0]?.planName || `${year}年${quarter}${type === 'sow' ? '播种' : '收获'}进度`,
       planName: source ? `${source.year}年${source.quarter}${source.cropType}种植计划` : planTasks[0].planName,
       planYear: source?.year || planTasks[0].year,
       quarter: source?.quarter || planTasks[0].quarter,
@@ -1699,3 +1872,4 @@ export const fetchRankData = (role) => mockRequest(() => planListByRole(role).ma
   sowRate: item.sowRate,
   harvestRate: item.harvestRate
 })))
+

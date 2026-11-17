@@ -107,7 +107,7 @@
         <el-empty v-else description="该地块暂无历史事件或抽查记录" :image-size="50" />
 
         <div class="drawer-actions">
-          <el-button type="primary" size="small" @click="$router.push('/fsr/events')">进入事件中心处置</el-button>
+          <el-button type="primary" size="small" @click="$router.push('/fsr/events')">进入事件中心</el-button>
           <el-button size="small" @click="$router.push('/fsr/task')">查看任务跟踪</el-button>
         </div>
       </template>

@@ -19,8 +19,8 @@
       <div class="section-title"><b>维护主体自报计划</b><el-tag size="small" type="warning">主体自行维护</el-tag></div>
       <el-form label-position="top">
         <el-form-item label="经营主体"><el-input v-model="form.subjectName" disabled /></el-form-item>
-        <el-form-item label="种植作物品种"><el-checkbox-group v-model="form.crops"><el-checkbox label="wheat">小麦</el-checkbox><el-checkbox label="rice">水稻</el-checkbox><el-checkbox label="corn">玉米</el-checkbox><el-checkbox label="soybean">大豆</el-checkbox></el-checkbox-group></el-form-item>
-        <el-form-item label="各作物意向面积（亩）"><div class="crop-inputs"><el-input-number v-model="form.wheat" :min="0" controls-position="right" placeholder="小麦"/><el-input-number v-model="form.rice" :min="0" controls-position="right" placeholder="水稻"/><el-input-number v-model="form.corn" :min="0" controls-position="right" placeholder="玉米"/><el-input-number v-model="form.soybean" :min="0" controls-position="right" placeholder="大豆"/></div></el-form-item>
+        <el-form-item label="作物"><el-select v-model="form.crop" placeholder="请选择一种作物" style="width:100%"><el-option label="小麦" value="wheat"/><el-option label="水稻" value="rice"/><el-option label="玉米" value="corn"/><el-option label="大豆" value="soybean"/></el-select></el-form-item>
+        <el-form-item label="自报面积（亩）"><el-input-number v-model="form.area" :min="0" :precision="1" controls-position="right" style="width:100%" /></el-form-item>
         <el-form-item label="预计播种时间"><el-date-picker v-model="form.sowDate" type="date" value-format="YYYY-MM-DD" style="width:100%" /></el-form-item>
       </el-form>
       <el-alert title="主体自报计划仅作为本主体计划和进度参考，不改变县、市、省正式上报计划或进度。" type="info" :closable="false" show-icon />
@@ -39,7 +39,7 @@
       <div class="plot-list"><button v-for="plot in subjectPlots" :key="plot.id" :class="['plot-item', { selected: selectedPlots.includes(plot.id) }]" @click="togglePlot(plot)"><span>{{ plot.name }}</span><small>{{ plot.areaMu }}亩 · {{ plot.crop }}</small><b>{{ selectedPlots.includes(plot.id) ? '已选' : '选择' }}</b></button></div>
     </div>
 
-    <div class="actions"><el-button @click="saveDraft">保存主体自报草稿</el-button><el-button type="primary" @click="submit">提交主体自报计划</el-button></div>
+    <div class="actions"><el-button @click="saveDraft">保存草稿</el-button><el-button type="primary" @click="submit">提交计划</el-button></div>
     <el-alert v-if="draftSaved" title="草稿已保存在本机，联网后可继续提交" type="success" :closable="false" show-icon />
   </div>
 </template>
@@ -61,9 +61,9 @@ const subjectPlots = ref([])
 const selectedPlots = ref([])
 const mapRef = ref(null)
 const draftSaved = ref(false)
-const form = reactive({ subjectName: userStore.role?.unit || '', crops: ['wheat'], wheat: 0, rice: 0, corn: 0, soybean: 0, sowDate: '2026-10-05' })
+const form = reactive({ subjectName: userStore.role?.unit || '', crop: 'wheat', area: 0, sowDate: '2026-10-05' })
 
-const intentionArea = computed(() => ['wheat', 'rice', 'corn', 'soybean'].reduce((sum, crop) => sum + Number(form[crop] || 0), 0))
+const intentionArea = computed(() => Number(form.area || 0))
 const historyArea = computed(() => compareYear.value === 2025 ? 980 : 940)
 const growth = computed(() => historyArea.value ? Math.round((intentionArea.value / historyArea.value - 1) * 100) : 0)
 const geojson = computed(() => ({ type: 'FeatureCollection', features: subjectPlots.value.filter(item => item.geometry).map(item => ({ type: 'Feature', properties: { id: item.id }, geometry: item.geometry })) }))
@@ -75,19 +75,19 @@ const togglePlot = (plot) => {
 }
 
 const saveDraft = () => {
-  localStorage.setItem('wanqitong-intention-draft', JSON.stringify({ ...form, selectedPlots: selectedPlots.value }))
+  localStorage.setItem('wanqitong-intention-draft', JSON.stringify({ ...form, year: currentYear, status: '草稿', selectedPlots: selectedPlots.value }))
   draftSaved.value = true
   ElMessage.success('种植意向草稿已保存')
 }
 
 const submit = () => {
-  if (!form.crops.length || intentionArea.value <= 0) return ElMessage.warning('请选择作物并填写意向面积')
+  if (!form.crop || intentionArea.value <= 0) return ElMessage.warning('请选择一种作物并填写自报面积')
   if (!selectedPlots.value.length) return ElMessage.warning('请至少选择一块关联地块')
   const records = JSON.parse(localStorage.getItem('wanqitong-intentions') || '[]')
-  records.unshift({ ...form, subjectId: userStore.role?.subjectId, year: currentYear, selectedPlots: [...selectedPlots.value], submittedAt: new Date().toISOString() })
+  records.unshift({ id: `SUBJECT-PLAN-${Date.now()}`, ...form, subjectId: userStore.role?.subjectId, year: currentYear, status: '已保存', selectedPlots: [...selectedPlots.value], submittedAt: new Date().toISOString() })
   localStorage.setItem('wanqitong-intentions', JSON.stringify(records))
   draftSaved.value = false
-  ElMessage.success('种植意向已提交至属地管理部门')
+  ElMessage.success('主体自报计划已保存，行政端仅作查看')
 }
 
 onMounted(async () => {

@@ -6,7 +6,7 @@
         <div class="panel-head"><h2>青贮收储数字围栏</h2><el-button size="small" :loading="loading" @click="load">刷新示例</el-button></div>
         <p class="hint">展示普通备案和受灾免审上报所选整块地的精确边界。</p>
         <div class="stats"><div><b>{{ fences.length }}</b><span>备案单</span></div><div><b>{{ plotCount }}</b><span>关联地块</span></div><div><b>{{ totalArea.toFixed(1) }}</b><span>面积（亩）</span></div></div>
-        <el-button class="list-link" @click="router.push('/sil/declare')">查看普通申报列表</el-button>
+        <el-button class="list-link" @click="router.push('/sil/declare')">查看申报</el-button>
         <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon />
         <el-alert v-if="unavailable" :title="unavailable" type="warning" :closable="false" show-icon />
       </section>
