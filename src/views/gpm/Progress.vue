@@ -20,7 +20,7 @@
     <div class="page-header">
       <div>
         <h2>播种进度调度</h2>
-        <p>播种进度以审核通过的本级上报计划为基准填报。县级、市级向上级正式上报并接受审核，乡镇和主体数据仅作参考。</p>
+        <p>{{ isReadOnlyRole ? '按粮食计划查看播种进度，点击计划后查看下级行政区划进度。' : '持续维护播种进度；乡镇可代主体填报，县级可代乡镇填报并汇总。' }}</p>
       </div>
       <div class="scope-label">当前范围：{{ userStore.regionName }}</div>
     </div>
@@ -78,7 +78,7 @@
           </el-table>
         </div>
       </el-tab-pane>
-      <el-tab-pane label="上报与审核" name="report">
+      <el-tab-pane v-if="!isReadOnlyRole" label="进度填报" name="report">
         <ProgressReportPanel type="sow" />
       </el-tab-pane>
     </el-tabs>
@@ -88,7 +88,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { fetchSowingProgress } from '@/api/gpm'
+import { fetchSowingProgress, fetchProgressPlanOverview } from '@/api/gpm'
 import { getRegion } from '@/mock/common/regions'
 import ProgressReportPanel from './ProgressReportPanel.vue'
 const userStore = useUserStore()
@@ -103,7 +103,10 @@ const roleLevel = computed(() => userStore.role?.code || 'province')
 const currentRegion = computed(() => getRegion(currentCode.value))
 const currentLevel = computed(() => breadcrumbs.value.length - 1)
 const subjectLevel = computed(() => ({ province: 3, city: 2, county: 1, town: 0 }[roleLevel.value] ?? 3))
-const isSubjectLevel = computed(() => currentLevel.value >= subjectLevel.value || !currentRegion.value?.children?.length)
+const isReadOnlyRole = computed(() => ['province', 'city'].includes(roleLevel.value))
+const selectedPlanId = ref('')
+const planOverview = ref([])
+const isSubjectLevel = computed(() => selectedPlanId.value && (currentLevel.value >= subjectLevel.value || !currentRegion.value?.children?.length))
 const currentRegionName = computed(() => currentRegion.value?.name || userStore.regionName || '本区域')
 // 按区划编码判断下级层级（省→市、市→县、县→乡镇、乡镇→主体）
 const childLevelOf = (code) => {
@@ -112,7 +115,7 @@ const childLevelOf = (code) => {
   if (String(code).length === 6) return 'town'
   return 'subject'
 }
-const currentChildLabel = computed(() => ({ city: '市级地区', county: '县级地区', town: '乡镇地区', subject: '种植主体' }[childLevelOf(currentCode.value)] || '下级地区'))
+const currentChildLabel = computed(() => isReadOnlyRole.value && !selectedPlanId.value ? '粮食计划' : ({ city: '市级地区', county: '县级地区', town: '乡镇地区', subject: '种植主体' }[childLevelOf(currentCode.value)] || '下级地区'))
 
 const sumRows = rows => {
   const planArea = rows.reduce((sum, item) => sum + Number(item.planArea || 0), 0)
@@ -124,8 +127,10 @@ const sumRows = rows => {
   }
 }
 
-const rowsInRegion = code => records.value.filter(item => String(item.regionCode || '').startsWith(String(code)))
+const rowsInRegion = code => records.value.filter(item => (!selectedPlanId.value || item.planId === selectedPlanId.value) && String(item.regionCode || '').startsWith(String(code)))
+const planRows = computed(() => [...new Map(records.value.filter(item => Number(item.year) === 2026).map(item => [item.planId || item.planName, item])).values()].map(item => ({ ...sumRows(records.value.filter(row => (row.planId || row.planName) === (item.planId || item.planName))), planId: item.planId || item.planName, code: item.planId || item.planName, name: item.planName || `${item.year}年${item.quarter}${item.cropName || item.crop || ''}计划`, planName: item.planName || `${item.year}年${item.quarter}${item.cropName || item.crop || ''}计划`, year: item.year, quarter: item.quarter })))
 const currentRows = computed(() => {
+  if (!selectedPlanId.value) return planOverview.value
   if (isSubjectLevel.value) {
     const subjectRows = rowsInRegion(currentCode.value)
       .filter(item => item.level === 'subject')
@@ -158,19 +163,25 @@ const currentRows = computed(() => {
   const level = childLevelOf(currentCode.value)
   return (currentRegion.value?.children || []).map(region => ({
     ...region,
-    ...sumRows(rowsInRegion(region.code).filter(item => item.level === level))
+    ...sumRows(rowsInRegion(region.code).filter(item => item.level !== 'plan'))
   })).filter(item => item.planArea > 0)
 })
 const filters = { crop: '' }
 
 const load = async () => {
   records.value = await fetchSowingProgress(userStore.role || {})
+  planOverview.value = await fetchProgressPlanOverview(userStore.role || {}, 'sow')
   const roleRegionCode = userStore.role?.regionCode || '340000'
   currentCode.value = roleRegionCode
   const root = getRegion(roleRegionCode)
   breadcrumbs.value = root ? [root] : [{ code: roleRegionCode, name: userStore.regionName || '安徽省' }]
 }
 const openLevel = row => {
+  if (!selectedPlanId.value) {
+    selectedPlanId.value = row.planId
+    breadcrumbs.value = [...breadcrumbs.value, { code: row.planId, name: row.name }]
+    return
+  }
   currentCode.value = row.code
   breadcrumbs.value = [...breadcrumbs.value, row]
 }
@@ -182,6 +193,7 @@ const goToLevel = item => {
   const index = breadcrumbs.value.findIndex(row => row.code === item.code)
   if (index < 0) return
   breadcrumbs.value = breadcrumbs.value.slice(0, index + 1)
+  if (breadcrumbs.value.length <= 1) selectedPlanId.value = ''
   currentCode.value = item.code
 }
 

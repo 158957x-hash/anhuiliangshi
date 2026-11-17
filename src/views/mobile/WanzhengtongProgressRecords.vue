@@ -8,8 +8,8 @@
       <div v-for="item in ownOrders" :key="item.id" class="record-card">
         <div class="record-main"><b>{{ item.year }}年{{ item.quarter }}{{ type === 'sow' ? '播种' : '收获' }}</b><el-tag size="small" :type="statusType(item.status)">{{ item.status }}</el-tag></div>
         <p>{{ item.planName || `${item.year}年${item.quarter}本级上报计划` }}</p>
-        <div class="record-data"><span>计划 {{ Number(item.summary?.planArea || 0).toLocaleString() }} 亩</span><strong>{{ type === 'sow' ? '已播' : '已收获' }} {{ Number(item.summary?.doneArea || 0).toLocaleString() }} 亩</strong></div>
-        <small>上报至{{ item.auditLevelName }} · {{ item.reportedAt || '尚未上报' }}</small>
+        <div class="record-data"><span>计划 {{ Number(item.summary?.planArea || 0).toLocaleString() }} 亩</span><strong>{{ type === 'sow' ? '累计已播' : '累计已收获' }} {{ Number(item.summary?.doneArea || 0).toLocaleString() }} 亩</strong></div>
+        <small>本次新增 {{ Number(item.incrementArea || item.summary?.incrementArea || 0).toLocaleString() }} 亩 · {{ item.updatedAt || item.reportedAt || '尚未填报' }}</small><small>上报至{{ item.auditLevelName || '本级留痕' }} · {{ item.reportedAt || '尚未上报' }}</small>
         <div class="record-actions"><el-button v-if="item.status === '已驳回'" link type="primary" @click="resubmit(item)">重提</el-button><el-button link type="primary" @click="showDetail(item)">详情</el-button></div>
       </div>
       <el-empty v-if="!ownOrders.length" description="暂无本级上报记录" :image-size="60" />
@@ -31,7 +31,7 @@
       <el-empty v-if="!auditOrders.length" description="暂无待审核乡镇上报" :image-size="50" />
     </section>
 
-    <el-dialog v-model="detailVisible" title="上报详情" width="92%"><template v-if="current"><el-descriptions :column="1" border><el-descriptions-item label="周期">{{ current.year }}年{{ current.quarter }}</el-descriptions-item><el-descriptions-item label="类型">{{ type === 'sow' ? '播种进度' : '收获进度' }}</el-descriptions-item><el-descriptions-item label="状态"><el-tag size="small" :type="statusType(current.status)">{{ current.status }}</el-tag></el-descriptions-item><el-descriptions-item label="汇总">计划 {{ current.summary?.planArea || 0 }} 亩，完成 {{ current.summary?.doneArea || 0 }} 亩</el-descriptions-item><el-descriptions-item label="上报时间">{{ current.reportedAt || '—' }}</el-descriptions-item><el-descriptions-item label="审核意见">{{ current.auditOpinion || '—' }}</el-descriptions-item></el-descriptions></template><template #footer><el-button @click="detailVisible = false">关闭</el-button></template></el-dialog>
+    <el-dialog v-model="detailVisible" title="上报详情" width="92%"><template v-if="current"><el-descriptions :column="1" border><el-descriptions-item label="周期">{{ current.year }}年{{ current.quarter }}</el-descriptions-item><el-descriptions-item label="类型">{{ type === 'sow' ? '播种进度' : '收获进度' }}</el-descriptions-item><el-descriptions-item label="状态"><el-tag size="small" :type="statusType(current.status)">{{ current.status }}</el-tag></el-descriptions-item><el-descriptions-item label="汇总">计划 {{ current.summary?.planArea || 0 }} 亩，累计完成 {{ current.summary?.doneArea || 0 }} 亩</el-descriptions-item><el-descriptions-item label="本次新增">{{ current.incrementArea || current.summary?.incrementArea || 0 }} 亩</el-descriptions-item><el-descriptions-item label="填报时间">{{ current.updatedAt || current.reportedAt || '—' }}</el-descriptions-item><el-descriptions-item label="上报时间">{{ current.reportedAt || '—' }}</el-descriptions-item><el-descriptions-item label="审核意见">{{ current.auditOpinion || '—' }}</el-descriptions-item></el-descriptions></template><template #footer><el-button @click="detailVisible = false">关闭</el-button></template></el-dialog>
   </div>
 </template>
 

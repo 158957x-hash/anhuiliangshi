@@ -3,29 +3,30 @@ import { getRegion, listCities } from '@/mock/common/regions'
 import { GROW_SUBJECTS, PLOTS } from '@/mock/geo/plot-gen'
 
 export const PLANTING_PLAN_LIST = [
-  { id: 'PLANT-2026-FULL', year: 2026, quarter: '全年', area: 10920, cropType: '粮食', description: '2026年全年粮食生产总体安排，统筹四季种植结构与面积任务，作为年度总纲逐级分解下达。', attachmentName: '2026年全年粮食生产种植计划.pdf', status: '已分解' },
-  { id: 'PLANT-2026-Q1', year: 2026, quarter: '第一季度', area: 2184, cropType: '小麦', description: '稳定夏粮播种面积，重点保障小麦生产任务落实。', attachmentName: '2026年第一季度小麦种植计划.pdf', status: '已分解' },
-  { id: 'PLANT-2026-Q2', year: 2026, quarter: '第二季度', area: 3822, cropType: '水稻', description: '统筹早中晚稻生产布局，推进水稻绿色高质高效生产。', attachmentName: '2026年第二季度水稻种植计划.docx', status: '已分解' },
-  { id: 'PLANT-2026-Q3', year: 2026, quarter: '第三季度', area: 3276, cropType: '玉米', description: '落实玉米大豆带状复合种植，稳定秋粮生产面积。', attachmentName: '', status: '已下达', issuedAt: '2026-09-10' },
+  { id: 'PLANT-2026-FULL', year: 2026, quarter: '全年', area: 4280, cropType: '小麦', description: '2026年全年小麦生产种植计划；其他作物分别维护独立计划。', attachmentName: '2026年全年小麦种植计划.pdf', status: '待分解' },
+  { id: 'PLANT-2026-Q1', year: 2026, quarter: '第一季度', area: 2184, cropType: '小麦', description: '稳定夏粮播种面积，重点保障小麦生产任务落实。', attachmentName: '2026年第一季度小麦种植计划.pdf', status: '待分解' },
+  { id: 'PLANT-2026-Q2', year: 2026, quarter: '第二季度', area: 3822, cropType: '水稻', description: '统筹早中晚稻生产布局，推进水稻绿色高质高效生产。', attachmentName: '2026年第二季度水稻种植计划.docx', status: '待分解' },
+  { id: 'PLANT-2026-Q3', year: 2026, quarter: '第三季度', area: 3276, cropType: '玉米', description: '落实玉米种植安排，稳定秋粮生产面积。', attachmentName: '', status: '已分解', issuedAt: '2026-09-10' },
   { id: 'PLANT-2026-Q4', year: 2026, quarter: '第四季度', area: 1638, cropType: '小麦', description: '做好秋冬种安排，提前落实冬小麦及轮作任务。', attachmentName: '', status: '待分解' },
-  { id: 'PLANT-2025-Q4', year: 2025, quarter: '第四季度', area: 1580, cropType: '小麦', description: '2025年第四季度秋冬种植任务。', attachmentName: '2025年第四季度种植计划.pdf', status: '已分解' }
+  { id: 'PLANT-2025-Q4', year: 2025, quarter: '第四季度', area: 1580, cropType: '小麦', description: '2025年第四季度秋冬种植任务。', attachmentName: '2025年第四季度种植计划.pdf', status: '待分解' }
 ]
 
 export const PLANTING_PLAN_CITY_TASKS = []
 
+export const PROVINCE_PLAN_LIST = [
+  { id: 'PLAN-2026-PROV-wheat', year: 2026, quarter: '全年', area: 4280, totalArea: 4280, crop: 'wheat', cropType: '小麦', name: '安徽省2026年小麦种植计划', status: 'issued' },
+  { id: 'PLAN-2026-PROV-rice', year: 2026, quarter: '全年', area: 2650, totalArea: 2650, crop: 'rice', cropType: '水稻', name: '安徽省2026年水稻种植计划', status: 'issued' },
+  { id: 'PLAN-2026-PROV-corn', year: 2026, quarter: '全年', area: 2480, totalArea: 2480, crop: 'corn', cropType: '玉米', name: '安徽省2026年玉米种植计划', status: 'issued' },
+  { id: 'PLAN-2026-PROV-soybean', year: 2026, quarter: '全年', area: 1510, totalArea: 1510, crop: 'soybean', cropType: '大豆', name: '安徽省2026年大豆种植计划', status: 'issued' }
+]
+export const PROVINCE_PLAN_TOTAL_AREA = 10920
+// 兼容旧接口的单作物省级计划记录。多作物年度总纲由 PROVINCE_PLAN_LIST 分开维护。
 export const PROVINCE_PLAN = {
-  year: 2026,
+  ...PROVINCE_PLAN_LIST[0],
   id: 'PLAN-2026-PROV',
-  name: '安徽省2026年粮食生产种植计划',
-  remark: '围绕粮食安全责任制和年度生产目标，统筹安排主要粮食作物种植面积。',
-  status: 'issued',
-  totalArea: 10920,
-  crops: [
-    { crop: 'wheat', name: '小麦', area: 4280 },
-    { crop: 'rice', name: '水稻', area: 2650 },
-    { crop: 'corn', name: '玉米', area: 2480 },
-    { crop: 'soybean', name: '大豆', area: 1510 }
-  ],
+  name: '安徽省2026年小麦生产种植计划',
+  remark: '一条计划只对应一种作物；其他作物分别维护独立计划。',
+  annualTotalArea: PROVINCE_PLAN_TOTAL_AREA,
   createdAt: '2026-08-20',
   issuedAt: '2026-09-10'
 }
@@ -38,44 +39,33 @@ const CITY_WEIGHT = {
 const sumWeight = Object.values(CITY_WEIGHT).reduce((a, b) => a + b, 0)
 
 export const CITY_PLANS = listCities().map((city, idx) => {
-  const total = Math.round(PROVINCE_PLAN.totalArea * CITY_WEIGHT[city.code] / sumWeight)
-  const wheat = Math.round(total * 0.39)
-  const rice = Math.round(total * 0.24)
-  const corn = Math.round(total * 0.23)
+  const total = Math.round(PROVINCE_PLAN_TOTAL_AREA * CITY_WEIGHT[city.code] / sumWeight)
+  const crops = ['小麦', '水稻', '玉米', '大豆']
+  const cropType = crops[idx % crops.length]
+  const crop = { '小麦': 'wheat', '水稻': 'rice', '玉米': 'corn', '大豆': 'soybean' }[cropType]
   return {
     id: `PLAN-2026-${city.code}`, year: 2026, cityCode: city.code, cityName: city.name,
-    totalArea: total, wheat, rice, corn, soybean: total - wheat - rice - corn,
+    totalArea: total, area: total, crop, cropType,
     status: ['issued', 'issued', 'issued', 'implementing'][idx % 4],
     implementRate: 55 + ((idx * 7) % 44), sowRate: 60 + ((idx * 11) % 38), harvestRate: (idx * 13) % 75
   }
 })
 
 const QUARTER_CONFIG = [
-  { quarter: 'Q1', name: '第一季度', rate: 0.2 },
-  { quarter: 'Q2', name: '第二季度', rate: 0.35 },
-  { quarter: 'Q3', name: '第三季度', rate: 0.3 },
-  { quarter: 'Q4', name: '第四季度', rate: 0.15 }
+  { quarter: 'Q1', name: '第一季度', rate: 0.2, crop: 'wheat', cropType: '小麦' },
+  { quarter: 'Q2', name: '第二季度', rate: 0.35, crop: 'rice', cropType: '水稻' },
+  { quarter: 'Q3', name: '第三季度', rate: 0.3, crop: 'corn', cropType: '玉米' },
+  { quarter: 'Q4', name: '第四季度', rate: 0.15, crop: 'soybean', cropType: '大豆' }
 ]
 
-export const QUARTERLY_PLAN_TARGETS = QUARTER_CONFIG.map((item) => ({
-  year: PROVINCE_PLAN.year,
-  quarter: item.quarter,
-  quarterName: item.name,
-  totalArea: Math.round(PROVINCE_PLAN.totalArea * item.rate),
-  crops: PROVINCE_PLAN.crops.map((crop) => ({ ...crop, area: Math.round(crop.area * item.rate) }))
-}))
-
-QUARTERLY_PLAN_TARGETS[QUARTERLY_PLAN_TARGETS.length - 1].totalArea = PROVINCE_PLAN.totalArea - QUARTERLY_PLAN_TARGETS.slice(0, -1).reduce((sum, item) => sum + item.totalArea, 0)
-QUARTERLY_PLAN_TARGETS[QUARTERLY_PLAN_TARGETS.length - 1].crops = PROVINCE_PLAN.crops.map((crop) => ({
-  ...crop,
-  area: crop.area - QUARTERLY_PLAN_TARGETS.slice(0, -1).reduce((sum, item) => sum + Number(item.crops.find((row) => row.crop === crop.crop)?.area || 0), 0)
-}))
+export const QUARTERLY_PLAN_TARGETS = QUARTER_CONFIG.map((item) => {
+  const source = PROVINCE_PLAN_LIST.find((row) => row.crop === item.crop)
+  const area = Math.round(Number(source?.area || 0) * item.rate)
+  return { year: 2026, quarter: item.quarter, quarterName: item.name, crop: item.crop, cropType: item.cropType, area, totalArea: area }
+})
 
 export const CITY_QUARTER_ALLOCATIONS = QUARTERLY_PLAN_TARGETS.flatMap((target) => CITY_PLANS.map((city, index) => {
   const totalArea = Math.round(target.totalArea * CITY_WEIGHT[city.cityCode] / sumWeight)
-  const wheat = Math.round(totalArea * city.wheat / city.totalArea)
-  const rice = Math.round(totalArea * city.rice / city.totalArea)
-  const corn = Math.round(totalArea * city.corn / city.totalArea)
   return {
     id: `CLAIM-${target.year}-${target.quarter}-${city.cityCode}`,
     year: target.year,
@@ -85,32 +75,31 @@ export const CITY_QUARTER_ALLOCATIONS = QUARTERLY_PLAN_TARGETS.flatMap((target) 
     cityName: city.cityName,
     targetArea: totalArea,
     claimedArea: totalArea,
-    wheat,
-    rice,
-    corn,
-    soybean: totalArea - wheat - rice - corn,
+    area: totalArea,
+    crop: target.crop,
+    cropType: target.cropType,
     status: '已领取',
     claimedAt: '2026-01-15'
   }
 }))
 
 export const COUNTY_PLANS = [
-  { id: 'PLAN-2026-341222', year: 2026, countyCode: '341222', countyName: '太和县', cityCode: '341200', totalArea: 302, wheat: 128, rice: 32, corn: 96, soybean: 46, status: 'implementing', implementRate: 78, sowRate: 86, harvestRate: 42 },
-  { id: 'PLAN-2026-341226', year: 2026, countyCode: '341226', countyName: '颍上县', cityCode: '341200', totalArea: 300, wheat: 115, rice: 90, corn: 65, soybean: 30, status: 'issued', implementRate: 84, sowRate: 89, harvestRate: 51 },
-  { id: 'PLAN-2026-341221', year: 2026, countyCode: '341221', countyName: '临泉县', cityCode: '341200', totalArea: 290, wheat: 125, rice: 48, corn: 75, soybean: 42, status: 'implementing', implementRate: 73, sowRate: 81, harvestRate: 39 },
-  { id: 'PLAN-2026-341225', year: 2026, countyCode: '341225', countyName: '阜南县', cityCode: '341200', totalArea: 265, wheat: 105, rice: 88, corn: 45, soybean: 27, status: 'issued', implementRate: 69, sowRate: 77, harvestRate: 36 },
-  { id: 'PLAN-2026-341282', year: 2026, countyCode: '341282', countyName: '界首市', cityCode: '341200', totalArea: 216, wheat: 62, rice: 72, corn: 35, soybean: 47, status: 'issued', implementRate: 88, sowRate: 92, harvestRate: 57 },
-  { id: 'PLAN-2026-341622', year: 2026, countyCode: '341622', countyName: '涡阳县', cityCode: '341600', totalArea: 358, wheat: 152, rice: 18, corn: 128, soybean: 60, status: 'implementing', implementRate: 71, sowRate: 82, harvestRate: 38 },
-  { id: 'PLAN-2026-340123', year: 2026, countyCode: '340123', countyName: '肥西县', cityCode: '340100', totalArea: 186, wheat: 58, rice: 74, corn: 30, soybean: 24, status: 'implementing', implementRate: 66, sowRate: 78, harvestRate: 51 },
-  { id: 'PLAN-2026-340121', year: 2026, countyCode: '340121', countyName: '长丰县', cityCode: '340100', totalArea: 172, wheat: 52, rice: 66, corn: 28, soybean: 26, status: 'implementing', implementRate: 62, sowRate: 74, harvestRate: 47 }
+  { id: 'PLAN-2026-341222', year: 2026, countyCode: '341222', countyName: '太和县', cityCode: '341200', totalArea: 302, area: 302, crop: 'wheat', cropType: '小麦', status: 'implementing', implementRate: 78, sowRate: 86, harvestRate: 42 },
+  { id: 'PLAN-2026-341226', year: 2026, countyCode: '341226', countyName: '颍上县', cityCode: '341200', totalArea: 300, area: 300, crop: 'rice', cropType: '水稻', status: 'issued', implementRate: 84, sowRate: 89, harvestRate: 51 },
+  { id: 'PLAN-2026-341221', year: 2026, countyCode: '341221', countyName: '临泉县', cityCode: '341200', totalArea: 290, area: 290, crop: 'wheat', cropType: '小麦', status: 'implementing', implementRate: 73, sowRate: 81, harvestRate: 39 },
+  { id: 'PLAN-2026-341225', year: 2026, countyCode: '341225', countyName: '阜南县', cityCode: '341200', totalArea: 265, area: 265, crop: 'rice', cropType: '水稻', status: 'issued', implementRate: 69, sowRate: 77, harvestRate: 36 },
+  { id: 'PLAN-2026-341282', year: 2026, countyCode: '341282', countyName: '界首市', cityCode: '341200', totalArea: 216, area: 216, crop: 'soybean', cropType: '大豆', status: 'issued', implementRate: 88, sowRate: 92, harvestRate: 57 },
+  { id: 'PLAN-2026-341622', year: 2026, countyCode: '341622', countyName: '涡阳县', cityCode: '341600', totalArea: 358, area: 358, crop: 'corn', cropType: '玉米', status: 'implementing', implementRate: 71, sowRate: 82, harvestRate: 38 },
+  { id: 'PLAN-2026-340123', year: 2026, countyCode: '340123', countyName: '肥西县', cityCode: '340100', totalArea: 186, area: 186, crop: 'rice', cropType: '水稻', status: 'implementing', implementRate: 66, sowRate: 78, harvestRate: 51 },
+  { id: 'PLAN-2026-340121', year: 2026, countyCode: '340121', countyName: '长丰县', cityCode: '340100', totalArea: 172, area: 172, crop: 'rice', cropType: '水稻', status: 'implementing', implementRate: 62, sowRate: 74, harvestRate: 47 }
 ]
 
 export const TOWN_PLANS = [
-  { id: 'PLAN-2026-341222104', year: 2026, townCode: '341222104', townName: '旧县镇', countyCode: '341222', totalArea: 70, wheat: 30, rice: 8, corn: 22, soybean: 10, status: 'implementing', implementRate: 92, sowRate: 96, harvestRate: 70 },
-  { id: 'PLAN-2026-341222103', year: 2026, townCode: '341222103', townName: '大新镇', countyCode: '341222', totalArea: 62, wheat: 26, rice: 7, corn: 20, soybean: 9, status: 'implementing', implementRate: 68, sowRate: 81, harvestRate: 48 },
-  { id: 'PLAN-2026-341222108', year: 2026, townCode: '341222108', townName: '税镇镇', countyCode: '341222', totalArea: 58, wheat: 24, rice: 6, corn: 18, soybean: 10, status: 'implementing', implementRate: 55, sowRate: 73, harvestRate: 39 },
-  { id: 'PLAN-2026-341222112', year: 2026, townCode: '341222112', townName: '皮条孙镇', countyCode: '341222', totalArea: 54, wheat: 22, rice: 5, corn: 18, soybean: 9, status: 'issued', implementRate: 43, sowRate: 62, harvestRate: 31 },
-  { id: 'PLAN-2026-341222101', year: 2026, townCode: '341222101', townName: '城关镇', countyCode: '341222', totalArea: 58, wheat: 26, rice: 6, corn: 18, soybean: 8, status: 'issued', implementRate: 81, sowRate: 88, harvestRate: 54 }
+  { id: 'PLAN-2026-341222104', year: 2026, townCode: '341222104', townName: '旧县镇', countyCode: '341222', totalArea: 70, area: 70, crop: 'wheat', cropType: '小麦', status: 'implementing', implementRate: 92, sowRate: 96, harvestRate: 70 },
+  { id: 'PLAN-2026-341222103', year: 2026, townCode: '341222103', townName: '大新镇', countyCode: '341222', totalArea: 62, area: 62, crop: 'corn', cropType: '玉米', status: 'implementing', implementRate: 68, sowRate: 81, harvestRate: 48 },
+  { id: 'PLAN-2026-341222108', year: 2026, townCode: '341222108', townName: '税镇镇', countyCode: '341222', totalArea: 58, area: 58, crop: 'corn', cropType: '玉米', status: 'implementing', implementRate: 55, sowRate: 73, harvestRate: 39 },
+  { id: 'PLAN-2026-341222112', year: 2026, townCode: '341222112', townName: '皮条孙镇', countyCode: '341222', totalArea: 54, area: 54, crop: 'wheat', cropType: '小麦', status: 'issued', implementRate: 43, sowRate: 62, harvestRate: 31 },
+  { id: 'PLAN-2026-341222101', year: 2026, townCode: '341222101', townName: '城关镇', countyCode: '341222', totalArea: 58, area: 58, crop: 'wheat', cropType: '小麦', status: 'issued', implementRate: 81, sowRate: 88, harvestRate: 54 }
 ]
 
 const definedTownCodes = new Set(TOWN_PLANS.map(item => item.townCode))
@@ -126,23 +115,22 @@ const ALL_TOWN_PLANS = COUNTY_PLANS.flatMap((county) => {
       townName: town.name,
       countyCode: county.countyCode,
       totalArea: Number((county.totalArea / count).toFixed(1)),
-      wheat: Number((county.wheat / count).toFixed(1)),
-      rice: Number((county.rice / count).toFixed(1)),
-      corn: Number((county.corn / count).toFixed(1)),
-      soybean: Number((county.soybean / count).toFixed(1)),
+      area: Number((county.area / count).toFixed(1)),
+      crop: county.crop,
+      cropType: county.cropType,
       status: index % 2 ? 'issued' : 'implementing'
     }
   })
 })
 const SOWING_TOWN_PLANS = [...TOWN_PLANS, ...ALL_TOWN_PLANS]
 
-const sowingCropKeys = ['wheat', 'rice', 'corn', 'soybean']
 // 按作物农时推断进度所属季度（演示数据用）
 const cropQuarter = { wheat: '第一季度', rice: '第二季度', corn: '第三季度', soybean: '第三季度' }
 const quarterPlanId = (year, quarter) => ({ '第一季度': `PLANT-${year}-Q1`, '第二季度': `PLANT-${year}-Q2`, '第三季度': `PLANT-${year}-Q3`, '第四季度': `PLANT-${year}-Q4` }[quarter] || `PLANT-${year}-FULL`)
-const sowingRowsFromPlans = (plans, level) => plans.flatMap((plan) => sowingCropKeys.map((crop, index) => {
-  const planArea = Number(plan[crop] || 0)
-  const sownArea = Number((planArea * (0.58 + ((index + String(plan.id).length) % 25) / 100)).toFixed(1))
+const sowingRowsFromPlans = (plans, level) => plans.map((plan) => {
+  const crop = plan.crop || 'wheat'
+  const planArea = Number(plan.area || plan.totalArea || 0)
+  const sownArea = Number((planArea * (0.58 + (String(plan.id).length % 25) / 100)).toFixed(1))
   const regionCode = level === 'city' ? plan.cityCode : level === 'county' ? plan.countyCode : plan.townCode
   const regionName = level === 'city' ? plan.cityName : level === 'county' ? plan.countyName : plan.townName
   return {
@@ -157,11 +145,12 @@ const sowingRowsFromPlans = (plans, level) => plans.flatMap((plan) => sowingCrop
     countyCode: plan.countyCode || (level === 'county' ? plan.countyCode : ''),
     townCode: plan.townCode || (level === 'town' ? plan.townCode : ''),
     crop,
+    cropName: plan.cropType,
     planArea,
     sownArea,
     updatedAt: '2026-10-20'
   }
-}))
+})
 
 const sowingSubjectRows = () => GROW_SUBJECTS.flatMap((subject, subjectIndex) => {
   const townPlans = SOWING_TOWN_PLANS.filter(plan => plan.countyCode === subject.regionCode || plan.townCode === subject.regionCode)
@@ -223,51 +212,38 @@ export const HARVEST_PROGRESS_ROWS = SOWING_PROGRESS_ROWS.map((row, index) => ({
   updatedAt: '2026-10-22'
 }))
 
-// 历史省级计划及下级任务分解演示数据
-export const PLAN_HISTORY = [
-  {
-    id: 'PLAN-HISTORY-2025-PROV-V2', year: 2025, version: 'V2', name: '安徽省2025年粮食生产种植计划（调整版）',
-    remark: '统筹夏粮和秋粮生产，优化水稻、玉米种植结构。', status: 'completed', totalArea: 10680,
-    crops: [{ crop: 'wheat', name: '小麦', area: 4210 }, { crop: 'rice', name: '水稻', area: 2710 }, { crop: 'corn', name: '玉米', area: 2350 }, { crop: 'soybean', name: '大豆', area: 1410 }],
-    createdAt: '2025-01-12', issuedAt: '2025-02-08', versionNote: '根据春季生产形势完成一次调整', decompositionSummary: { cityCount: 16, taskCount: 16, issuedArea: 10680 }
-  },
-  {
-    id: 'PLAN-HISTORY-2025-PROV-V1', year: 2025, version: 'V1', name: '安徽省2025年粮食生产种植计划',
-    remark: '年度粮食生产目标计划。', status: 'completed', totalArea: 10450,
-    crops: [{ crop: 'wheat', name: '小麦', area: 4180 }, { crop: 'rice', name: '水稻', area: 2580 }, { crop: 'corn', name: '玉米', area: 2290 }, { crop: 'soybean', name: '大豆', area: 1400 }],
-    createdAt: '2024-12-18', issuedAt: '2025-01-06', versionNote: '初始下达版本', decompositionSummary: { cityCount: 16, taskCount: 16, issuedArea: 10450 }
-  },
-  {
-    id: 'PLAN-HISTORY-2024-PROV-V1', year: 2024, version: 'V1', name: '安徽省2024年粮食生产种植计划',
-    remark: '稳定粮食播种面积，提升主要粮食作物综合产能。', status: 'completed', totalArea: 10120,
-    crops: [{ crop: 'wheat', name: '小麦', area: 4020 }, { crop: 'rice', name: '水稻', area: 2510 }, { crop: 'corn', name: '玉米', area: 2220 }, { crop: 'soybean', name: '大豆', area: 1370 }],
-    createdAt: '2023-12-20', issuedAt: '2024-01-15', versionNote: '年度正式版本', decompositionSummary: { cityCount: 16, taskCount: 16, issuedArea: 10120 }
-  }
+// 历史计划也按单作物保存；同一年度/版本的不同作物使用独立记录。
+const PLAN_HISTORY_SEEDS = [
+  { id: 'PLAN-HISTORY-2025-PROV-V2', year: 2025, version: 'V2', name: '安徽省2025年粮食生产种植计划（调整版）', remark: '统筹夏粮和秋粮生产，优化种植结构。', status: 'completed', createdAt: '2025-01-12', issuedAt: '2025-02-08', versionNote: '根据春季生产形势完成一次调整', cropRows: [['wheat', '小麦', 4210], ['rice', '水稻', 2710], ['corn', '玉米', 2350], ['soybean', '大豆', 1410]] },
+  { id: 'PLAN-HISTORY-2025-PROV-V1', year: 2025, version: 'V1', name: '安徽省2025年粮食生产种植计划', remark: '年度粮食生产目标计划。', status: 'completed', createdAt: '2024-12-18', issuedAt: '2025-01-06', versionNote: '初始下达版本', cropRows: [['wheat', '小麦', 4180], ['rice', '水稻', 2580], ['corn', '玉米', 2290], ['soybean', '大豆', 1400]] },
+  { id: 'PLAN-HISTORY-2024-PROV-V1', year: 2024, version: 'V1', name: '安徽省2024年粮食生产种植计划', remark: '稳定粮食播种面积，提升主要粮食作物综合产能。', status: 'completed', createdAt: '2023-12-20', issuedAt: '2024-01-15', versionNote: '年度正式版本', cropRows: [['wheat', '小麦', 4020], ['rice', '水稻', 2510], ['corn', '玉米', 2220], ['soybean', '大豆', 1370]] }
 ]
+export const PLAN_HISTORY = PLAN_HISTORY_SEEDS.flatMap((seed) => seed.cropRows.map(([crop, cropType, area]) => ({ ...seed, id: `${seed.id}-${crop}`, name: `${seed.name}（${cropType}）`, crop, cropType, area, totalArea: area, decompositionSummary: { cityCount: 16, taskCount: 16, issuedArea: area } })))
 
-export const TASK_HISTORY = [
-  { id: 'TASK-HISTORY-2025-CITY-341200', year: 2025, level: 'city', levelName: '市级', regionCode: '341200', regionName: '阜阳市', parentPlanId: 'PLAN-HISTORY-2025-PROV-V2', parentPlanName: '安徽省2025年粮食生产种植计划（调整版）', totalArea: 965, crops: { wheat: 380, rice: 260, corn: 195, soybean: 130 }, status: 'completed', issuedAt: '2025-02-10', issuer: '安徽省农业农村厅', issueRecords: [{ time: '2025-02-10 09:30', issuer: '安徽省农业农村厅', action: '下达至阜阳市' }] },
-  { id: 'TASK-HISTORY-2025-COUNTY-341222', year: 2025, level: 'county', levelName: '县级', regionCode: '341222', regionName: '太和县', parentPlanId: 'PLAN-HISTORY-2025-CITY-341200', parentPlanName: '阜阳市2025年粮食生产任务', totalArea: 198, crops: { wheat: 82, rice: 30, corn: 58, soybean: 28 }, status: 'completed', issuedAt: '2025-02-18', issuer: '阜阳市农业农村局', issueRecords: [{ time: '2025-02-18 15:00', issuer: '阜阳市农业农村局', action: '下达至太和县' }] },
-  { id: 'TASK-HISTORY-2025-TOWN-341222104', year: 2025, level: 'town', levelName: '乡镇', regionCode: '341222104', regionName: '旧县镇', parentPlanId: 'TASK-HISTORY-2025-COUNTY-341222', parentPlanName: '太和县2025年粮食生产任务', totalArea: 48, crops: { wheat: 20, rice: 8, corn: 13, soybean: 7 }, status: 'completed', issuedAt: '2025-02-26', issuer: '太和县农业农村局', issueRecords: [{ time: '2025-02-26 10:20', issuer: '太和县农业农村局', action: '下达至旧县镇' }] },
-  { id: 'TASK-HISTORY-2024-CITY-341200', year: 2024, level: 'city', levelName: '市级', regionCode: '341200', regionName: '阜阳市', parentPlanId: 'PLAN-HISTORY-2024-PROV-V1', parentPlanName: '安徽省2024年粮食生产种植计划', totalArea: 920, crops: { wheat: 365, rice: 245, corn: 185, soybean: 125 }, status: 'completed', issuedAt: '2024-01-20', issuer: '安徽省农业农村厅', issueRecords: [{ time: '2024-01-20 09:00', issuer: '安徽省农业农村厅', action: '下达至阜阳市' }] },
-  { id: 'TASK-HISTORY-2024-COUNTY-341222', year: 2024, level: 'county', levelName: '县级', regionCode: '341222', regionName: '太和县', parentPlanId: 'TASK-HISTORY-2024-CITY-341200', parentPlanName: '阜阳市2024年粮食生产任务', totalArea: 186, crops: { wheat: 76, rice: 28, corn: 55, soybean: 27 }, status: 'completed', issuedAt: '2024-01-28', issuer: '阜阳市农业农村局', issueRecords: [{ time: '2024-01-28 14:00', issuer: '阜阳市农业农村局', action: '下达至太和县' }] }
+const TASK_HISTORY_SEEDS = [
+  { id: 'TASK-HISTORY-2025-CITY-341200', year: 2025, level: 'city', levelName: '市级', regionCode: '341200', regionName: '阜阳市', parentPlanId: 'PLAN-HISTORY-2025-PROV-V2', parentPlanName: '阜阳市2025年粮食生产任务', areaRows: [['wheat', '小麦', 380], ['rice', '水稻', 260], ['corn', '玉米', 195], ['soybean', '大豆', 130]], issuedAt: '2025-02-10', issuer: '安徽省农业农村厅', action: '下达至阜阳市' },
+  { id: 'TASK-HISTORY-2025-COUNTY-341222', year: 2025, level: 'county', levelName: '县级', regionCode: '341222', regionName: '太和县', parentPlanId: 'TASK-HISTORY-2025-CITY-341200', parentPlanName: '太和县2025年粮食生产任务', areaRows: [['wheat', '小麦', 82], ['rice', '水稻', 30], ['corn', '玉米', 58], ['soybean', '大豆', 28]], issuedAt: '2025-02-18', issuer: '阜阳市农业农村局', action: '下达至太和县' },
+  { id: 'TASK-HISTORY-2025-TOWN-341222104', year: 2025, level: 'town', levelName: '乡镇', regionCode: '341222104', regionName: '旧县镇', parentPlanId: 'TASK-HISTORY-2025-COUNTY-341222', parentPlanName: '旧县镇2025年粮食生产任务', areaRows: [['wheat', '小麦', 20], ['rice', '水稻', 8], ['corn', '玉米', 13], ['soybean', '大豆', 7]], issuedAt: '2025-02-26', issuer: '太和县农业农村局', action: '下达至旧县镇' },
+  { id: 'TASK-HISTORY-2024-CITY-341200', year: 2024, level: 'city', levelName: '市级', regionCode: '341200', regionName: '阜阳市', parentPlanId: 'PLAN-HISTORY-2024-PROV-V1', parentPlanName: '阜阳市2024年粮食生产任务', areaRows: [['wheat', '小麦', 365], ['rice', '水稻', 245], ['corn', '玉米', 185], ['soybean', '大豆', 125]], issuedAt: '2024-01-20', issuer: '安徽省农业农村厅', action: '下达至阜阳市' },
+  { id: 'TASK-HISTORY-2024-COUNTY-341222', year: 2024, level: 'county', levelName: '县级', regionCode: '341222', regionName: '太和县', parentPlanId: 'TASK-HISTORY-2024-CITY-341200', parentPlanName: '太和县2024年粮食生产任务', areaRows: [['wheat', '小麦', 76], ['rice', '水稻', 28], ['corn', '玉米', 55], ['soybean', '大豆', 27]], issuedAt: '2024-01-28', issuer: '阜阳市农业农村局', action: '下达至太和县' }
 ]
+export const TASK_HISTORY = TASK_HISTORY_SEEDS.flatMap((seed) => seed.areaRows.map(([crop, cropType, area]) => ({ ...seed, id: `${seed.id}-${crop}`, crop, cropType, area, totalArea: area, status: 'completed', issueRecords: [{ time: `${seed.issuedAt} 09:00`, issuer: seed.issuer, action: seed.action }] })))
 
 export const TASK_PATH_DETAILS = [
   { id: 'PATH-001', planName: '2026年第一季度小麦种植计划', year: 2026, quarter: '第一季度', cropType: '小麦', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', townCode: '341222104', townName: '旧县镇', subjectId: 'SUB-0004', subjectName: '旧县镇赵多种植大户', owner: '赵磊', taskArea: 220, issuedAt: '2026-02-26', status: '已落实', progress: 100 },
   { id: 'PATH-002', planName: '2026年第一季度小麦种植计划', year: 2026, quarter: '第一季度', cropType: '小麦', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', townCode: '341222104', townName: '旧县镇', subjectId: 'SUB-0005', subjectName: '旧县镇田乐家庭农场', owner: '田乐', taskArea: 180, issuedAt: '2026-02-26', status: '落实中', progress: 82 },
   { id: 'PATH-003', planName: '2026年第一季度小麦种植计划', year: 2026, quarter: '第一季度', cropType: '小麦', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', townCode: '341222103', townName: '大新镇', subjectId: 'SUB-0001', subjectName: '太和县丰乐种植专业合作社', owner: '陈勇', taskArea: 620, issuedAt: '2026-02-27', status: '落实中', progress: 76 },
-  { id: 'PATH-004', planName: '2026年第二季度水稻种植计划', year: 2026, quarter: '第二季度', cropType: '水稻', cityCode: '341200', cityName: '阜阳市', countyCode: '341226', countyName: '颍上县', townCode: '341226106', townName: '润河镇', subjectId: 'SUB-0101', subjectName: '颍上县润河合作社', owner: '周明', taskArea: 760, issuedAt: '2026-04-18', status: '已下达', progress: 35 },
+  { id: 'PATH-004', planName: '2026年第二季度水稻种植计划', year: 2026, quarter: '第二季度', cropType: '水稻', cityCode: '341200', cityName: '阜阳市', countyCode: '341226', countyName: '颍上县', townCode: '341226106', townName: '润河镇', subjectId: 'SUB-0101', subjectName: '颍上县润河合作社', owner: '周明', taskArea: 760, issuedAt: '2026-04-18', status: '已分解', progress: 35 },
   { id: 'PATH-005', planName: '2026年第一季度小麦种植计划', year: 2026, quarter: '第一季度', cropType: '小麦', cityCode: '341600', cityName: '亳州市', countyCode: '341622', countyName: '涡阳县', townCode: '341622105', townName: '义门镇', subjectId: 'SUB-0007', subjectName: '涡阳县丰收种植合作社', owner: '马丰', taskArea: 850, issuedAt: '2026-02-28', status: '落实中', progress: 71 },
   { id: 'PATH-006', planName: '2026年第二季度水稻种植计划', year: 2026, quarter: '第二季度', cropType: '水稻', cityCode: '340100', cityName: '合肥市', countyCode: '340123', countyName: '肥西县', townCode: '340123101', townName: '三河镇', subjectId: 'SUB-0009', subjectName: '肥西县三河现代农业公司', owner: '张三河', taskArea: 1100, issuedAt: '2026-04-20', status: '已落实', progress: 100 },
-  { id: 'PATH-007', planName: '2026年第三季度玉米种植计划', year: 2026, quarter: '第三季度', cropType: '玉米', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', townCode: '341222103', townName: '大新镇', subjectId: 'SUB-0001', subjectName: '太和县丰乐种植专业合作社', owner: '陈勇', taskArea: 580, issuedAt: '2026-09-10', status: '已下达', progress: 35 }
+  { id: 'PATH-007', planName: '2026年第三季度玉米种植计划', year: 2026, quarter: '第三季度', cropType: '玉米', cityCode: '341200', cityName: '阜阳市', countyCode: '341222', countyName: '太和县', townCode: '341222103', townName: '大新镇', subjectId: 'SUB-0001', subjectName: '太和县丰乐种植专业合作社', owner: '陈勇', taskArea: 580, issuedAt: '2026-09-10', status: '已分解', progress: 35 }
 ].map((item) => ({
   ...item,
   path: `${item.cityName} / ${item.countyName} / ${item.townName} / ${item.subjectName}`,
   nodes: [
-    { level: '市级', name: item.cityName, unit: `${item.cityName}农业农村局`, status: '已下达' },
-    { level: '县级', name: item.countyName, unit: `${item.countyName}农业农村局`, status: '已下达' },
-    { level: '乡级', name: item.townName, unit: `${item.townName}人民政府`, status: '已下达' },
+    { level: '市级', name: item.cityName, unit: `${item.cityName}农业农村局`, status: '已分解' },
+    { level: '县级', name: item.countyName, unit: `${item.countyName}农业农村局`, status: '已分解' },
+    { level: '乡级', name: item.townName, unit: `${item.townName}人民政府`, status: '已分解' },
     { level: '种植主体', name: item.subjectName, unit: item.owner, status: item.status }
   ]
 }))
@@ -364,7 +340,7 @@ export const PLAN_SUPERVISE = [
 
 export const PLAN_STATS = {
   overview: { totalSubjects: PLAN_SUBJECTS.length, totalPlots: PLOTS.length, totalArea: PLAN_SUBJECTS.reduce((sum, item) => sum + item.area, 0) },
-  crops: [{ name: '小麦', value: CITY_PLANS.reduce((sum, item) => sum + item.wheat, 0) }, { name: '水稻', value: CITY_PLANS.reduce((sum, item) => sum + item.rice, 0) }, { name: '玉米', value: CITY_PLANS.reduce((sum, item) => sum + item.corn, 0) }, { name: '大豆', value: CITY_PLANS.reduce((sum, item) => sum + item.soybean, 0) }],
+  crops: ['小麦', '水稻', '玉米', '大豆'].map((name) => ({ name, value: CITY_PLANS.filter((item) => item.cropType === name).reduce((sum, item) => sum + Number(item.area || 0), 0) })),
   trend: [
     { month: '7月', planArea: 10920, implementRate: 48, sowRate: 35 }, { month: '8月', planArea: 10920, implementRate: 62, sowRate: 54 }, { month: '9月', planArea: 10920, implementRate: 78, sowRate: 71 }, { month: '10月', planArea: 10920, implementRate: 86, sowRate: 83 }
   ]
@@ -372,16 +348,16 @@ export const PLAN_STATS = {
 
 export const PLAN_PLOTS = [
   { id: 'PLOT-PLAN-001', planId: 'PLAN-2026-341222104', plotId: 'PL-0007', regionCode: '341222104', regionName: '旧县镇', subjectId: 'SUB-0004', subjectName: '旧县镇赵多种植大户', crop: 'wheat', cropName: '小麦', area: 220, status: 'implemented', implementedAt: '2026-09-20' },
-  { id: 'PLOT-PLAN-002', planId: 'PLAN-2026-341222104', plotId: 'PL-0009', regionCode: '341222104', regionName: '旧县镇', subjectId: 'SUB-0005', subjectName: '旧县镇田乐家庭农场', crop: 'corn', cropName: '玉米', area: 180, status: 'implemented', implementedAt: '2026-09-22' },
-  { id: 'PLOT-PLAN-003', planId: 'PLAN-2026-341222', plotId: 'PL-0001', regionCode: '341222', regionName: '太和县', subjectId: 'SUB-0001', subjectName: '太和县丰乐种植专业合作社', crop: 'corn', cropName: '玉米', area: 620, status: 'implemented', implementedAt: '2026-09-25' }
+  { id: 'PLOT-PLAN-002', planId: 'PLAN-2026-341222104', plotId: 'PL-0009', regionCode: '341222104', regionName: '旧县镇', subjectId: 'SUB-0005', subjectName: '旧县镇田乐家庭农场', crop: 'wheat', cropName: '小麦', area: 180, status: 'implemented', implementedAt: '2026-09-22' },
+  { id: 'PLOT-PLAN-003', planId: 'PLAN-2026-341222', plotId: 'PL-0001', regionCode: '341222', regionName: '太和县', subjectId: 'SUB-0001', subjectName: '太和县丰乐种植专业合作社', crop: 'wheat', cropName: '小麦', area: 620, status: 'implemented', implementedAt: '2026-09-25' }
 ]
 
 export const PROGRESS_RECORDS = [
   { id: 'PR-0001', planId: 'PLANT-2026-Q1', planName: '2026年第一季度小麦种植计划', regionCode: '341222104', regionName: '旧县镇', subjectId: 'SUB-0004', subjectName: '旧县镇赵多种植大户', plotId: 'PL-0007', crop: 'wheat', cropName: '小麦', type: 'harvest', area: 220, date: '2026-09-25', reporter: '赵磊', source: '皖政通填报' },
-  { id: 'PR-0002', planId: 'PLANT-2026-Q1', planName: '2026年第一季度小麦种植计划', regionCode: '341222104', regionName: '旧县镇', subjectId: 'SUB-0005', subjectName: '旧县镇田乐家庭农场', plotId: 'PL-0009', crop: 'corn', cropName: '玉米', type: 'harvest', area: 180, date: '2026-09-26', reporter: '田乐', source: '皖企通填报' },
-  { id: 'PR-0003', planId: 'PLANT-2026-Q1', planName: '2026年第一季度小麦种植计划', regionCode: '341222', regionName: '太和县', subjectId: 'SUB-0001', subjectName: '太和县丰乐种植专业合作社', plotId: 'PL-0001', crop: 'corn', cropName: '玉米', type: 'harvest', area: 620, date: '2026-09-27', reporter: '陈勇', source: '皖企通填报' },
-  { id: 'PR-0004', planId: 'PLANT-2026-Q1', planName: '2026年第一季度小麦种植计划', regionCode: '341622', regionName: '涡阳县', subjectId: 'SUB-0007', subjectName: '涡阳县丰收种植合作社', plotId: 'PL-0020', crop: 'rice', cropName: '水稻', type: 'sow', area: 850, date: '2026-09-24', reporter: '马丰', source: 'PC端填报' },
-  { id: 'PR-0005', planId: 'PLANT-2026-Q2', planName: '2026年第二季度水稻种植计划', regionCode: '340123', regionName: '肥西县', subjectId: 'SUB-0009', subjectName: '肥西县三河现代农业公司', plotId: 'PL-0026', crop: 'wheat', cropName: '小麦', type: 'sow', area: 1100, date: '2026-09-28', reporter: '张三河', source: '皖企通填报' },
+  { id: 'PR-0002', planId: 'PLANT-2026-Q1', planName: '2026年第一季度小麦种植计划', regionCode: '341222104', regionName: '旧县镇', subjectId: 'SUB-0005', subjectName: '旧县镇田乐家庭农场', plotId: 'PL-0009', crop: 'wheat', cropName: '小麦', type: 'harvest', area: 180, date: '2026-09-26', reporter: '田乐', source: '皖企通填报' },
+  { id: 'PR-0003', planId: 'PLANT-2026-Q1', planName: '2026年第一季度小麦种植计划', regionCode: '341222', regionName: '太和县', subjectId: 'SUB-0001', subjectName: '太和县丰乐种植专业合作社', plotId: 'PL-0001', crop: 'wheat', cropName: '小麦', type: 'harvest', area: 620, date: '2026-09-27', reporter: '陈勇', source: '皖企通填报' },
+  { id: 'PR-0004', planId: 'PLANT-2026-Q1', planName: '2026年第一季度小麦种植计划', regionCode: '341622', regionName: '涡阳县', subjectId: 'SUB-0007', subjectName: '涡阳县丰收种植合作社', plotId: 'PL-0020', crop: 'wheat', cropName: '小麦', type: 'sow', area: 850, date: '2026-09-24', reporter: '马丰', source: 'PC端填报' },
+  { id: 'PR-0005', planId: 'PLANT-2026-Q2', planName: '2026年第二季度水稻种植计划', regionCode: '340123', regionName: '肥西县', subjectId: 'SUB-0009', subjectName: '肥西县三河现代农业公司', plotId: 'PL-0026', crop: 'rice', cropName: '水稻', type: 'sow', area: 1100, date: '2026-09-28', reporter: '张三河', source: '皖企通填报' },
   { id: 'PR-0006', planId: 'PLANT-2026-Q2', planName: '2026年第二季度水稻种植计划', regionCode: '341226', regionName: '颍上县', subjectId: 'SUB-0101', subjectName: '颍上县润河合作社', plotId: 'FY-0101', crop: 'rice', cropName: '水稻', type: 'sow', area: 760, date: '2026-09-21', reporter: '周明', source: 'PC端填报' },
   { id: 'PR-0007', planId: 'PLANT-2026-Q1', planName: '2026年第一季度小麦种植计划', regionCode: '341221', regionName: '临泉县', subjectId: 'SUB-0102', subjectName: '临泉县丰源家庭农场', plotId: 'FY-0102', crop: 'wheat', cropName: '小麦', type: 'sow', area: 680, date: '2026-09-20', reporter: '刘丰', source: '皖企通填报' },
   { id: 'PR-0008', planId: 'PLANT-2026-Q1', planName: '2026年第一季度小麦种植计划', regionCode: '341222', regionName: '太和县', subjectId: 'SUB-0001', subjectName: '太和县丰乐种植专业合作社', plotId: 'PL-0002', crop: 'wheat', cropName: '小麦', type: 'planting', area: 315.6, date: '2026-09-18', reporter: '陈勇', source: '主体端填报' },

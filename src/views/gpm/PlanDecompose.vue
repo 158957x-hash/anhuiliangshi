@@ -2,23 +2,23 @@
   <div class="page-container task-page">
     <div class="page-head">
       <div>
-        <h2>种植计划下达</h2>
-        <p>仅展示已直接下达的参考计划，省、市、县按权限查看对应分解任务，不提供修改操作。</p>
+        <h2>任务分解</h2>
+        <p>维护当前角色向下一级分解的任务明细；保存后计划状态为“已分解”，上报计划另行填报。</p>
       </div>
-      <el-button @click="load">刷新计划</el-button>
+      <el-button type="primary" @click="load">刷新计划</el-button>
     </div>
 
     <div class="metric-grid">
       <div class="metric-card"><span>查看范围</span><strong>{{ userStore.role?.roleName || levelLabel(userStore.role?.code) }}</strong><small>按当前角色权限展示</small></div>
-      <div class="metric-card blue"><span>下达计划数</span><strong>{{ countyIssueRows.length }}</strong><small>直接下达的参考计划</small></div>
+      <div class="metric-card blue"><span>下达计划数</span><strong>{{ countyIssueRows.length }}</strong><small>当前角色可维护的分解任务</small></div>
       <div class="metric-card green"><span>计划种植面积</span><strong>{{ currentArea.toLocaleString() }}</strong><small>万亩</small></div>
-      <div class="metric-card orange"><span>版本状态</span><strong>最终版</strong><small>只读不可修改</small></div>
+      <div class="metric-card orange"><span>版本状态</span><strong>已分解</strong><small>分解后可进入上报计划填报</small></div>
     </div>
 
     <div class="panel county-issue-panel">
       <div class="panel-title">
-        <span class="title-text">已下达参考计划列表</span>
-        <el-tag type="info" effect="plain">只读查看</el-tag>
+        <span class="title-text">已分解任务列表</span>
+        <el-tag type="primary" effect="plain">分解任务</el-tag>
       </div>
       <el-form :inline="true" class="county-filters">
         <el-form-item label="关键字"><el-input v-model="countyFilters.keyword" clearable placeholder="作物类型或计划说明" style="width:180px" /></el-form-item>
@@ -43,7 +43,7 @@
       <el-empty v-if="!countyIssueRows.length" description="暂无种植计划" />
     </div>
 
-    <el-dialog v-model="countyIssueVisible" title="已下达参考计划分解" width="1050px" destroy-on-close>
+    <el-dialog v-model="countyIssueVisible" title="已分解任务分解" width="1050px" destroy-on-close>
       <template v-if="countyIssueDetail">
         <el-descriptions :column="3" border>
           <el-descriptions-item label="年份">{{ countyIssueDetail.year }}年</el-descriptions-item>
@@ -51,7 +51,7 @@
           <el-descriptions-item label="计划种植面积">{{ countyIssueDetail.area }} 万亩</el-descriptions-item>
           <el-descriptions-item label="作物类型">{{ countyIssueDetail.cropType }}</el-descriptions-item>
           <el-descriptions-item label="附件">{{ countyIssueDetail.attachmentName || '未上传' }}</el-descriptions-item>
-          <el-descriptions-item label="版本"><el-tag size="small" type="success">最终下达版</el-tag></el-descriptions-item>
+          <el-descriptions-item label="版本"><el-tag size="small" type="success">已分解</el-tag></el-descriptions-item>
           <el-descriptions-item label="计划说明" :span="3">{{ countyIssueDetail.description }}</el-descriptions-item>
         </el-descriptions>
         <div class="detail-title"><b>{{ issueLevelTitle }}</b><span class="drill-tip">点击市、县、乡镇行继续下钻</span></div>
@@ -133,7 +133,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { fetchIssuedPlantingPlans, fetchPlantingPlanIssueRows, fetchTaskPathDetail } from '@/api/gpm'
+import { fetchIssuedPlantingPlans, fetchPlantingPlanIssueRows, fetchTaskPathDetail, fetchCrops } from '@/api/gpm'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()
@@ -152,7 +152,7 @@ const drillVisible = ref(false)
 const filters = reactive({ year: '', quarter: '', region: '', cropType: '', subjectType: '', plotRange: '', keyword: '' })
 const quarters = ['全年', '第一季度', '第二季度', '第三季度', '第四季度']
 const regionOptions = ['阜阳市', '亳州市', '合肥市']
-const cropOptions = ['小麦', '水稻', '玉米', '大豆']
+const cropOptions = ref([])
 const levelLabels = { province: '省级计划', city: '市级', county: '县级', town: '乡镇', subject: '种植主体', plot: '地块参考' }
 const levelLabel = (level) => levelLabels[level] || level
 const currentNode = computed(() => stack.value[stack.value.length - 1] || null)
@@ -162,13 +162,13 @@ const currentTitle = computed(() => currentNode.value ? `${currentNode.value.nam
 const currentArea = computed(() => countyIssueRows.value.reduce((sum, item) => sum + Number(item.area || 0), 0))
 const completedCount = computed(() => countyIssueRows.value.length)
 const issueLevelTitle = computed(() => ({ city: '市级任务', county: '县级任务', town: '乡镇任务', subject: '种植主体和地块任务' }[issueTableLevel.value]))
-const statusType = (status) => ({ 已落实: 'success', 落实中: 'warning', 已下达: 'primary' }[status] || 'info')
+const statusType = (status) => ({ 已落实: 'success', 落实中: 'warning', 已分解: 'primary' }[status] || 'info')
 const cropName = (crop) => ({ wheat: '小麦', rice: '水稻', corn: '玉米', soybean: '大豆', silage_corn: '青贮玉米' }[crop] || crop || '未设置')
 
 const loadCountyIssueList = async () => {
   const plans = await fetchIssuedPlantingPlans(userStore.role, countyFilters)
   countyIssueRows.value = plans
-  hierarchy.value = plans.map((item) => ({ ...item, name: `${item.year}年${item.quarter}${item.cropType}种植计划`, level: 'province', taskCount: 0, status: '已下达', children: [] }))
+  hierarchy.value = plans.map((item) => ({ ...item, name: `${item.year}年${item.quarter}${item.cropType}种植计划`, level: 'province', taskCount: 0, status: '已分解', children: [] }))
 }
 const openCountyIssue = async (row) => {
   countyIssueDetail.value = row
@@ -223,7 +223,7 @@ const goHome = () => {
   drillVisible.value = false
 }
 
-onMounted(load)
+onMounted(async () => { cropOptions.value = (await fetchCrops({ enabled: true })).map((item) => item.name); await load() })
 </script>
 
 <style lang="scss" scoped>

@@ -5,7 +5,7 @@
         <div><b>粮食计划管理</b><span>皖企通移动端</span></div>
         <el-tag type="success" size="small">{{ userStore.regionName || '属地服务' }}</el-tag>
       </div>
-      <p>计划查看、进度填报、灾情上报一站完成</p>
+      <p>计划查看、进度填报、主体填报一站完成</p>
     </div>
 
     <div class="quick-grid">
@@ -17,9 +17,9 @@
         <strong>播种与收获</strong>
         <span>查看已填写的播种、收获进度数据</span>
       </button>
-      <button class="quick-item report" @click="$router.push('/mobile/snapshot')">
-        <strong>灾情上报</strong>
-        <span>病虫害、干旱、洪涝等问题随时上报</span>
+      <button class="quick-item report" @click="$router.push('/mobile/declare')">
+        <strong>主体填报</strong>
+        <span>填报主体计划和粮食生产信息</span>
       </button>
     </div>
 
