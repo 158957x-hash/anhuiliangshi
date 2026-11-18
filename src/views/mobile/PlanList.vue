@@ -56,7 +56,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import { fetchSubjectPlanTasks, fetchSubjectPlotRelations } from '@/api/gpm'
+import { fetchSubjectPlanTasks } from '@/api/gpm'
 import { PLOTS } from '@/mock/geo/plot-gen'
 import BaseMap from '@/components/map/BaseMap.vue'
 
@@ -107,9 +107,14 @@ const togglePlot = plot => { if (!plot) return; const index = selectedIds.value.
 const confirmPlots = () => { reportRows.value = buildRows(activeTask.value, { rows: selectedIds.value.map(plotId => reportRows.value.find(row => row.plotId === plotId) || { plotId }) }); reportRows.value = selectedIds.value.map(plotId => { const plot = subjectPlots.value.find(item => item.id === plotId); const old = reportRows.value.find(row => row.plotId === plotId); return { plotId, plotName: plot.name, plotArea: Number(plot.areaMu || 0), crop: old?.crop || '', area: Number(old?.area || 0) } }); pickerVisible.value = false }
 const submitReport = () => { if (!canSubmit.value) return ElMessage.warning('请为每块已选地块填写作物和不超过地块面积的上报面积'); const record = { taskId: activeTask.value.taskId, year: activeTask.value.year, status: '已上报', submittedAt: new Date().toISOString(), rows: reportRows.value.map(row => ({ ...row })) }; const all = JSON.parse(localStorage.getItem('wanqitong-plan-reports') || '[]').filter(item => !(item.subjectId === userStore.role?.subjectId && item.taskId === activeTask.value.taskId)); all.unshift({ ...record, subjectId: userStore.role?.subjectId }); localStorage.setItem('wanqitong-plan-reports', JSON.stringify(all)); records.value = all.filter(item => item.subjectId === userStore.role?.subjectId); reportVisible.value = false; ElMessage.success('主体计划已提交上报') }
 
+const loadSubjectPlots = () => {
+  // 主体端上报使用当前主体已绑定地块；演示数据不再依赖行政端关联关系状态。
+  subjectPlots.value = PLOTS.filter(item => item.subjectId === userStore.role?.subjectId)
+}
+
 onMounted(async () => {
   tasks.value = await fetchSubjectPlanTasks(userStore.role)
-  await loadSubjectPlots()
+  loadSubjectPlots()
   records.value = JSON.parse(localStorage.getItem('wanqitong-plan-reports') || '[]').filter(item => item.subjectId === userStore.role?.subjectId)
 })
 </script>
