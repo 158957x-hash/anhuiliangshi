@@ -16,11 +16,6 @@
       <p class="compare-tip">按同一地块对比本年度与历史上报面积，未上报地块显示为 0。</p>
       <div v-for="row in compareRows" :key="row.plotId" class="compare-row"><div><b>{{ row.plotName }}</b><span>{{ row.crop || '未填写作物' }}</span></div><div class="compare-values"><span><small>{{ compareYear }}年</small>{{ row.history.toFixed(1) }}亩</span><span><small>{{ selectedYear }}年</small>{{ row.current.toFixed(1) }}亩</span></div></div>
     </section>
-    <section v-if="subjectPlots.length" class="compare-card">
-      <div class="section-title"><b>地块年度对比</b><el-select v-model="compareYear" size="small" style="width:105px"><el-option v-for="year in compareYears" :key="year" :label="`${year}年`" :value="year" /></el-select></div>
-      <p class="compare-tip">按同一地块对比本年度与历史上报面积，未上报地块显示为 0。</p>
-      <div v-for="row in compareRows" :key="row.plotId" class="compare-row"><div><b>{{ row.plotName }}</b><span>{{ row.crop || '未填写作物' }}</span></div><div class="compare-values"><span><small>{{ compareYear }}年</small>{{ row.history.toFixed(1) }}亩</span><span><small>{{ selectedYear }}年</small>{{ row.current.toFixed(1) }}亩</span></div></div>
-    </section>
     <el-empty v-if="!filteredTasks.length" description="暂无该年度下发计划" />
 
     <el-dialog v-model="reportVisible" :title="reportMode === 'view' ? '已上报计划详情' : '上报主体计划'" width="94%" destroy-on-close>
@@ -34,7 +29,15 @@
           <span class="unit">亩</span>
         </div>
         <el-empty v-if="!reportRows.length" description="暂无可关联地块，请先维护主体地块" :image-size="45" />
-        <div v-if="reportMode !== 'view'" class="dialog-actions"><el-button plain @click="openPlotPicker">从地图选择地块</el-button><span>已填 {{ filledArea.toFixed(1) }} 亩</span></div>
+        <div v-if="reportMode !== 'view'" class="dialog-actions">
+          <el-button plain @click="openPlotPicker">从地图选择地块</el-button>
+          <span>已填 {{ filledArea.toFixed(1) }} 亩</span>
+        </div>
+        <section v-if="reportMode !== 'view' && reportRows.length" class="plot-compare-card">
+          <div class="section-title"><b>本地块年度对比</b><el-select v-model="compareYear" size="small" style="width:105px"><el-option v-for="year in compareYears" :key="year" :label="`${year}年`" :value="year" /></el-select></div>
+          <p class="compare-tip">按当前已选地块对比历史上报面积。</p>
+          <div v-for="row in compareRows" :key="row.plotId" class="compare-row"><div><b>{{ row.plotName }}</b><span>{{ row.crop || '未填写作物' }}</span></div><div class="compare-values"><span><small>{{ compareYear }}年</small>{{ row.history.toFixed(1) }}亩</span><span><small>{{ selectedYear }}年</small>{{ row.current.toFixed(1) }}亩</span></div></div>
+        </section>
         <div v-else class="dialog-summary">已上报 {{ filledArea.toFixed(1) }} 亩 · {{ reportRows.length }} 块地</div>
       </template>
       <template #footer><el-button @click="reportVisible = false">关闭</el-button><el-button v-if="reportMode !== 'view'" type="primary" :disabled="!canSubmit" @click="submitReport">提交上报</el-button></template>
@@ -73,13 +76,14 @@ const mapRef = ref(null)
 const filteredTasks = computed(() => tasks.value.filter(item => Number(item.year) === selectedYear.value))
 const compareYear = ref(2025)
 const compareYears = [2025, 2024]
-const compareRows = computed(() => subjectPlots.value.map(plot => {
+const compareRows = computed(() => reportRows.value.map(plot => {
   const currentRecord = records.value.find(item => item.subjectId === userStore.role?.subjectId && Number(item.year) === selectedYear.value)
   const historyRecord = records.value.find(item => item.subjectId === userStore.role?.subjectId && Number(item.year) === compareYear.value)
-  const current = currentRecord?.rows?.find(row => row.plotId === plot.id)
-  const history = historyRecord?.rows?.find(row => row.plotId === plot.id)
-  return { plotId: plot.id, plotName: plot.name, crop: current?.crop || history?.crop || '', current: Number(current?.area || 0), history: Number(history?.area || 0) }
-})) [{ label: '小麦', value: 'wheat' }, { label: '水稻', value: 'rice' }, { label: '玉米', value: 'corn' }, { label: '大豆', value: 'soybean' }]
+  const current = currentRecord?.rows?.find(row => row.plotId === plot.plotId)
+  const history = historyRecord?.rows?.find(row => row.plotId === plot.plotId)
+  return { plotId: plot.plotId, plotName: plot.plotName, crop: current?.crop || history?.crop || plot.crop, current: Number(current?.area || plot.area || 0), history: Number(history?.area || 0) }
+}))
+const crops = [{ label: '小麦', value: 'wheat' }, { label: '水稻', value: 'rice' }, { label: '玉米', value: 'corn' }, { label: '大豆', value: 'soybean' }]
 const filledArea = computed(() => reportRows.value.reduce((sum, row) => sum + Number(row.area || 0), 0))
 const canSubmit = computed(() => reportRows.value.length > 0 && reportRows.value.every(row => row.crop && Number(row.area) > 0 && Number(row.area) <= Number(row.plotArea)))
 const statusOf = task => {
@@ -103,7 +107,11 @@ const togglePlot = plot => { if (!plot) return; const index = selectedIds.value.
 const confirmPlots = () => { reportRows.value = buildRows(activeTask.value, { rows: selectedIds.value.map(plotId => reportRows.value.find(row => row.plotId === plotId) || { plotId }) }); reportRows.value = selectedIds.value.map(plotId => { const plot = subjectPlots.value.find(item => item.id === plotId); const old = reportRows.value.find(row => row.plotId === plotId); return { plotId, plotName: plot.name, plotArea: Number(plot.areaMu || 0), crop: old?.crop || '', area: Number(old?.area || 0) } }); pickerVisible.value = false }
 const submitReport = () => { if (!canSubmit.value) return ElMessage.warning('请为每块已选地块填写作物和不超过地块面积的上报面积'); const record = { taskId: activeTask.value.taskId, year: activeTask.value.year, status: '已上报', submittedAt: new Date().toISOString(), rows: reportRows.value.map(row => ({ ...row })) }; const all = JSON.parse(localStorage.getItem('wanqitong-plan-reports') || '[]').filter(item => !(item.subjectId === userStore.role?.subjectId && item.taskId === activeTask.value.taskId)); all.unshift({ ...record, subjectId: userStore.role?.subjectId }); localStorage.setItem('wanqitong-plan-reports', JSON.stringify(all)); records.value = all.filter(item => item.subjectId === userStore.role?.subjectId); reportVisible.value = false; ElMessage.success('主体计划已提交上报') }
 
-onMounted(async () => { tasks.value = await fetchSubjectPlanTasks(userStore.role); const relations = await fetchSubjectPlotRelations(userStore.role, { subjectId: userStore.role?.subjectId }); const ids = new Set(relations.filter(item => item.relationStatus === '已关联').map(item => item.plotId)); subjectPlots.value = PLOTS.filter(item => item.subjectId === userStore.role?.subjectId && ids.has(item.id)); records.value = JSON.parse(localStorage.getItem('wanqitong-plan-reports') || '[]').filter(item => item.subjectId === userStore.role?.subjectId) })
+onMounted(async () => {
+  tasks.value = await fetchSubjectPlanTasks(userStore.role)
+  await loadSubjectPlots()
+  records.value = JSON.parse(localStorage.getItem('wanqitong-plan-reports') || '[]').filter(item => item.subjectId === userStore.role?.subjectId)
+})
 </script>
 
 <style lang="scss" scoped>
