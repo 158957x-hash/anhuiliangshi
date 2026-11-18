@@ -58,7 +58,7 @@ function buildPlots() {
       const center = offsetPoint(seed.center, (rand() - 0.5) * 22, (rand() - 0.5) * 18)
       const ring = circlePolygon(center, 1.2 + rand() * 1.8, 6 + Math.floor(rand() * 3))
       const crop = CROP_POOL[Math.floor(rand() * CROP_POOL.length)]
-      const areaMu = polygonAreaMu(ring)
+      const areaMu = Math.round((subject.area / plotCount) * (0.85 + rand() * 0.3) * 10) / 10
       plots.push({
         id: `PL-${String(id).padStart(4, '0')}`,
         name: `${seed.name}${['东', '西', '南', '北', '中', '新'][i % 6]}${Math.floor(rand() * 90 + 10)}号地块`,
