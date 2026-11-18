@@ -30,7 +30,7 @@
       <div class="progress-top"><el-tag size="small" :type="type === 'sow' ? 'warning' : 'success'">{{ type === 'sow' ? '播种上报' : '收获上报' }}</el-tag><span>{{ item.date || item.updatedAt }}</span></div>
       <b>{{ item.planName }}</b>
       <p>{{ item.cropName || item.crop }} · {{ item.regionName }} · {{ item.plotId }}</p>
-      <div class="report-line"><span>本次上报面积</span><strong>{{ Number(item.area || 0).toFixed(1) }} 亩</strong></div>
+      <div class="report-line"><span>本次上报面积</span><strong>{{ Number(item.area || 0).toFixed(1) }} 亩</strong></div><el-progress :percentage="rowProgress(item)" :status="type === 'harvest' ? 'success' : undefined" :stroke-width="8" :show-text="false" /><div class="progress-percent">累计进度 {{ rowProgress(item) }}%</div>
       <div class="report-meta"><span>上报主体：{{ item.subjectName || '当前主体' }}</span><span>{{ item.source || '皖企通填报' }}</span></div>
     </div>
     <section class="form-card">
@@ -67,6 +67,7 @@ const records = ref([])
 const plots = ref([])
 const form = reactive({ taskId: '', type: 'sow', area: 0, plotId: '' })
 const summary = reactive({ planArea: 0, reportedArea: 0, progress: 0 })
+const rowProgress = item => { const plan = Number(item.planArea || item.taskAreaMu || 0); const done = Number(item.reportedArea || item.area || 0); return plan ? Math.min(100, Number((done / plan * 100).toFixed(1))) : 0 }
 const yearTasks = computed(() => tasks.value.filter(item => Number(item.year) === selectedYear.value))
 
 const rows = computed(() => {
@@ -85,7 +86,7 @@ const load = async () => {
   const taskIds = new Set(currentTasks.map(item => item.taskId || item.id))
   const matchedRows = rows.value.filter(item => !item.taskId || taskIds.has(item.taskId))
   const intentions = JSON.parse(localStorage.getItem('wanqitong-intentions') || '[]')
-  const latestPlan = intentions.find(item => Number(item.year) === selectedYear.value)
+  const latestPlan = intentions.find(item => item.subjectId === userStore.role?.subjectId && Number(item.year) === selectedYear.value)
   summary.planArea = latestPlan ? ['wheat', 'rice', 'corn', 'soybean'].reduce((sum, crop) => sum + Number(latestPlan[crop] || 0), 0) : 0
   summary.reportedArea = matchedRows.reduce((sum, item) => sum + Number(item.area || 0), 0)
   summary.progress = summary.planArea ? Number(Math.min(100, summary.reportedArea / summary.planArea * 100).toFixed(1)) : 0
@@ -114,6 +115,6 @@ onMounted(async () => {
 </script>
 
 <style lang="scss" scoped>
-.mobile-page{width:100%;min-height:100%;box-sizing:border-box;background:#f5f7fa;padding:14px}.mobile-head,.summary-card,.progress-card,.form-card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px}.mobile-head{display:flex;align-items:center;justify-content:space-between;color:#1f3c68}.mobile-head b{display:block;font-size:21px}.mobile-head span{display:block;color:#667085;font-size:13px;margin-top:4px}.year-tabs,.tabs{display:flex;gap:8px;margin-bottom:12px}.year-tabs button,.tabs button{flex:1;border:1px solid #d9e2ec;background:#fff;border-radius:8px;padding:9px;color:#667085}.year-tabs button.active,.tabs button.active{background:#eaf6f1;border-color:#2d8c72;color:#176b58;font-weight:600}.summary-card{background:linear-gradient(135deg,#eaf6f1,#f8fbfa);border:1px solid #d6eee5}.summary-head,.summary-foot{display:flex;align-items:center;justify-content:space-between}.summary-head{color:#176b58}.summary-number{margin:14px 0 10px;color:#667085}.summary-number strong{font-size:30px;color:#176b58}.summary-number span{font-size:14px}.summary-foot{font-size:12px;color:#667085;margin-top:8px}.summary-foot b{color:#176b58;font-size:16px}.summary-card p{font-size:11px;color:#7a918a;line-height:1.5;margin:10px 0 0}.progress-top{display:flex;justify-content:space-between;color:#98a2b3;font-size:11px}.progress-card>b{display:block;color:#243b5a;font-size:15px;margin:11px 0 5px}.progress-card p{font-size:12px;color:#667085;margin:0 0 13px}.report-line{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f4f8fb;border-radius:8px;font-size:12px;color:#667085}.report-line strong{font-size:16px;color:#176b58}.report-meta{display:flex;justify-content:space-between;gap:8px;color:#98a2b3;font-size:11px;margin-top:10px}.form-card :deep(.el-form-item){margin-bottom:14px}.submit-btn{width:100%;margin-top:12px}
+.mobile-page{width:100%;min-height:100%;box-sizing:border-box;background:#f5f7fa;padding:14px}.mobile-head,.summary-card,.progress-card,.form-card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px}.mobile-head{display:flex;align-items:center;justify-content:space-between;color:#1f3c68}.mobile-head b{display:block;font-size:21px}.mobile-head span{display:block;color:#667085;font-size:13px;margin-top:4px}.year-tabs,.tabs{display:flex;gap:8px;margin-bottom:12px}.year-tabs button,.tabs button{flex:1;border:1px solid #d9e2ec;background:#fff;border-radius:8px;padding:9px;color:#667085}.year-tabs button.active,.tabs button.active{background:#eaf6f1;border-color:#2d8c72;color:#176b58;font-weight:600}.summary-card{background:linear-gradient(135deg,#eaf6f1,#f8fbfa);border:1px solid #d6eee5}.summary-head,.summary-foot{display:flex;align-items:center;justify-content:space-between}.summary-head{color:#176b58}.summary-number{margin:14px 0 10px;color:#667085}.summary-number strong{font-size:30px;color:#176b58}.summary-number span{font-size:14px}.summary-foot{font-size:12px;color:#667085;margin-top:8px}.summary-foot b{color:#176b58;font-size:16px}.summary-card p{font-size:11px;color:#7a918a;line-height:1.5;margin:10px 0 0}.progress-top{display:flex;justify-content:space-between;color:#98a2b3;font-size:11px}.progress-card>b{display:block;color:#243b5a;font-size:15px;margin:11px 0 5px}.progress-card p{font-size:12px;color:#667085;margin:0 0 13px}.report-line{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#f4f8fb;border-radius:8px;font-size:12px;color:#667085}.report-line strong{font-size:16px;color:#176b58}.report-meta{display:flex;justify-content:space-between;gap:8px;color:#98a2b3;font-size:11px;margin-top:10px}.progress-percent{font-size:11px;color:#176b58;text-align:right;margin-top:3px}.form-card :deep(.el-form-item){margin-bottom:14px}.submit-btn{width:100%;margin-top:12px}
 </style>
 

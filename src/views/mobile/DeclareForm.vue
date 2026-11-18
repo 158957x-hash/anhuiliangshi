@@ -74,8 +74,10 @@ const togglePlot = (plot) => {
   else selectedPlots.value.push(plot.id)
 }
 
+const draftKey = `wanqitong-intention-draft-${userStore.role?.subjectId || 'unknown'}-${currentYear}`
+
 const saveDraft = () => {
-  localStorage.setItem('wanqitong-intention-draft', JSON.stringify({ ...form, year: currentYear, status: '草稿', selectedPlots: selectedPlots.value }))
+  localStorage.setItem(draftKey, JSON.stringify({ ...form, year: currentYear, status: '草稿', selectedPlots: selectedPlots.value }))
   draftSaved.value = true
   ElMessage.success('种植意向草稿已保存')
 }
@@ -96,7 +98,7 @@ onMounted(async () => {
   const relations = await fetchSubjectPlotRelations(userStore.role, { subjectId: userStore.role?.subjectId })
   const relationIds = new Set(relations.filter(item => item.relationStatus === '已关联').map(item => item.plotId))
   subjectPlots.value = PLOTS.filter(item => item.subjectId === userStore.role?.subjectId && relationIds.has(item.id))
-  const draft = JSON.parse(localStorage.getItem('wanqitong-intention-draft') || 'null')
+  const draft = JSON.parse(localStorage.getItem(draftKey) || 'null')
   if (draft) {
     Object.assign(form, draft)
     selectedPlots.value = draft.selectedPlots || []
