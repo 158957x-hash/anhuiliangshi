@@ -1204,6 +1204,7 @@ export const fetchProgressReportOrders = (role, filters = {}) => mockRequest(() 
   return PROGRESS_REPORT_ORDERS
     .filter((item) => item.type === type && (!year || Number(item.year) === Number(year)) && (!quarter || item.quarter === quarter))
     .filter((item) => !role?.regionCode || role.regionCode === '340000' || String(item.regionCode || '').startsWith(String(role.regionCode)))
+    .filter((item) => !role?.code || ORDER_AUDIT_LEVEL[item.level] === role.code)
     .map((item) => {
       const issuedRows = issuedPlanProgressRows({ code: 'province', regionCode: '340000' }, item.type).filter((row) => Number(row.year) === Number(item.year) && quarterMatched(row.quarter, item.quarter) && String(row.regionCode || '').startsWith(String(item.regionCode || '')))
       const ownRows = progressRowsInScope(item.type, { year: item.year, quarter: item.quarter, regionCode: item.regionCode }).filter((row) => row.level === item.level && (!item.planId || !row.planId || row.planId === item.planId))
@@ -1212,7 +1213,7 @@ export const fetchProgressReportOrders = (role, filters = {}) => mockRequest(() 
       const subjectRows = rows.filter((row) => row.level === 'subject')
       const townRows = rows.filter((row) => row.level === 'town')
       const areaField = item.type === 'sow' ? 'sownArea' : 'harvestedArea'
-      const currentRows = officialRows.length ? officialRows : rows.filter(row => row.level === item.level)
+      const currentRows = rows.filter(row => row.level === item.level)
       const childRowsForOrder = item.level === 'county' ? townRows : item.level === 'city' ? rows.filter(row => row.level === 'county') : subjectRows
       const summarize = list => ({ planArea: Number(list.reduce((sum, row) => sum + Number(row.planArea || 0), 0).toFixed(1)), cumulative: Number(list.reduce((sum, row) => sum + Number(row[areaField] || 0), 0).toFixed(1)), increment: Number(list.reduce((sum, row) => sum + Number(row.incrementArea || 0), 0).toFixed(1)) })
       return {
@@ -1221,7 +1222,8 @@ export const fetchProgressReportOrders = (role, filters = {}) => mockRequest(() 
         submittedSummary: item.submittedSummary || summarize(currentRows),
         childSummary: item.childSummary || summarize(childRowsForOrder),
         summary: aggregateProgressRows(officialRows, item.type),
-        details: [...officialRows, ...townRows, ...subjectRows].map(row => ({ name: row.townName || row.subjectName || row.regionName, area: Number((item.type === 'sow' ? row.sownArea : row.harvestedArea) || 0), cumulative: Number((item.type === 'sow' ? row.sownArea : row.harvestedArea) || 0), planArea: Number(row.planArea || 0), level: row.level })),
+        auditRole: ORDER_AUDIT_LEVEL[item.level],
+        details: [...currentRows, ...childRowsForOrder].map(row => ({ name: row.townName || row.subjectName || row.regionName, area: Number((item.type === 'sow' ? row.sownArea : row.harvestedArea) || 0), increment: Number(row.incrementArea || 0), cumulative: Number((item.type === 'sow' ? row.sownArea : row.harvestedArea) || 0), planArea: Number(row.planArea || 0), level: row.level })),
         subjectCount: new Set(subjectRows.map((row) => row.subjectId || row.subjectName)).size,
         townCount: new Set(townRows.map((row) => row.regionCode)).size,
         auditLevelName: { county: '县级', city: '市级', province: '省级' }[ORDER_AUDIT_LEVEL[item.level]],
