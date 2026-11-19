@@ -16,12 +16,12 @@ export const MENU_CONFIG = [
       { title: '种植计划制定', route: '/gpm/plan', icon: 'EditPen', section: '计划编制与下达', roles: ['province', 'city', 'county'] },
       { title: '上报计划', route: '/gpm/plan-report', icon: 'Upload', section: '计划上报与审核', roles: ['city', 'county'] },
       { title: '上报计划审核', route: '/gpm/audit', icon: 'Stamp', section: '计划上报与审核', roles: ['province', 'city', 'county'] },
-      { title: '任务分解', route: '/gpm/decompose', icon: 'Share', section: '计划编制与下达', roles: ['province', 'city'] },
       { title: '作物维护', route: '/gpm/crops', icon: 'Collection', section: '基础数据', roles: ['province'] },
 
       // 计划落实与调度：落实 → 进度 → 监督 → 排名
       { title: '播种进度调度', route: '/gpm/progress', icon: 'DataLine', section: '计划落实与调度', roles: ['province', 'city', 'county'] },
       { title: '收获进度调度', route: '/gpm/harvest-progress', icon: 'TrendCharts', section: '计划落实与调度', roles: ['province', 'city', 'county'] },
+      { title: '进度审核', route: '/gpm/progress-audit', icon: 'Stamp', section: '计划落实与调度', roles: ['province', 'city'] },
       { title: '种植统计分析', route: '/gpm/stats', icon: 'DataAnalysis', section: '计划落实与调度', roles: ['province'] },
 
       // 服务保障
@@ -91,10 +91,12 @@ export const MENU_CONFIG = [
       { title: '皖企通·青贮饲料管理', route: '/mobile/wqt-silage', icon: 'Wheat', roles: ['grower', 'storage_subject'], system: 'sil', section: '青贮饲料管理' },
       { title: '皖政通·粮食安全核查', route: '/mobile/wzt-food-safety', icon: 'Position', roles: ['county', 'city', 'province'], system: 'fsr', section: '粮食安全综合监管' },
       { title: '皖政通·粮食计划', route: '/mobile/wzt-gpm', icon: 'DataAnalysis', roles: ['county', 'town'], system: 'gpm', section: '粮食计划管理' },
-      { title: '皖企通·主体填报', route: '/mobile/declare', icon: 'Tickets', roles: ['grower'], system: 'gpm', section: '粮食计划管理' },
+      { title: '皖企通·主体工作台', route: '/mobile/wanqitong', icon: 'HomeFilled', roles: ['grower'], system: 'portal', section: '移动端首页' },
+      { title: '皖企通·计划列表', route: '/mobile/plans', icon: 'Tickets', roles: ['grower'], system: 'gpm', section: '种植主体' },
+      { title: '皖企通·播种与收获', route: '/mobile/progress', icon: 'DataAnalysis', roles: ['grower'], system: 'gpm', section: '种植主体' },
+      { title: '皖企通·预警与政策', route: '/mobile/advisories', icon: 'Bell', roles: ['grower'], system: 'gpm', section: '种植主体' },
       { title: '皖政通·青贮饲料管理', route: '/mobile/wzt-silage', icon: 'Iphone', roles: ['county'], system: 'sil', section: '青贮饲料管理' },
-      { title: '皖事通·随手拍', route: '/mobile/snapshot', icon: 'Camera', roles: ['grower', 'storage_subject'], system: 'fsr', section: '粮食安全综合监管' },
-      { title: '皖企通首页', route: '/mobile/wanqitong', icon: 'HomeFilled', roles: ['grower', 'storage_subject'], system: 'portal', section: '移动端首页' }
+      { title: '皖事通·随手拍', route: '/mobile/snapshot', icon: 'Camera', roles: ['grower', 'storage_subject'], system: 'fsr', section: '粮食安全综合监管' }
     ]
   }
 ]

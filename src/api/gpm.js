@@ -10,6 +10,7 @@ import { REPORTS, REPORT_DETAILS, REPORT_TARGET_BY_ROLE, REPORT_REVIEWER_BY_ROLE
 
 const PLANTING_PLAN_VERSIONS = []
 const PLANTING_PLAN_SUBJECT_TASKS = []
+const PROGRESS_ENTRY_HISTORY = []
 const TOWN_PLAN_REPORTS = [
   { id: 'TOWN-PLAN-PLANT-2026-Q1-341222104', planId: 'PLANT-2026-Q1', year: 2026, quarter: '第一季度', cropType: '小麦', area: 4.2, countyCode: '341222', countyName: '太和县', townCode: '341222104', townName: '旧县镇', subjectReferenceArea: 4.05, remark: '乡镇计划草稿演示', status: '草稿', submittedAt: '', submitter: '旧县镇人民政府', auditor: '', auditedAt: '', auditOpinion: '' },
   { id: 'TOWN-PLAN-PLANT-2026-Q2-341222104', planId: 'PLANT-2026-Q2', year: 2026, quarter: '第二季度', cropType: '水稻', area: 5.4, countyCode: '341222', countyName: '太和县', townCode: '341222104', townName: '旧县镇', subjectReferenceArea: 5.12, remark: '已提交县级审核，等待处理', status: '待县级审核', submittedAt: '2026-11-15', submitter: '旧县镇人民政府', auditor: '', auditedAt: '', auditOpinion: '' },
@@ -532,7 +533,6 @@ export const savePlantingPlanSubjectTasks = (planId, rows, role) => mockRequest(
     const subject = PLAN_SUBJECTS.find((item) => item.id === row.subjectId)
     const plots = PLOTS.filter((plot) => (row.plotIds || []).includes(plot.id) && String(plot.regionCode || '').startsWith(String(role.regionCode)) && plot.subjectId === row.subjectId)
     if (!subject || !String(subject.regionCode || '').startsWith(String(role.regionCode))) return failed('包含无权限的种植主体')
-    if (!plots.length) return failed(`请为${subject.name}选择地块`)
   }
   const retained = PLANTING_PLAN_SUBJECT_TASKS.filter((item) => item.planId !== planId || item.regionCode !== role.regionCode)
   const nextRows = validRows.map((row) => ({ ...row, planId, regionCode: role.regionCode, plotIds: row.plotIds || [], plotRows: (row.plotRows || []).filter((item) => (row.plotIds || []).includes(item.plotId)), status: '已分解', updatedBy: role.name || role.regionName, updatedAt: new Date().toISOString().slice(0, 10) }))
@@ -679,6 +679,9 @@ export const saveTownPlanReport = (data, role) => mockRequest(() => {
     townCode: role.regionCode,
     townName: role.regionName,
     subjectReferenceArea: Number(data.subjectReferenceArea || 0),
+    subjectId: data.subjectId || '',
+    subjectName: data.subjectName || '',
+    subjectRows: Array.isArray(data.subjectRows) ? data.subjectRows.map(row => ({ subjectId: row.subjectId || '', subjectName: row.subjectName || '', targetArea: Number(row.targetArea || 0), owner: row.owner || '', plotIds: row.plotIds || [] })) : (existing?.subjectRows || []),
     remark: data.remark || '',
     status: existing?.status === '已驳回' ? '草稿' : (existing?.status || '草稿'),
     updatedBy: role.name || role.regionName,
@@ -1033,8 +1036,10 @@ export const saveSowingProgress = (data, role) => mockRequest(() => {
   if (!Number.isFinite(sownArea) || sownArea < 0) return failed('已播面积不能小于0')
   if (sownArea > planArea) return failed('已播面积不能超过计划面积')
   const next = { ...data, year: Number(data.year || 2026), quarter: data.quarter || '第三季度', planArea, sownArea, incrementArea: Number(data.progressIncrement ?? data.sownArea ?? 0), level: role?.code || 'region', updatedAt: new Date().toISOString().slice(0, 10) }
-  // 进度必须归属于当前选择的本级上报计划；有计划编号时禁止跨计划复用旧记录。
+  // 每次填报单独保留历史快照，当前进度记录只保存最新累计值。
   const existing = SOWING_PROGRESS_ROWS.find((item) => item.regionCode === data.regionCode && item.crop === data.crop && Number(item.year) === next.year && item.quarter === next.quarter && (data.planId ? item.planId === data.planId : !item.planId))
+  PROGRESS_ENTRY_HISTORY.unshift({ ...next, id: `SOW-HISTORY-${Date.now()}`, type: 'sow', sownArea: Number(existing?.sownArea || 0) + Number(next.incrementArea || 0), recordedAt: new Date().toISOString() })
+  // 进度必须归属于当前选择的本级上报计划；有计划编号时禁止跨计划复用旧记录。
   if (existing) Object.assign(existing, next)
   else SOWING_PROGRESS_ROWS.unshift({ id: `SOW-${Date.now()}`, level: role?.code || 'region', ...next })
   return success({ item: { ...(existing || next), sowProgress: sowingProgress(existing || next) } })
@@ -1048,12 +1053,15 @@ export const saveHarvestProgress = (data, role) => mockRequest(() => {
   if (!Number.isFinite(harvestedArea) || harvestedArea < 0) return failed('已收获面积不能小于0')
   if (harvestedArea > planArea) return failed('已收获面积不能超过计划面积')
   const next = { ...data, year: Number(data.year || 2026), quarter: data.quarter || '第三季度', harvestedArea, planArea, incrementArea: Number(data.progressIncrement ?? data.harvestedArea ?? 0), level: role?.code || 'region', updatedAt: new Date().toISOString().slice(0, 10) }
-  // 进度必须归属于当前选择的本级上报计划；有计划编号时禁止跨计划复用旧记录。
   const existing = HARVEST_PROGRESS_ROWS.find((item) => item.regionCode === data.regionCode && item.crop === data.crop && Number(item.year) === next.year && item.quarter === next.quarter && (data.planId ? item.planId === data.planId : !item.planId))
+  PROGRESS_ENTRY_HISTORY.unshift({ ...next, id: `HARVEST-HISTORY-${Date.now()}`, type: 'harvest', harvestedArea: Number(existing?.harvestedArea || 0) + Number(next.incrementArea || 0), recordedAt: new Date().toISOString() })
+  // 进度必须归属于当前选择的本级上报计划；有计划编号时禁止跨计划复用旧记录。
   if (existing) Object.assign(existing, next)
   else HARVEST_PROGRESS_ROWS.unshift({ id: `HARVEST-${Date.now()}`, level: role?.code || 'region', ...next })
   return success({ item: { ...(existing || next), harvestProgress: harvestProgress(existing || next) } })
 })
+export const fetchProgressEntryHistory = (role, filters = {}) => mockRequest(() => PROGRESS_ENTRY_HISTORY.filter((item) => (!role?.regionCode || role.regionCode === '340000' || String(item.regionCode || '').startsWith(String(role.regionCode))) && (!filters.planId || item.planId === filters.planId) && (!filters.year || Number(item.year) === Number(filters.year)) && (!filters.quarter || item.quarter === filters.quarter) && (!filters.type || item.type === filters.type)).sort((a, b) => String(b.recordedAt).localeCompare(String(a.recordedAt))))
+
 export const fetchTownProgressDraft = (role, filters = {}) => mockRequest(() => {
   if (role?.code !== 'town') return []
   return ALL_PROGRESS_ROWS(filters.type || 'sow').filter((item) => item.level === 'town' && item.regionCode === role.regionCode && (!filters.year || Number(item.year) === Number(filters.year)) && quarterMatched(item.quarter, filters.quarter)).map((item) => ({ ...item, doneArea: Number((filters.type || 'sow') === 'sow' ? item.sownArea || 0 : item.harvestedArea || 0) }))
@@ -1084,6 +1092,11 @@ const aggregateProgressRows = (rows, type) => {
   const doneArea = rows.reduce((sum, item) => sum + Number((type === 'sow' ? item.sownArea : item.harvestedArea) || 0), 0)
   return { planArea: Number(planArea.toFixed(1)), doneArea: Number(doneArea.toFixed(1)), progress: planArea ? Number((doneArea / planArea * 100).toFixed(1)) : 0 }
 }
+const progressOrderFor = (type, year, quarter, level, regionCode, planId = '') => PROGRESS_REPORT_ORDERS.find(item => item.type === type && Number(item.year) === Number(year) && item.quarter === quarter && item.level === level && String(item.regionCode) === String(regionCode) && (!planId || !item.planId || item.planId === planId))
+const approvedProgressRows = (rows, type) => rows.filter(row => {
+  const order = progressOrderFor(type, row.year, row.quarter, row.level, row.regionCode, row.planId)
+  return order?.status === '审核通过'
+})
 const ORDER_AUDIT_LEVEL = { town: 'county', county: 'city', city: 'province' }
 const ORDER_LEVEL_NAME = { town: '乡镇', county: '县级', city: '市级' }
 const progressPlanIdByQuarter = (year, quarter) => ({ '第一季度': `PLANT-${year}-Q1`, '第二季度': `PLANT-${year}-Q2`, '第三季度': `PLANT-${year}-Q3`, '第四季度': `PLANT-${year}-Q4` }[quarter] || `PLANT-${year}-FULL`)
@@ -1167,6 +1180,7 @@ export const fetchProgressPlanOptions = (role, filters = {}) => mockRequest(() =
     const planRows = rows.filter((item) => item.planId === planId)
     const order = orders.find((item) => item.planId === planId)
     const firstRow = planRows[0]
+    const approvedRows = approvedProgressRows(planRows, type)
     const planArea = planRows.reduce((sum, item) => sum + Number(item.planArea || 0), 0) || Number(plan.actualArea || plan.totalArea || 0)
     return {
       id: `${planId}-${type}-${role.regionCode}`,
@@ -1181,7 +1195,7 @@ export const fetchProgressPlanOptions = (role, filters = {}) => mockRequest(() =
       regionCode: role.regionCode,
       regionName: role.regionName,
       reportStatus: order?.status || '未上报',
-      doneArea: planRows.reduce((sum, item) => sum + Number((type === 'sow' ? item.sownArea : item.harvestedArea) || 0), 0)
+      doneArea: approvedRows.reduce((sum, item) => sum + Number((type === 'sow' ? item.sownArea : item.harvestedArea) || 0), 0)
     }
   })
 })
@@ -1194,13 +1208,20 @@ export const fetchProgressReportOrders = (role, filters = {}) => mockRequest(() 
       const issuedRows = issuedPlanProgressRows({ code: 'province', regionCode: '340000' }, item.type).filter((row) => Number(row.year) === Number(item.year) && quarterMatched(row.quarter, item.quarter) && String(row.regionCode || '').startsWith(String(item.regionCode || '')))
       const ownRows = progressRowsInScope(item.type, { year: item.year, quarter: item.quarter, regionCode: item.regionCode }).filter((row) => row.level === item.level && (!item.planId || !row.planId || row.planId === item.planId))
       const rows = [...issuedRows.filter((row) => row.level !== item.level), ...ownRows]
-      const officialRows = rows.filter((row) => row.level === item.level)
+      const officialRows = approvedProgressRows(rows.filter((row) => row.level === item.level), item.type)
       const subjectRows = rows.filter((row) => row.level === 'subject')
       const townRows = rows.filter((row) => row.level === 'town')
+      const areaField = item.type === 'sow' ? 'sownArea' : 'harvestedArea'
+      const currentRows = officialRows.length ? officialRows : rows.filter(row => row.level === item.level)
+      const childRowsForOrder = item.level === 'county' ? townRows : item.level === 'city' ? rows.filter(row => row.level === 'county') : subjectRows
+      const summarize = list => ({ planArea: Number(list.reduce((sum, row) => sum + Number(row.planArea || 0), 0).toFixed(1)), cumulative: Number(list.reduce((sum, row) => sum + Number(row[areaField] || 0), 0).toFixed(1)), increment: Number(list.reduce((sum, row) => sum + Number(row.incrementArea || 0), 0).toFixed(1)) })
       return {
         ...item,
         planId: item.planId || progressPlanIdByQuarter(item.year, item.quarter),
+        submittedSummary: item.submittedSummary || summarize(currentRows),
+        childSummary: item.childSummary || summarize(childRowsForOrder),
         summary: aggregateProgressRows(officialRows, item.type),
+        details: [...officialRows, ...townRows, ...subjectRows].map(row => ({ name: row.townName || row.subjectName || row.regionName, area: Number((item.type === 'sow' ? row.sownArea : row.harvestedArea) || 0), cumulative: Number((item.type === 'sow' ? row.sownArea : row.harvestedArea) || 0), planArea: Number(row.planArea || 0), level: row.level })),
         subjectCount: new Set(subjectRows.map((row) => row.subjectId || row.subjectName)).size,
         townCount: new Set(townRows.map((row) => row.regionCode)).size,
         auditLevelName: { county: '县级', city: '市级', province: '省级' }[ORDER_AUDIT_LEVEL[item.level]],
@@ -1219,6 +1240,7 @@ export const submitProgressReport = (role, payload = {}) => mockRequest(() => {
   const timeStr = new Date().toLocaleString('zh-CN', { hour12: false })
   const operator = role.unit || role.regionName
   const parentName = level === 'town' ? '县级' : level === 'county' ? '市级' : '省级'
+  const childLevel = level === 'county' ? 'town' : level === 'city' ? 'county' : 'subject'
   const action = `${existing ? '重新' : ''}向${parentName}上报${year}年${quarter}${type === 'sow' ? '播种' : '收获'}进度`
   if (existing && existing.status === '待审核') return failed('当前周期已上报，请等待上级审核')
   if (existing) {
@@ -1227,6 +1249,10 @@ export const submitProgressReport = (role, payload = {}) => mockRequest(() => {
   }
   const cityCode = level === 'city' ? role.regionCode : String(role.regionCode).slice(0, 4) + '00'
   const countyCode = level === 'city' ? '' : String(role.regionCode).slice(0, 6)
+  const ownRows = rows.filter(row => row.level === level)
+  const childRows = progressRowsInScope(type, { year, quarter, regionCode: role.regionCode }).filter(row => row.level === childLevel)
+  const areaField = type === 'sow' ? 'sownArea' : 'harvestedArea'
+  const summarize = list => ({ planArea: Number(list.reduce((sum, row) => sum + Number(row.planArea || 0), 0).toFixed(1)), cumulative: Number(list.reduce((sum, row) => sum + Number(row[areaField] || 0), 0).toFixed(1)), increment: Number(list.reduce((sum, row) => sum + Number(row.incrementArea || 0), 0).toFixed(1)) })
   const order = {
     id: `PRO-${type.toUpperCase()}-${year}-${quarter}-${role.regionCode}-${Date.now()}`,
     year: Number(year), quarter, type, level, planId,
@@ -1236,6 +1262,9 @@ export const submitProgressReport = (role, payload = {}) => mockRequest(() => {
     townCode: level === 'town' ? role.regionCode : '', townName: level === 'town' ? role.regionName : '',
     status: '待审核', reporter: operator, reportedAt: dateStr,
     auditor: '', auditedAt: '', auditOpinion: '',
+    submittedSummary: summarize(ownRows),
+    childSummary: summarize(childRows),
+    details: childRows.map(row => ({ name: row.townName || row.subjectName || row.regionName, area: Number(row[areaField] || 0), cumulative: Number(row[areaField] || 0), increment: Number(row.incrementArea || 0), planArea: Number(row.planArea || 0), level: row.level })),
     timeline: [{ time: timeStr, operator, action }]
   }
   PROGRESS_REPORT_ORDERS.push(order)
@@ -1252,9 +1281,19 @@ export const auditProgressReport = (orderId, { approved, opinion = '' }, role) =
   const operator = role.unit || role.regionName
   order.status = approved ? '审核通过' : '已驳回'
   order.auditor = operator
+  order.auditLevel = role.code
+  order.nextAuditLevel = approved ? ({ county: 'city', city: 'province' }[order.level] || '') : ''
   order.auditedAt = dateStr
   order.auditOpinion = String(opinion || '').trim()
   order.timeline = [...(order.timeline || []), { time: timeStr, operator, action: approved ? `审核通过${order.auditOpinion ? '：' + order.auditOpinion : ''}` : `审核驳回：${order.auditOpinion}` }]
+  if (approved && ['county', 'city'].includes(order.level)) {
+    const nextLevel = order.level === 'county' ? 'city' : 'province'
+    const nextCode = nextLevel === 'city' ? order.cityCode : '340000'
+    const existsNext = PROGRESS_REPORT_ORDERS.find(item => item.type === order.type && Number(item.year) === Number(order.year) && item.quarter === order.quarter && item.level === nextLevel && String(item.regionCode) === String(nextCode) && item.planId === order.planId)
+    if (!existsNext) {
+      PROGRESS_REPORT_ORDERS.push({ id: `PRO-${order.type.toUpperCase()}-${order.year}-${order.quarter}-${nextCode}-${Date.now()}`, year: order.year, quarter: order.quarter, type: order.type, level: nextLevel, planId: order.planId, regionCode: nextCode, regionName: nextLevel === 'province' ? '安徽省' : getRegion(nextCode)?.name || '', cityCode: nextLevel === 'city' ? nextCode : '', cityName: nextLevel === 'city' ? getRegion(nextCode)?.name || '' : '', countyCode: '', countyName: '', status: '待审核', reporter: operator, reportedAt: dateStr, auditor: '', auditedAt: '', auditOpinion: '', details: order.details || [], timeline: [{ time: timeStr, operator, action: `${order.regionName}审核通过，提交${nextLevel === 'city' ? '市级' : '省级'}审核` }] })
+    }
+  }
   return success({ item: order })
 })
 export const fetchProgressRecords = (role) => mockRequest(() => PROGRESS_RECORDS.filter((item) => inRoleScope(item, role)))
@@ -1891,8 +1930,8 @@ export const createPlanReport = (data, role) => mockRequest(() => {
   if (!data.planId || !Array.isArray(data.details) || !data.details.length) return failed('请选择关联计划并填写下一级明细')
   if (data.details.some((row) => !row.childId || !row.childName || Number(row.planArea) <= 0)) return failed('每个下级对象都必须填写大于0的计划面积')
   const duplicate = REPORTS.find((item) => item.planId === data.planId && item.reporterRole === role.code && item.reporterRegionCode === role.regionCode && ['草稿', '待审核', '已驳回'].includes(item.status))
-  const report = duplicate || { id: `RPT-${Date.now()}`, planId: data.planId, reporterRole: role.code, reporterRegionCode: role.regionCode, reporterRegionName: role.regionName, targetLevel: REPORT_TARGET_BY_ROLE[role.code], status: '草稿', sourceType: data.details.some((row) => row.source === 'sync') ? '同步+手工' : '手工填报', submittedAt: '', reviewedAt: '', reviewComment: '', totalArea: 0 }
-  Object.assign(report, { totalArea: reportTotal(data.details), sourceType: data.details.some((row) => row.source === 'sync') ? '同步+手工' : '手工填报' })
+  const report = duplicate || { id: `RPT-${Date.now()}`, planId: data.planId, reporterRole: role.code, reporterRegionCode: role.regionCode, reporterRegionName: role.regionName, targetLevel: REPORT_TARGET_BY_ROLE[role.code], status: '草稿', submittedAt: '', reviewedAt: '', reviewComment: '', totalArea: 0 }
+  Object.assign(report, { totalArea: reportTotal(data.details) })
   if (!duplicate) REPORTS.unshift(report)
   REPORT_DETAILS.splice(0, REPORT_DETAILS.length, ...REPORT_DETAILS.filter((item) => item.reportId !== report.id), ...data.details.map((item, index) => ({ ...item, id: item.id?.startsWith('draft-') ? `RPD-${Date.now()}-${index}` : item.id, reportId: report.id })))
   return success({ report, details: REPORT_DETAILS.filter((item) => item.reportId === report.id) })
@@ -1915,7 +1954,7 @@ export const syncChildReportData = (reportId, role) => mockRequest(() => {
   report.sourceType = '同步+手工'
   return success({ report, details })
 })
-export const fetchReportAuditList = (role, filters = {}) => mockRequest(() => REPORTS.filter((item) => item.status === '待审核' && REPORT_REVIEWER_BY_ROLE[item.reporterRole] === role?.code && (!filters.keyword || `${item.reporterRegionName}${item.id}`.includes(filters.keyword))))
+export const fetchReportAuditList = (role, filters = {}) => mockRequest(() => REPORTS.filter((item) => REPORT_REVIEWER_BY_ROLE[item.reporterRole] === role?.code && (!filters.keyword || `${item.reporterRegionName}${item.id}`.includes(filters.keyword))))
 export const reviewPlanReport = (reportId, action, comment, role) => mockRequest(() => {
   const report = REPORTS.find((item) => item.id === reportId)
   if (!report || REPORT_REVIEWER_BY_ROLE[report.reporterRole] !== role?.code) return failed('当前角色无权审核该上报单')

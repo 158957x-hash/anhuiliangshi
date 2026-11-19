@@ -3,7 +3,7 @@
     <div class="mobile-head"><button class="back-button" @click="$router.back()">‹</button><div><b>粮食计划</b><span>皖政通工作台</span></div></div>
     <section class="summary-card"><div class="summary-icon">粮</div><div><b>{{ isTown ? '乡镇计划与进度工作台' : '县级计划与进度工作台' }}</b><p>从工作台进入计划管理或进度填报，不在首页直接铺开业务表单。</p></div></section>
     <MobileFunctionEntry title="计划管理工作台" subtitle="选择要办理的业务" :role-label="isTown ? '乡镇级' : '县级'" :items="entryItems" />
-    <section class="scene-tip"><b>业务路径</b><p>计划管理：查看县级分解计划 → 发起或查看本级上报；进度填报：查看已通过计划 → 填写本次新增进度 → 在计划详情查看留痕。</p></section>
+    <section class="scene-tip"><b>业务路径</b><p>{{ isTown ? '计划管理：查看乡镇上报计划列表 → 新增或编辑本级上报；进度填报：选择已通过计划 → 填写本次新增进度 → 查看上报记录。' : '计划管理：查看县级计划 → 发起或查看本级上报；进度填报：查看已通过计划 → 填写本次新增进度 → 查看上报记录。' }}</p></section>
   </div>
 </template>
 
@@ -13,10 +13,23 @@ import { useUserStore } from '@/stores/user'
 import MobileFunctionEntry from '@/components/mobile/MobileFunctionEntry.vue'
 const userStore = useUserStore()
 const isTown = computed(() => userStore.role?.code === 'town')
-const entryItems = [
-  { key: 'plan', to: '/mobile/wzt-town-plan', label: '计划管理', description: '查看县级分解计划和本级上报状态', tone: 'blue' },
-  { key: 'progress', to: '/mobile/wzt-progress', label: '进度填报', description: '选择已通过计划填写本次新增进度', tone: 'green' }
-]
+const entryItems = computed(() => {
+  if (isTown.value) return [
+    { key: 'decompose', to: '/mobile/wzt-town-plan?tab=plan', label: '计划分解', description: '查看县级计划并分解到种植主体', tone: 'blue' },
+    { key: 'report', to: '/mobile/wzt-town-plan?tab=report', label: '上报计划', description: '填写乡镇本级计划并提交审核', tone: 'green' },
+    { key: 'progress', to: '/mobile/wzt-progress', label: '进度填报', description: '填写主体进度并查看下级明细', tone: 'purple' },
+    { key: 'policies', to: '/mobile/wzt-policies', label: '惠农政策', description: '查看最新惠农政策和申报指南', tone: 'green' },
+    { key: 'weather', to: '/mobile/wzt-weather', label: '气象预警', description: '查看区域气象风险和预警信息', tone: 'orange' }
+  ]
+  return [
+    { key: 'plan', to: '/mobile/wzt-county-plan', label: '县级计划管理', description: '查看市级下达计划并分解到乡镇', tone: 'blue' },
+    { key: 'report', to: '/mobile/wzt-county-report', label: '上报计划', description: '在皖政通移动端填写县级计划并提交', tone: 'green' },
+    { key: 'audit', to: '/mobile/wzt-county-audit', label: '上报计划审核', description: '审核本县乡镇提交的计划', tone: 'orange' },
+    { key: 'progress', to: '/mobile/wzt-progress', label: '进度填报', description: '填写乡镇进度并查看乡镇明细', tone: 'purple' },
+    { key: 'policies', to: '/mobile/wzt-policies', label: '惠农政策', description: '查看最新惠农政策和申报指南', tone: 'green' },
+    { key: 'weather', to: '/mobile/wzt-weather', label: '气象预警', description: '查看区域气象风险和预警信息', tone: 'orange' }
+  ]
+})
 </script>
 
 <style lang="scss" scoped>

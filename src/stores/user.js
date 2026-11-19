@@ -8,10 +8,13 @@ const STORAGE_KEY = 'ah_grain_demo_user'
 export const useUserStore = defineStore('user', () => {
   const role = ref(null)
 
-  // 恢复登录态
+  // 恢复登录态，并以角色字典中的最新信息为准，避免旧缓存造成权限判断错误。
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) role.value = JSON.parse(saved)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      role.value = findRole(parsed.code) || parsed
+    }
   } catch (e) { /* 忽略 */ }
 
   const isLoggedIn = computed(() => !!role.value)
@@ -43,7 +46,9 @@ export const useUserStore = defineStore('user', () => {
 
   // 免登录切换演示角色（串场演示关键能力）
   const switchRole = (roleCode) => {
-    return login(roleCode)
+    const switched = login(roleCode)
+    // Pinia ref 已同步更新；路由守卫在下一次导航时读取新角色。
+    return switched
   }
 
   const logout = () => {

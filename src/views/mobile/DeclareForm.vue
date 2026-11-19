@@ -34,10 +34,15 @@
     </div>
 
     <div class="form-card">
-      <div class="section-title"><b>地图点选关联地块</b><span class="muted">已选 {{ selectedPlots.length }} 块</span></div>
+      <div class="section-title"><b>地图选择地块</b><span class="muted">已选 {{ selectedPlots.length }} 块</span></div>
       <div class="map-wrap"><BaseMap ref="mapRef" :center="[33.16, 115.62]" :zoom="10" /></div>
-      <div class="plot-list"><button v-for="plot in subjectPlots" :key="plot.id" :class="['plot-item', { selected: selectedPlots.includes(plot.id) }]" @click="togglePlot(plot)"><span>{{ plot.name }}</span><small>{{ plot.areaMu }}亩 · {{ plot.crop }}</small><b>{{ selectedPlots.includes(plot.id) ? '已选' : '选择' }}</b></button></div>
     </div>
+    <div class="form-card">
+      <div class="section-title"><b>我的地块列表</b><span class="muted">地图点选与列表选择同步</span></div>
+      <div class="plot-list"><button v-for="plot in subjectPlots" :key="plot.id" :class="['plot-item', { selected: selectedPlots.includes(plot.id) } ]" @click="togglePlot(plot)"><span>{{ plot.name }}</span><small>{{ Number(plot.areaMu || 0).toFixed(1) }}亩 · {{ cropName(plot.crop) }}</small><b>{{ selectedPlots.includes(plot.id) ? '已选' : '选择' }}</b></button></div>
+      <el-empty v-if="!subjectPlots.length" description="暂无主体地块" :image-size="45" />
+    </div>
+
 
     <div class="actions"><el-button @click="saveDraft">保存草稿</el-button><el-button type="primary" @click="submit">提交计划</el-button></div>
     <el-alert v-if="draftSaved" title="草稿已保存在本机，联网后可继续提交" type="success" :closable="false" show-icon />
@@ -68,14 +73,18 @@ const historyArea = computed(() => compareYear.value === 2025 ? 980 : 940)
 const growth = computed(() => historyArea.value ? Math.round((intentionArea.value / historyArea.value - 1) * 100) : 0)
 const geojson = computed(() => ({ type: 'FeatureCollection', features: subjectPlots.value.filter(item => item.geometry).map(item => ({ type: 'Feature', properties: { id: item.id }, geometry: item.geometry })) }))
 
+const cropName = crop => ({ wheat: '小麦', rice: '水稻', corn: '玉米', soybean: '大豆', silage_corn: '青贮玉米' }[crop] || crop || '未设置')
 const togglePlot = (plot) => {
+  if (!plot) return
   const index = selectedPlots.value.indexOf(plot.id)
   if (index >= 0) selectedPlots.value.splice(index, 1)
   else selectedPlots.value.push(plot.id)
 }
 
+const draftKey = `wanqitong-intention-draft-${userStore.role?.subjectId || 'unknown'}-${currentYear}`
+
 const saveDraft = () => {
-  localStorage.setItem('wanqitong-intention-draft', JSON.stringify({ ...form, year: currentYear, status: '草稿', selectedPlots: selectedPlots.value }))
+  localStorage.setItem(draftKey, JSON.stringify({ ...form, year: currentYear, status: '草稿', selectedPlots: selectedPlots.value }))
   draftSaved.value = true
   ElMessage.success('种植意向草稿已保存')
 }
@@ -96,7 +105,7 @@ onMounted(async () => {
   const relations = await fetchSubjectPlotRelations(userStore.role, { subjectId: userStore.role?.subjectId })
   const relationIds = new Set(relations.filter(item => item.relationStatus === '已关联').map(item => item.plotId))
   subjectPlots.value = PLOTS.filter(item => item.subjectId === userStore.role?.subjectId && relationIds.has(item.id))
-  const draft = JSON.parse(localStorage.getItem('wanqitong-intention-draft') || 'null')
+  const draft = JSON.parse(localStorage.getItem(draftKey) || 'null')
   if (draft) {
     Object.assign(form, draft)
     selectedPlots.value = draft.selectedPlots || []
