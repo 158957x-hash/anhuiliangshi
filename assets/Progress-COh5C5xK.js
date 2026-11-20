@@ -1,0 +1,1 @@
+import{P as r}from"./ProgressOverview-CJzNOXJa.js";import{o,p as e}from"./index-DHf2ggrz.js";import"./gpm-B8TPCTI7.js";import"./request-DGSFTNOH.js";import"./plot-gen-DOK1wqSd.js";import"./dict-C2-rHL8M.js";const f={__name:"Progress",setup(t){return(p,s)=>(o(),e(r,{type:"sow"}))}};export{f as default};
