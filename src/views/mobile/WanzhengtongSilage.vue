@@ -88,9 +88,8 @@
             <el-button v-if="item.status === 'pending'" link type="primary" @click="openAudit(item, 'plan')">去审核</el-button>
             <el-button v-else link type="primary" @click="toggleAudit(`p-${item.id}`)">{{ expandedAudit === `p-${item.id}` ? '收起' : '查看详情' }}</el-button>
           </div>
-          <div v-if="expandedAudit === `p-${item.id}`" class="detail-list">
-            <div class="detail-row"><b>办理结果</b><span>{{ auditSummary(item) }}</span></div>
-            <div v-for="(trail, index) in item.auditTrail" :key="index" class="detail-row"><b>{{ trail.action }}</b><span>{{ trail.time }} · {{ trail.user }}<template v-if="trail.opinion"> · {{ trail.opinion }}</template></span></div>
+          <div v-if="expandedAudit === `p-${item.id}`" class="detail-wrap">
+            <DeclareDetail :row="item" type="plan" compact />
           </div>
         </article>
         <el-empty v-if="!auditPlanRows.length" :description="`暂无${statusName}的种植计划`" :image-size="55" />
@@ -106,19 +105,23 @@
             <el-button v-if="item.status === 'pending'" link type="primary" @click="openAudit(item, 'storage')">去审核</el-button>
             <el-button v-else link type="primary" @click="toggleAudit(`s-${item.id}`)">{{ expandedAudit === `s-${item.id}` ? '收起' : '查看详情' }}</el-button>
           </div>
-          <div v-if="expandedAudit === `s-${item.id}`" class="detail-list">
-            <div class="detail-row"><b>办理结果</b><span>{{ auditSummary(item) }}</span></div>
-            <div v-for="(trail, index) in item.auditTrail" :key="index" class="detail-row"><b>{{ trail.action }}</b><span>{{ trail.time }} · {{ trail.user }}<template v-if="trail.opinion"> · {{ trail.opinion }}</template></span></div>
+          <div v-if="expandedAudit === `s-${item.id}`" class="detail-wrap">
+            <DeclareDetail :row="item" type="storage" compact />
           </div>
         </article>
         <el-empty v-if="!auditStorageRows.length" :description="`暂无${statusName}的收储申报`" :image-size="55" />
       </section>
     </template>
 
-    <el-dialog class="mobile-sheet" v-model="auditVisible" :title="auditType === 'plan' ? '种植计划备案审核' : '收储备案审核'" width="92%">
+    <el-dialog class="mobile-sheet audit-sheet" v-model="auditVisible" :title="auditType === 'plan' ? '种植计划备案审核' : '收储备案审核'" width="92%">
       <div class="audit-target"><b>{{ auditType === 'plan' ? auditRow?.subjectName : auditRow?.storageSubjectName }}</b><span>{{ auditType === 'plan' ? `${auditRow?.area} 亩 · ${auditRow?.year} ${auditRow?.season}` : `${auditRow?.expectedWeight} 吨 · ${auditRow?.price} 元/吨` }}</span></div>
-      <el-radio-group v-model="auditAction" class="audit-actions"><el-radio label="pass">审核通过</el-radio><el-radio label="reject">驳回</el-radio></el-radio-group>
-      <el-input v-model="auditOpinion" type="textarea" :rows="3" :placeholder="auditAction === 'pass' ? '审核意见（选填）' : '请填写驳回原因'" />
+      <div class="audit-detail-scroll">
+        <DeclareDetail :row="auditRow || {}" :type="auditType" />
+      </div>
+      <div class="audit-form">
+        <el-radio-group v-model="auditAction" class="audit-actions"><el-radio label="pass">审核通过</el-radio><el-radio label="reject">驳回</el-radio></el-radio-group>
+        <el-input v-model="auditOpinion" type="textarea" :rows="3" :placeholder="auditAction === 'pass' ? '审核意见（选填）' : '请填写驳回原因'" />
+      </div>
       <template #footer><el-button @click="auditVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="submitAudit">提交</el-button></template>
     </el-dialog>
   </div>
@@ -129,6 +132,7 @@ import { computed, onMounted, reactive, ref, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import BaseMap from '@/components/map/BaseMap.vue'
+import DeclareDetail from '@/components/sil/DeclareDetail.vue'
 import { useUserStore } from '@/stores/user'
 import {
   SIL_PLAN_STATUS, silCropName,
@@ -310,5 +314,8 @@ watch(() => role.value.code, () => { tab.value = 'map'; auditStatus.value = 'pen
 .audit-target { background: #f5f8fc; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
 .audit-target b, .audit-target span { display: block; }
 .audit-target span { font-size: 12px; color: #7a8b9e; margin-top: 4px; }
+.audit-detail-scroll { max-height: 46vh; overflow-y: auto; -webkit-overflow-scrolling: touch; margin-bottom: 12px; padding-right: 2px; }
+.audit-form { border-top: 1px solid #eef2f5; padding-top: 10px; }
+.detail-wrap { margin-top: 8px; }
 .audit-actions { display: flex; gap: 14px; margin-bottom: 10px; }
 </style>

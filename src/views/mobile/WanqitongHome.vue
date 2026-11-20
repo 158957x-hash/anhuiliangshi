@@ -13,7 +13,7 @@
         <strong>粮食计划管理</strong>
         <span>查看年度参考计划，维护主体自报计划和进度</span>
       </button>
-      <button class="quick-item system" @click="$router.push('/mobile/wqt-silage')">
+      <button class="quick-item system" @click="$router.push(silagePath)">
         <strong>青贮饲料管理</strong>
         <span>种植与收储一体申报、备案进度查询</span>
       </button>
@@ -33,9 +33,12 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { fetchPolicies, fetchWeatherAlerts } from '@/api/gpm'
+import { useUserStore } from '@/stores/user'
+const userStore = useUserStore()
+const silagePath = computed(() => (userStore.role?.code === 'storage_subject' ? '/mobile/wqt-silage' : '/mobile/wqt-silage-grower'))
 const policies = ref([]); const alerts = ref([])
 const showUnavailable = name => ElMessage.info(`${name}移动端功能待接入`)
 onMounted(async () => { policies.value = (await fetchPolicies()).filter(item => item.status === '已发布' || item.status === 'published' || item.active !== false); alerts.value = await fetchWeatherAlerts({ regionCode: '340000' }) })

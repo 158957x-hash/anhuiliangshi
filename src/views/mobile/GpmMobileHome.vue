@@ -10,12 +10,12 @@
       <div class="work-grid" v-if="!isStorage">
         <button class="work-item plan" @click="$router.push('/mobile/plans')"><i>计</i><strong>计划管理</strong><span>查看下发计划，按地块上报计划</span></button>
         <button class="work-item progress" @click="$router.push('/mobile/progress')"><i>进</i><strong>播种/收获进度</strong><span>维护每块地的播种和收获进度</span></button>
-        <button class="work-item silage wide" @click="$router.push('/mobile/wqt-silage')"><i>贮</i><strong>青贮饲料管理</strong><span>申报种植计划、维护种植进度、受灾补充上报</span></button>
+        <button class="work-item silage wide" @click="$router.push('/mobile/wqt-silage-grower')"><i>贮</i><strong>青贮饲料管理</strong><span>申报青贮种植计划、维护种植进度、受灾补充上报</span></button>
       </div>
       <div class="work-grid" v-else>
         <button class="work-item plan" @click="$router.push({ path: '/mobile/wqt-silage', query: { tab: 'storages' } })"><i>收</i><strong>收储申报</strong><span>申报计划收储的品种、价格与重量</span></button>
         <button class="work-item progress" @click="$router.push({ path: '/mobile/wqt-silage', query: { tab: 'execution' } })"><i>实</i><strong>实际收储</strong><span>登记实际重量、价格与来源地块</span></button>
-        <button class="work-item silage wide" @click="$router.push({ path: '/mobile/wqt-silage', query: { tab: 'match' } })"><i>料</i><strong>按图索料</strong><span>匹配已备案地块，对接种植主体</span></button>
+        <button class="work-item silage wide" @click="$router.push('/mobile/wqt-silage-match')"><i>料</i><strong>按图索料</strong><span>按已备案收储申报在图上查找种植主体</span></button>
       </div>
     </section>
 

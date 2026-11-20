@@ -18,13 +18,20 @@ export const TILE_PROVIDERS = {
     crs: 'gcj02'
   },
   tdt: {
-    name: '天地图（需key）',
+    name: '天地图矢量（需key）',
     url: 'https://t{s}.tianditu.gov.cn/DataServer?T=vec_w&x={x}&y={y}&z={z}&tk={key}',
+    subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
+    needsKey: true,
+    crs: 'wgs84'
+  },
+  tdt_img: {
+    name: '天地图影像（需key）',
+    url: 'https://t{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&z={z}&tk={key}',
     subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
     needsKey: true,
     crs: 'wgs84'
   }
 }
 
-// 默认底图：配置了天地图 key 时用天地图，否则回退到免 key 的政务灰底，保证无 key 环境开箱可用
-export const DEFAULT_PROVIDER = import.meta.env.VITE_TILE_PROVIDER || (import.meta.env.VITE_TDT_KEY ? 'tdt' : 'geoq_gray')
+// 默认底图：配置了天地图 key 时用天地图影像（部分 key 未开通矢量服务，矢量瓦片会返回空白图），否则回退到免 key 的政务灰底
+export const DEFAULT_PROVIDER = import.meta.env.VITE_TILE_PROVIDER || (import.meta.env.VITE_TDT_KEY ? 'tdt_img' : 'geoq_gray')
