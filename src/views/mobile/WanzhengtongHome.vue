@@ -12,7 +12,7 @@
         <button class="quick-item plan" @click="$router.push('/mobile/wzt-gpm')">
           <strong>粮食计划管理</strong>
         </button>
-        <button v-if="isCounty" class="quick-item system" @click="$router.push('/mobile/wzt-silage')">
+        <button v-if="isCounty || isTown" class="quick-item system" @click="$router.push('/mobile/wzt-silage')">
           <strong>青贮饲料管理</strong>
         </button>
         <button v-if="isCounty" class="quick-item system" @click="$router.push('/mobile/wzt-food-safety')">

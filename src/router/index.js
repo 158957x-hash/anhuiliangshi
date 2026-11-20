@@ -28,8 +28,8 @@ const routes = [
         meta: { subsystem: 'onemap' },
         children: [
           { path: 'safety', name: 'OnemapSafety', component: () => import('@/views/onemap/SafetyMap.vue'), meta: { title: '粮食安全监测一张图' } },
-          { path: 'silage', name: 'OnemapSilage', component: () => import('@/views/onemap/SilageMap.vue'), meta: { title: '青贮饲料一张图' } },
-          { path: 'pesticide', name: 'OnemapPesticide', component: () => import('@/views/onemap/PesticideMap.vue'), meta: { title: '农药监管一张图' } },
+          { path: 'silage', name: 'OnemapSilage', component: () => import('@/views/sil/PlantingMap.vue'), meta: { title: '青贮饲料一张图' } },
+          { path: 'pesticide', name: 'OnemapPesticide', component: () => import('@/views/onemap/PesticideMap.vue'), meta: { title: '农药监管一张图' } }
         ]
       },
 
@@ -60,17 +60,14 @@ const routes = [
         path: 'sil',
         meta: { subsystem: 'sil' },
         children: [
-          { path: 'growers', name: 'SilGrowers', component: () => import('@/views/sil/Growers.vue'), meta: { title: '种植主体列表', roles: ['province'] } },
-          { path: 'plots', name: 'SilPlots', component: () => import('@/views/sil/Plots.vue'), meta: { title: '种植地块列表', roles: ['province'] } },
-          { path: 'storage-subjects', name: 'SilStorageSubjects', component: () => import('@/views/sil/StorageSubjects.vue'), meta: { title: '收储主体维护', roles: ['province', 'county'] } },
-          { path: 'declare', name: 'SilDeclare', component: () => import('@/views/sil/DeclareList.vue'), meta: { title: '青贮饲料作物收储申报', roles: ['province', 'city', 'county', 'grower', 'storage_subject'] } },
-          { path: 'storage', name: 'SilStorage', component: () => import('@/views/sil/StorageDeclare.vue'), meta: { title: '青贮饲料作物收储申报', roles: ['county', 'grower', 'storage_subject'] } },
-          { path: 'supplement', name: 'SilSupplement', component: () => import('@/views/sil/Supplement.vue'), meta: { title: '受灾作物补充收储上报', roles: ['province', 'city', 'county', 'grower', 'storage_subject'] } },
-          { path: 'audit', name: 'SilAudit', component: () => import('@/views/sil/AuditList.vue'), meta: { title: '收储审核处理', roles: ['province', 'city', 'county'] } },
-          { path: 'fence', name: 'SilFence', component: () => import('@/views/sil/FenceMap.vue'), meta: { title: '种植上图·数字围栏', roles: ['province', 'city', 'county', 'grower', 'storage_subject'] } },
-          { path: 'ledger', name: 'SilLedger', component: () => import('@/views/sil/Ledger.vue'), meta: { title: '收储台账', roles: ['province', 'city', 'county', 'grower', 'storage_subject'] } },
-          { path: 'audit-config', name: 'SilAuditConfig', component: () => import('@/views/sil/AuditConfig.vue'), meta: { title: '审核流程配置', roles: ['province', 'city', 'county'] } },
-          { path: 'crops', name: 'SilCrops', component: () => import('@/views/sil/CropDict.vue'), meta: { title: '作物字典维护', roles: ['province', 'city', 'county'] } }
+          { path: 'plan', name: 'SilPlan', component: () => import('@/views/sil/PlanDeclare.vue'), meta: { title: '种植计划申报', roles: ['grower', 'county'] } },
+          { path: 'storage-declare', name: 'SilStorageDeclare', component: () => import('@/views/sil/StorageDeclareList.vue'), meta: { title: '青贮饲料作物收储申报', roles: ['storage_subject', 'county'] } },
+          { path: 'disaster', name: 'SilDisaster', component: () => import('@/views/sil/DisasterReport.vue'), meta: { title: '受灾作物补充收储上报', roles: ['grower', 'county'] } },
+          { path: 'audit', name: 'SilAudit', component: () => import('@/views/sil/AuditCenter.vue'), meta: { title: '备案审核', roles: ['county'] } },
+          { path: 'map', name: 'SilMap', component: () => import('@/views/sil/PlantingMap.vue'), meta: { title: '种植上图', roles: ['province', 'city', 'county'] } },
+          { path: 'subjects', name: 'SilSubjects', component: () => import('@/views/sil/SubjectCheck.vue'), meta: { title: '主体信息核查', roles: ['province', 'city', 'county'] } },
+          { path: 'ledger', name: 'SilLedger', component: () => import('@/views/sil/ProductionLedger.vue'), meta: { title: '青贮饲料生产台账', roles: ['province', 'city', 'county'] } },
+          { path: 'storage-subjects', name: 'SilStorageSubjects', component: () => import('@/views/sil/StorageSubjects.vue'), meta: { title: '收储主体管理', roles: ['province'] } }
         ]
       },
 
@@ -124,7 +121,7 @@ const routes = [
     path: '/mobile',
     component: () => import('@/components/layout/MobileLayout.vue'),
     children: [
-      { path: 'wanqitong', name: 'MobileWanqitong', component: () => import('@/views/mobile/GpmMobileHome.vue'), meta: { title: '皖企通·种植主体工作台', roles: ['grower'] } },
+      { path: 'wanqitong', name: 'MobileWanqitong', component: () => import('@/views/mobile/GpmMobileHome.vue'), meta: { title: '皖企通', roles: ['grower', 'storage_subject'] } },
       { path: 'wanzhengtong', name: 'MobileWanzhengtong', component: () => import('@/views/mobile/WanzhengtongHome.vue'), meta: { title: '皖政通', roles: ['county', 'town'] } },
       { path: 'wzt-gpm', name: 'MobileWztGpm', component: () => import('@/views/mobile/WanzhengtongGpm.vue'), meta: { title: '皖政通·粮食计划管理', roles: ['county', 'town'] } },
       { path: 'wzt-county-plan', name: 'MobileWztCountyPlan', component: () => import('@/views/mobile/WanzhengtongCountyPlan.vue'), meta: { title: '皖政通·县级计划管理', roles: ['county'] } },
@@ -135,7 +132,7 @@ const routes = [
       { path: 'wzt-policies', name: 'MobileWztPolicies', component: () => import('@/views/mobile/WanzhengtongPolicies.vue'), meta: { title: '皖政通·惠农政策', roles: ['county', 'town'] } },
       { path: 'wzt-weather', name: 'MobileWztWeather', component: () => import('@/views/mobile/WanzhengtongDisaster.vue'), meta: { title: '皖政通·气象预警', roles: ['county', 'town'] } },
       { path: 'wzt-disaster', name: 'MobileWztDisaster', component: () => import('@/views/mobile/WanzhengtongDisaster.vue'), meta: { title: '皖政通·灾情上报', roles: ['county'] } },
-      { path: 'wzt-silage', name: 'MobileWztSilage', component: () => import('@/views/mobile/WanzhengtongSilage.vue'), meta: { title: '皖政通·青贮饲料管理', roles: ['county'] } },
+      { path: 'wzt-silage', name: 'MobileWztSilage', component: () => import('@/views/mobile/WanzhengtongSilage.vue'), meta: { title: '皖政通·青贮饲料管理', roles: ['county', 'town', 'city', 'province'] } },
       { path: 'wzt-safety', name: 'MobileWztSafety', component: () => import('@/views/mobile/WanzhengtongSafety.vue'), meta: { title: '皖政通·粮食安全综合监管', roles: ['county', 'town'] } },
       { path: 'wzt-food-safety', name: 'MobileWztFoodSafety', component: () => import('@/views/mobile/WanzhengtongFoodSafety.vue'), meta: { title: '皖政通·粮食安全综合监管', roles: ['county', 'town', 'city', 'province'] } },
       { path: 'gpm', name: 'MobileGpm', component: () => import('@/views/mobile/GpmMobileHome.vue'), meta: { title: '皖企通·种植主体工作台', roles: ['grower'] } },

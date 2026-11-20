@@ -7,6 +7,7 @@ import 'element-plus/dist/index.css'
 import 'leaflet/dist/leaflet.css'
 import '@/assets/styles/global.scss'
 import '@/assets/styles/map-dark.scss'
+import '@/assets/styles/mobile-sheet.scss'
 import App from './App.vue'
 import router from './router'
 

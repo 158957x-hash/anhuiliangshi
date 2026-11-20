@@ -13,7 +13,7 @@ export const DEMO_ROLES = [
 
 export const ROLE_SYSTEM_GROUPS = [
   { code: 'gpm', name: '粮食计划管理系统', roles: ['province', 'city', 'county', 'town', 'grower'] },
-  { code: 'sil', name: '青贮饲料管理系统', roles: ['province', 'city', 'county', 'grower', 'storage_subject'] },
+  { code: 'sil', name: '青贮饲料管理系统', roles: ['province', 'city', 'county', 'town', 'grower', 'storage_subject'] },
   // fsr 含 grower：种植主体演示账号模拟社会公众，经皖事通随手拍上报粮食安全线索（可研 5.5.3.9.3：随手拍为皖事通专属社会监督应用）
   { code: 'fsr', name: '粮食安全综合监管系统', roles: ['province', 'city', 'county', 'grower'] },
   { code: 'pes', name: '农药数字监督管理系统', roles: ['province', 'city', 'county', 'pes_producer', 'pes_operator', 'pes_recycler'] }

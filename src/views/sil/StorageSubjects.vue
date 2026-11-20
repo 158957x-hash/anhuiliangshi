@@ -1,6 +1,6 @@
 <template>
   <div class="page-container storage-subjects">
-    <header class="page-head"><div><h2>收储主体维护</h2><p>维护实际参与青贮收储的养殖户、养殖企业及第三方收储机构，与种植主体档案分别管理。</p></div><el-button v-if="canManage" type="primary" @click="openEdit()">新增收储主体</el-button></header>
+    <header class="page-head"><div><h2>收储主体管理</h2><p>省级维护实际参与青贮收储的养殖户、养殖企业及第三方收储机构档案，供收储申报和按图索料匹配调用。</p></div><el-button v-if="canManage" type="primary" @click="openEdit()">新增收储主体</el-button></header>
     <section class="panel">
       <el-form :inline="true" class="filters" @submit.prevent="load">
         <el-form-item label="关键词"><el-input v-model="filters.keyword" placeholder="名称、编号、负责人" clearable @keyup.enter="load" /></el-form-item>

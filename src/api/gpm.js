@@ -1200,11 +1200,11 @@ export const fetchProgressPlanOptions = (role, filters = {}) => mockRequest(() =
   })
 })
 export const fetchProgressReportOrders = (role, filters = {}) => mockRequest(() => {
-  const { type = 'sow', year = '', quarter = '' } = filters
+  const { type = 'sow', year = '', quarter = '', includeOwn = false } = filters
   return PROGRESS_REPORT_ORDERS
     .filter((item) => item.type === type && (!year || Number(item.year) === Number(year)) && (!quarter || item.quarter === quarter))
     .filter((item) => !role?.regionCode || role.regionCode === '340000' || String(item.regionCode || '').startsWith(String(role.regionCode)))
-    .filter((item) => !role?.code || ORDER_AUDIT_LEVEL[item.level] === role.code)
+    .filter((item) => !role?.code || ORDER_AUDIT_LEVEL[item.level] === role.code || (includeOwn && item.level === role.code && String(item.regionCode) === String(role.regionCode)))
     .map((item) => {
       const issuedRows = issuedPlanProgressRows({ code: 'province', regionCode: '340000' }, item.type).filter((row) => Number(row.year) === Number(item.year) && quarterMatched(row.quarter, item.quarter) && String(row.regionCode || '').startsWith(String(item.regionCode || '')))
       const ownRows = progressRowsInScope(item.type, { year: item.year, quarter: item.quarter, regionCode: item.regionCode }).filter((row) => row.level === item.level && (!item.planId || !row.planId || row.planId === item.planId))

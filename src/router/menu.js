@@ -37,15 +37,22 @@ export const MENU_CONFIG = [
     icon: 'Wheat',
     system: 'sil',
     children: [
-      { title: '种植主体列表', route: '/sil/growers', icon: 'User', roles: ['province'] },
-      { title: '种植地块列表', route: '/sil/plots', icon: 'Grid', roles: ['province'] },
-      { title: '收储主体维护', route: '/sil/storage-subjects', icon: 'OfficeBuilding', roles: ['province', 'county'] },
-      { title: '青贮饲料作物收储申报', route: '/sil/declare', icon: 'Tickets', roles: ['province', 'city', 'county', 'grower', 'storage_subject'] },
-      { title: '受灾作物补充收储上报', route: '/sil/supplement', icon: 'Warning', roles: ['province', 'city', 'county', 'grower', 'storage_subject'] },
-      { title: '青贮作物收储', route: '/sil/audit', icon: 'Stamp', roles: ['province', 'city', 'county'] },
-      { title: '种植上图·数字围栏', route: '/sil/fence', icon: 'Grid' },
-      { title: '收储台账', route: '/sil/ledger', icon: 'Notebook' },
-      { title: '青贮饲料一张图', route: '/onemap/silage', icon: 'Picture' }
+      // 申报备案：种植主体、收储主体分别申报，县级代办与备案审核
+      { title: '种植计划申报', route: '/sil/plan', icon: 'EditPen', section: '申报与备案', roles: ['grower', 'county'] },
+      { title: '青贮饲料作物收储申报', route: '/sil/storage-declare', icon: 'Tickets', section: '申报与备案', roles: ['storage_subject', 'county'] },
+      { title: '受灾作物补充收储上报', route: '/sil/disaster', icon: 'Warning', section: '申报与备案', roles: ['grower', 'county'] },
+      { title: '备案审核', route: '/sil/audit', icon: 'Stamp', section: '申报与备案', roles: ['county'] },
+
+      // 备案后监管：一张图、主体核查、生产台账、按图索料
+      { title: '种植上图', route: '/sil/map', icon: 'Picture', section: '备案后监管', roles: ['province', 'city', 'county'] },
+      { title: '主体信息核查', route: '/sil/subjects', icon: 'User', section: '备案后监管', roles: ['province', 'city', 'county'] },
+      { title: '青贮饲料生产台账', route: '/sil/ledger', icon: 'Notebook', section: '备案后监管', roles: ['province', 'city', 'county'] },
+
+      // 基础配置：省级维护收储主体档案
+      { title: '收储主体管理', route: '/sil/storage-subjects', icon: 'OfficeBuilding', section: '基础配置', roles: ['province'] },
+
+      // 乡镇只在皖政通使用：一张图查看与主体信息核查
+      { title: '青贮一张图与主体核查', route: '/mobile/wzt-silage', icon: 'DataBoard', section: '移动端', roles: ['town'] }
     ]
   },
   {
@@ -91,11 +98,11 @@ export const MENU_CONFIG = [
       { title: '皖企通·青贮饲料管理', route: '/mobile/wqt-silage', icon: 'Wheat', roles: ['grower', 'storage_subject'], system: 'sil', section: '青贮饲料管理' },
       { title: '皖政通·粮食安全核查', route: '/mobile/wzt-food-safety', icon: 'Position', roles: ['county', 'city', 'province'], system: 'fsr', section: '粮食安全综合监管' },
       { title: '皖政通·粮食计划', route: '/mobile/wzt-gpm', icon: 'DataAnalysis', roles: ['county', 'town'], system: 'gpm', section: '粮食计划管理' },
-      { title: '皖企通·主体工作台', route: '/mobile/wanqitong', icon: 'HomeFilled', roles: ['grower'], system: 'portal', section: '移动端首页' },
+      { title: '皖企通·主体工作台', route: '/mobile/wanqitong', icon: 'HomeFilled', roles: ['grower', 'storage_subject'], system: 'portal', section: '移动端首页' },
       { title: '皖企通·计划列表', route: '/mobile/plans', icon: 'Tickets', roles: ['grower'], system: 'gpm', section: '种植主体' },
       { title: '皖企通·播种与收获', route: '/mobile/progress', icon: 'DataAnalysis', roles: ['grower'], system: 'gpm', section: '种植主体' },
       { title: '皖企通·预警与政策', route: '/mobile/advisories', icon: 'Bell', roles: ['grower'], system: 'gpm', section: '种植主体' },
-      { title: '皖政通·青贮饲料管理', route: '/mobile/wzt-silage', icon: 'Iphone', roles: ['county'], system: 'sil', section: '青贮饲料管理' },
+      { title: '皖政通·青贮饲料管理', route: '/mobile/wzt-silage', icon: 'Iphone', roles: ['county', 'town'], system: 'sil', section: '青贮饲料管理' },
       { title: '皖事通·随手拍', route: '/mobile/snapshot', icon: 'Camera', roles: ['grower', 'storage_subject'], system: 'fsr', section: '粮食安全综合监管' }
     ]
   }

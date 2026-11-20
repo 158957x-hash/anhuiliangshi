@@ -1,6 +1,6 @@
 <template>
   <div class="disaster-workspace" :class="{mobile}" v-loading="loading">
-    <div class="workspace-head"><div><h2>受灾作物补充收储上报</h2><p>受灾认定（专家会签非必填）→ 补充上报免审 → 发布临时需求 → 联系承接与实际收储</p></div><el-button size="small" @click="load">刷新</el-button></div>
+    <div class="workspace-head"><div><h2>受灾作物补充收储上报</h2><p>受灾认定 → 补充上报 → 发布临时需求 → 联系承接与实际收储；补充上报免重复普通收储审核。</p></div><el-button size="small" @click="load">刷新</el-button></div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon/>
     <div class="role-note">{{ roleNote }}</div>
     <el-tabs v-model="tab" class="disaster-tabs">
@@ -13,8 +13,8 @@
 
     <div v-if="tab==='events'" class="record-list">
       <article v-for="event in filtered(data.events)" :key="event.id" class="record-card">
-        <div class="record-title"><b>{{ event.subjectName }}</b><el-tag :type="event.status==='confirmed'?'success':'warning'">{{ event.status==='confirmed'?'会签已生效':'会签非必填，可上报' }}</el-tag></div>
-        <small>{{ event.number }}</small><p>{{ regionName(event.regionCode) }} · {{ event.disasterType }} · {{ event.plots.length }} 块地 · 受灾 {{ event.affectedArea }} 亩</p><p>三名专家已签 {{ event.experts.filter(e=>e.signedAt).length }}/3（未完成也可直接上报）</p>
+        <div class="record-title"><b>{{ event.subjectName }}</b><el-tag :type="event.status==='confirmed'?'success':'warning'">{{ event.status==='confirmed'?'受灾认定已生效':'受灾认定待完善' }}</el-tag></div>
+        <small>{{ event.number }}</small><p>{{ regionName(event.regionCode) }} · {{ event.disasterType }} · {{ event.plots.length }} 块地 · 受灾 {{ event.affectedArea }} 亩</p><p>专家评估材料：{{ event.experts.filter(e=>e.signedAt).length }}/{{ event.experts.length || 3 }} 已记录</p>
         <div class="record-actions"><el-button link type="primary" @click="view(event,'event')">查看认定</el-button><el-button v-if="isCounty && event.status==='signing'" link type="warning" @click="openSign(event)">专家会签</el-button><el-button v-if="canReport" link type="success" @click="newReport(event.id)">{{ isCounty?'代受灾主体上报':'补充上报' }}</el-button></div>
       </article><el-empty v-if="!filtered(data.events).length" description="暂无可查看的受灾认定" :image-size="65"/>
     </div>
@@ -22,7 +22,7 @@
       <article v-for="report in filtered(data.reports)" :key="report.id" class="record-card">
         <div class="record-title"><b>{{ report.subjectName }}</b><el-tag type="success">免审已生效</el-tag></div><small>{{ report.number }}</small><p>{{ report.crop }} · {{ report.plots.length }} 块地 · 补充面积 {{ report.area }} 亩</p><p>申报单位：{{ report.applicant.unit }} · {{ report.applicant.name }}</p>
         <div class="record-actions"><el-button link type="primary" @click="view(report,'report')">查看上报</el-button><el-button link type="primary" @click="mapLink(report)">查看围栏</el-button><el-button v-if="isCounty" link type="success" :disabled="data.demands.some(d=>d.reportId===report.id)" @click="newDemand(report)">{{ data.demands.some(d=>d.reportId===report.id)?'已发布需求':'发布临时需求' }}</el-button></div>
-      </article><el-empty v-if="!filtered(data.reports).length" description="暂无补充上报；请先完成受灾范围认定（专家会签非必填）" :image-size="65"/>
+      </article><el-empty v-if="!filtered(data.reports).length" description="暂无补充上报；请先完成受灾范围认定并关联评估材料" :image-size="65"/>
     </div>
     <div v-else-if="tab==='demands'" class="record-list">
       <article v-for="demand in filtered(data.demands)" :key="demand.id" class="record-card">
@@ -43,11 +43,11 @@
         <div v-if="step===1" class="form-grid">
           <template v-if="formType==='event'">
             <el-form label-position="top"><el-form-item label="受灾种植主体" required><el-select v-model="eventForm.subjectId" filterable aria-label="受灾种植主体"><el-option v-for="s in subjects" :key="s.id" :value="s.id" :label="s.name"/></el-select></el-form-item><el-form-item label="灾情类型" required><el-input v-model="eventForm.disasterType" placeholder="如：渍涝、风雹、干旱"/></el-form-item><el-form-item label="灾害发生日期" required><el-date-picker v-model="eventForm.occurredAt" type="date" value-format="YYYY-MM-DD"/></el-form-item><el-form-item label="作物年度" required><el-date-picker v-model="eventForm.year" type="year" value-format="YYYY"/></el-form-item></el-form>
-            <div class="help-box"><h4>受灾范围与会签</h4><p>选择受灾种植主体后，在下一步选择该主体的整块受灾地块，面积由地块汇总。</p><p>第三步可录入三名专家及评估材料；专家会签为非必填，可整体留空跳过。补充上报后免再审核。</p></div>
+            <div class="help-box"><h4>受灾范围与会签</h4><p>选择受灾种植主体后，在下一步选择该主体的整块受灾地块，面积由地块汇总。</p><p>第三步录入专家评估结论和材料，并查看会签记录；补充上报免重复普通收储审核，具体免审条件以业务确认口径为准。</p></div>
           </template>
           <template v-else>
-            <el-form label-position="top"><el-form-item label="申报单位"><el-input :model-value="userStore.role?.unit" disabled/></el-form-item><el-form-item label="申报人"><el-input :model-value="userStore.role?.name" disabled/></el-form-item><el-form-item label="受灾认定（会签非必填）" required><el-select v-model="reportForm.eventId" aria-label="受灾认定"><el-option v-for="e in confirmedEvents" :key="e.id" :value="e.id" :label="e.number+' · '+e.subjectName+(e.status==='confirmed'?' · 会签已生效':' · 未完成会签')"/></el-select></el-form-item><el-form-item label="受灾种植主体"><el-input :model-value="selectedEvent?.subjectName || ''" disabled/></el-form-item><el-form-item label="联系人" required><el-input v-model="reportForm.contact"/></el-form-item><el-form-item label="联系方式" required><el-input v-model="reportForm.phone"/></el-form-item></el-form>
-            <div class="help-box"><h4>先上报，再发布临时需求</h4><p>本次补充上报不要求预先确定收储主体。</p><p>在已登记受灾范围内批量选择整块地；专家会签非必填，提交后免再审核；县级根据生效记录发布临时收储需求。</p><p>收储主体后续登记联系承接并填报实际收储重量。</p></div>
+            <el-form label-position="top"><el-form-item label="申报单位"><el-input :model-value="userStore.role?.unit" disabled/></el-form-item><el-form-item label="申报人"><el-input :model-value="userStore.role?.name" disabled/></el-form-item><el-form-item label="受灾认定" required><el-select v-model="reportForm.eventId" aria-label="受灾认定"><el-option v-for="e in confirmedEvents" :key="e.id" :value="e.id" :label="e.number+' · '+e.subjectName+(e.status==='confirmed'?' · 会签已生效':' · 未完成会签')"/></el-select></el-form-item><el-form-item label="受灾种植主体"><el-input :model-value="selectedEvent?.subjectName || ''" disabled/></el-form-item><el-form-item label="联系人" required><el-input v-model="reportForm.contact"/></el-form-item><el-form-item label="联系方式" required><el-input v-model="reportForm.phone"/></el-form-item></el-form>
+            <div class="help-box"><h4>先上报，再发布临时需求</h4><p>本次补充上报不要求预先确定收储主体。</p><p>在已登记受灾范围内批量选择整块地，并关联受灾认定及评估材料；提交后免重复普通收储审核，县级根据生效记录发布临时收储需求。</p><p>收储主体后续登记联系承接并填报实际收储重量。</p></div>
           </template>
         </div>
         <template v-else-if="step===2">
@@ -61,7 +61,7 @@
             <h4>三名相关领域专家（选填，可整体留空跳过会签）</h4><div v-for="(expert,i) in eventForm.experts" :key="i" class="expert-input"><span>{{ i+1 }}</span><el-input v-model="expert.name" placeholder="姓名"/><el-input v-model="expert.unit" placeholder="单位"/><el-input v-model="expert.field" placeholder="专业领域"/></div>
           </template>
           <template v-else>
-            <div class="preview-box"><b>提交预览</b><p>{{ selectedEvent?.subjectName }} · {{ reportForm.crop }} · 已选 {{ reportForm.plotIds.length }} 块 · {{ reportArea.toFixed(1) }}亩</p><p>申报单位：{{ userStore.role?.unit }} · 联系人：{{ reportForm.contact }}</p><p>受灾认定编号：{{ selectedEvent?.number }}（专家会签非必填）</p></div>
+            <div class="preview-box"><b>提交预览</b><p>{{ selectedEvent?.subjectName }} · {{ reportForm.crop }} · 已选 {{ reportForm.plotIds.length }} 块 · {{ reportArea.toFixed(1) }}亩</p><p>申报单位：{{ userStore.role?.unit }} · 联系人：{{ reportForm.contact }}</p><p>受灾认定编号：{{ selectedEvent?.number }} · 已关联评估材料</p></div>
             <h4>关联专家评估材料</h4><SilAttachments :model-value="selectedEvent?.files || []"/>
             <h4>合同 / 订单（选填）</h4><SilAttachments v-model="reportForm.files" editable/>
             <h4>电子承诺书（选填）</h4><el-checkbox v-model="promiseChecked">自愿签署电子承诺书</el-checkbox><el-input v-if="promiseChecked" v-model="promiseText" type="textarea" :rows="3"/><small v-if="promiseChecked" class="muted">演示签署人：{{ userStore.role?.name }}，随本次提交记录文档版本与时间。</small>
@@ -75,9 +75,9 @@
     </el-dialog>
 
     <el-dialog v-model="signVisible" title="三名专家会签（演示）" width="min(800px,96vw)" append-to-body destroy-on-close>
-      <el-alert title="专家会签非必填：可逐人签字后生效，也可直接提交补充上报（免审）。" type="info" :closable="false"/>
+      <el-alert title="请先核对受灾认定和专家评估材料；补充上报免重复普通收储审核，具体免审条件以业务确认口径为准。" type="info" :closable="false"/>
       <div v-for="(expert,i) in current?.experts || []" :key="i" class="expert-sign"><div><b>{{ expert.name }}</b><small>{{ expert.unit }} · {{ expert.field }}</small><small>{{ expert.signedAt || '待签字' }}</small></div><el-tag v-if="expert.signedAt" type="success">已签字</el-tag><el-button v-else type="primary" :loading="saving" @click="sign(i)">模拟 {{ expert.name }} 签字</el-button></div>
-      <template #footer><el-button @click="signVisible=false">关闭</el-button><el-button v-if="canReport" type="primary" @click="signVisible=false;newReport(current.id)">{{ current?.status==='confirmed' ? '进入补充上报' : '直接上报' }}</el-button></template>
+      <template #footer><el-button @click="signVisible=false">关闭</el-button><el-button v-if="canReport" type="primary" @click="signVisible=false;newReport(current.id)">进入补充上报</el-button></template>
     </el-dialog>
 
     <el-dialog v-model="detailVisible" :title="detailTitle" width="min(1000px,96vw)" class="disaster-dialog" top="3vh" append-to-body destroy-on-close>

@@ -10,13 +10,13 @@
     <template v-if="activeTab === 'overview'">
       <section class="panel"><div class="section-title"><i></i><b>系统态势总览</b><span class="count">{{ events.length }} 条任务</span></div><div class="overview-grid"><button v-for="item in overview" :key="item.key" @click="goTaskFilter(item.key)"><strong>{{ item.count }}</strong><span>{{ item.label }}</span></button></div><p v-if="reminder" class="notice">任务提醒：{{ reminder }}</p></section>
       <section class="panel"><div class="section-title"><i></i><b>风险分布</b></div><div class="risk-bars"><div v-for="item in riskDistribution" :key="item.label"><span>{{ item.label }}</span><b><i :style="{ width: `${item.percent}%` }"></i></b><em>{{ item.count }}</em></div></div></section>
-      <section class="panel"><div class="section-title"><i></i><b>任务提醒</b></div><div class="reminder-box"><strong>{{ pendingCount }}</strong><span>条任务等待处理</span><el-button link type="primary" @click="activeTab = 'tasks'">立即处理</el-button></div></section>
+      <section class="panel"><div class="section-title"><i></i><b>任务提醒</b></div><div class="reminder-box"><strong>{{ pendingCount }}</strong><span>条已派发任务等待处理</span><el-button link type="primary" @click="activeTab = 'tasks'">立即处理</el-button></div></section>
       <section class="panel"><div class="section-title"><i></i><b>最近任务</b><span class="count">{{ recentTasks.length }} 条</span></div><div v-for="event in recentTasks" :key="event.id" class="task-card" :class="`task-${event.status}`" @click="selectTask(event)"><div class="task-head"><b>{{ event.code }}</b><el-tag size="small" :type="statusType(event.status)">{{ statusName(event.status) }}</el-tag></div><p>{{ event.regionName }} · {{ event.subjectName || '待核实主体' }}</p><div class="task-foot"><span>{{ event.deadline || '截止时间待定' }}</span><span>{{ riskName(event.risk) }} ›</span></div></div><el-empty v-if="!recentTasks.length" description="暂无最近任务" /></section>
     </template>
 
     <template v-if="activeTab === 'patrol-records'"><section class="panel"><div class="section-title"><i></i><b>我的巡查记录</b><span class="count">{{ patrolReports.length }} 条</span></div><p class="cache-tip">当前按{{ roleLevel }}组织范围展示网格巡查上报，包含尚未完成省级研判的线索。</p><div v-for="event in patrolReports" :key="event.id" class="task-card rich-task" :class="`task-${event.status}`" @click="selectTask(event)"><div class="task-head"><b>{{ event.code }}</b><el-tag size="small" :type="statusType(event.status)">{{ statusName(event.status) }}</el-tag></div><div class="task-meta"><span>问题：{{ event.desc || '—' }}</span><span>地点：{{ event.regionName || event.location || '—' }}</span><span>关联地块：{{ event.spot?.plotName || '—' }}</span><span>上报时间：{{ event.foundTime || '—' }}</span><span>证据：{{ event.reportAttachments?.length || 0 }} 项</span></div><div class="task-foot"><span>查看上报详情</span><span>›</span></div></div><el-empty v-if="!patrolReports.length" description="暂无巡查上报记录" /></section></template>
 
-    <template v-if="activeTab === 'tasks'"><section ref="taskSection" class="panel"><div class="section-title"><i></i><b>核查任务</b><span class="count">{{ filteredTasks.length }} 条</span></div><div class="filter-tabs"><button v-for="filter in statusTabs" :key="filter.key" :class="{ active: taskFilter === filter.key }" @click="taskFilter = filter.key">{{ filter.label }}</button></div><div v-for="event in filteredTasks" :key="event.id" class="task-card rich-task" :class="`task-${event.status}`" @click="selectTask(event)"><div class="task-head"><b>{{ event.code }}</b><el-tag size="small" :type="statusType(event.status)">{{ statusName(event.status) }}</el-tag></div><p v-if="event.conflictFlag" class="conflict-tip">该任务在其他设备已修改，上传前需合并（演示占位）</p><div class="task-meta"><span>问题：{{ event.desc || '待核实问题' }}</span><span>位置：{{ event.regionName }}</span><span>面积：{{ event.spot?.areaMu || 0 }} 亩</span><span>风险：{{ riskName(event.risk) }}</span><span>截止：{{ event.deadline || '待定' }}</span><span>责任人：{{ event.assignee || event.owner || '待分派' }}</span></div><div class="task-foot"><span>点击查看详情/现场核查</span><span>›</span></div></div><el-empty v-if="!filteredTasks.length" description="暂无符合条件的任务" /></section></template>
+    <template v-if="activeTab === 'tasks'"><section ref="taskSection" class="panel"><div class="section-title"><i></i><b>已派发核查任务</b><span class="count">{{ filteredTasks.length }} 条</span></div><div class="filter-tabs"><button v-for="filter in statusTabs" :key="filter.key" :class="{ active: taskFilter === filter.key }" @click="taskFilter = filter.key">{{ filter.label }}</button></div><div v-for="event in filteredTasks" :key="event.id" class="task-card rich-task" :class="`task-${event.status}`" @click="selectTask(event)"><div class="task-head"><b>{{ event.code }}</b><el-tag size="small" :type="statusType(event.status)">{{ statusName(event.status) }}</el-tag></div><p v-if="event.conflictFlag" class="conflict-tip">该任务在其他设备已修改，上传前需合并（演示占位）</p><div class="task-meta"><span>问题：{{ event.desc || '待核实问题' }}</span><span>位置：{{ event.regionName }}</span><span>面积：{{ event.spot?.areaMu || 0 }} 亩</span><span>风险：{{ riskName(event.risk) }}</span><span>截止：{{ event.deadline || '待定' }}</span><span>责任人：{{ event.assignee || event.owner || '待分派' }}</span></div><div class="task-foot"><span>点击查看详情/现场核查</span><span>›</span></div></div><el-empty v-if="!filteredTasks.length" description="暂无符合条件的任务" /></section></template>
 
     <!-- 任务详情弹窗（列表+详情按钮，不再在列表下方堆叠详情面板） -->
     <el-dialog v-model="detailVisible" :title="activeTask ? `任务详情 · ${activeTask.code}` : '任务详情'" width="92%" class="scroll-dialog">
@@ -175,9 +175,10 @@ const foodEntryItems = computed(() => [
   { key: 'offline', label: '离线中心', description: '缓存任务与待上传记录', tone: 'orange' },
   { key: 'audit', label: '审核抽查', description: '按角色显示可用功能', tone: 'purple', visible: ['province', 'city'].includes(userStore.role?.code) }
 ])
-// 状态页签与七状态字典统一（EVENT_STATUS）；页签按角色可见状态收敛（待研判仅省级、待派发仅省/市，与 api 层过滤口径一致）
+// 县级/乡镇只查看已派发到属地后的任务：待研判、待派发属于省/市前置环节，不进入移动端任务视图。
 const visibleStatuses = computed(() => {
   const code = userStore.role?.code
+  if (['county', 'town'].includes(code)) return EVENT_STATUS_FLOW.filter((key) => !['to_review', 'pending'].includes(key))
   const list = [...EVENT_STATUS_FLOW]
   if (code !== 'province') { const i = list.indexOf('to_review'); if (i > -1) list.splice(i, 1) }
   if (!['province', 'city'].includes(code)) { const i = list.indexOf('pending'); if (i > -1) list.splice(i, 1) }
@@ -198,8 +199,14 @@ const isProvince = computed(() => roleLevel.value === '省级'); const canAudit 
 const reviewingTasks = computed(() => events.value.filter((e) => e.status === 'reviewing'))
 const recheckTasks = computed(() => events.value.filter((e) => e.status === 'recheck'))
 const overview = computed(() => visibleStatuses.value.map((k) => ({ key: k, label: EVENT_STATUS[k].name, count: events.value.filter((e) => e.status === k).length })))
-const filteredTasks = computed(() => taskFilter.value === 'all' ? events.value : events.value.filter((e) => e.status === taskFilter.value))
-const recentTasks = computed(() => events.value.slice(0, 3)); const pendingCount = computed(() => events.value.filter((e) => ['checking', 'reviewing', 'recheck'].includes(e.status)).length)
+const taskVisibleEvents = computed(() => {
+  const hiddenBeforeDispatch = ['to_review', 'pending']
+  return ['county', 'town'].includes(userStore.role?.code)
+    ? events.value.filter((event) => !hiddenBeforeDispatch.includes(event.status))
+    : events.value
+})
+const filteredTasks = computed(() => taskFilter.value === 'all' ? taskVisibleEvents.value : taskVisibleEvents.value.filter((e) => e.status === taskFilter.value))
+const recentTasks = computed(() => taskVisibleEvents.value.slice(0, 3)); const pendingCount = computed(() => taskVisibleEvents.value.filter((e) => ['checking', 'reviewing', 'recheck'].includes(e.status)).length)
 const riskDistribution = computed(() => { const total = events.value.length || 1; return [{ label: '高风险', key: 'high', color: '#e85d75' }, { label: '中风险', key: 'medium', color: '#e6a23c' }, { label: '低风险', key: 'low', color: '#2f8c76' }].map((i) => ({ ...i, count: events.value.filter((e) => e.risk === i.key).length, percent: Math.round(events.value.filter((e) => e.risk === i.key).length / total * 100) })) })
 const reminder = computed(() => { const n = pendingCount.value; return n ? `您有 ${n} 条任务需要处理` : '' })
 // 状态命名统一走 EVENT_STATUS 字典
@@ -222,6 +229,8 @@ function handleEntry(item) {
 async function load() {
   const [result, patrolResult] = await Promise.all([fetchEvents(userStore.role, {}), fetchMyPatrolReports(userStore.role)])
   events.value = Array.isArray(result) ? result : []
+  // 页面层再次收敛县级/乡镇可见范围，避免缓存或演示数据将省/市前置状态带入移动端。
+  if (['county', 'town'].includes(userStore.role?.code)) events.value = events.value.filter((event) => !['to_review', 'pending'].includes(event.status))
   patrolReports.value = Array.isArray(patrolResult) ? patrolResult : []
   // 演示占位：模拟任务在其他设备被修改产生的离线冲突标记（真实多端同步待接入）
   const conflictDemo = events.value.find((e) => e.status === 'checking')

@@ -1,0 +1,148 @@
+/* 移动端底部抽屉式弹窗：替代 Element Plus 的桌面居中对话框样式 */
+.el-dialog.mobile-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  width: 100% !important;
+  max-width: 100%;
+  margin: 0 !important;
+  padding: 0;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -8px 32px rgba(23, 43, 60, 0.18);
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+  /* 弹窗相对手机壳定位（.phone-wrap 建立 containing block），高度按壳高收敛，避免顶部标题被裁掉 */
+  max-height: calc(100% - 8px);
+  overflow: hidden;
+  animation: mobile-sheet-up 0.22s ease-out;
+}
+
+@keyframes mobile-sheet-up {
+  from { transform: translateY(24px); opacity: 0.6; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.el-dialog.mobile-sheet::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 38px;
+  height: 4px;
+  margin-left: -19px;
+  border-radius: 2px;
+  background: #d5dee7;
+}
+
+.el-dialog.mobile-sheet .el-dialog__header {
+  flex: none;
+  margin: 0;
+  padding: 18px 16px 10px;
+  border-bottom: 1px solid #eef2f5;
+}
+
+.el-dialog.mobile-sheet .el-dialog__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #243b53;
+}
+
+.el-dialog.mobile-sheet .el-dialog__headerbtn {
+  top: 8px;
+  right: 4px;
+  width: 44px;
+  height: 44px;
+  font-size: 18px;
+}
+
+.el-dialog.mobile-sheet .el-dialog__body {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 16px 8px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.el-dialog.mobile-sheet .el-dialog__footer {
+  flex: none;
+  display: flex;
+  gap: 10px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid #eef2f5;
+}
+
+.el-dialog.mobile-sheet .el-dialog__footer .el-button {
+  flex: 1;
+  height: 44px;
+  margin: 0 !important;
+  font-size: 15px;
+  border-radius: 10px;
+}
+
+.el-dialog.mobile-sheet .el-form-item {
+  margin-bottom: 14px;
+}
+
+.el-dialog.mobile-sheet .el-form-item__label {
+  padding-bottom: 4px;
+  font-size: 13px;
+  color: #5b6b7c;
+  line-height: 1.5;
+}
+
+.el-dialog.mobile-sheet .el-input__wrapper,
+.el-dialog.mobile-sheet .el-select__wrapper,
+.el-dialog.mobile-sheet .el-textarea__inner {
+  min-height: 40px;
+  border-radius: 10px;
+}
+
+.el-dialog.mobile-sheet .el-input-number {
+  width: 100%;
+}
+
+.el-dialog.mobile-sheet .el-input-number .el-input__inner {
+  text-align: left;
+}
+
+.el-dialog.mobile-sheet .el-date-editor.el-input,
+.el-dialog.mobile-sheet .el-date-editor.el-input__wrapper {
+  width: 100% !important;
+}
+
+.el-dialog.mobile-sheet .el-radio-group {
+  display: flex;
+  gap: 18px;
+}
+
+.el-dialog.mobile-sheet .el-checkbox {
+  height: auto;
+  white-space: normal;
+  align-items: flex-start;
+  line-height: 1.5;
+}
+
+.el-dialog.mobile-sheet .el-checkbox__label {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.el-dialog.mobile-sheet .el-tag {
+  margin: 4px 6px 0 0;
+}
+
+/* 移动端表单里的地块选择行改为竖排卡片 */
+.el-dialog.mobile-sheet .plot-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.el-dialog.mobile-sheet .plot-row .el-select,
+.el-dialog.mobile-sheet .plot-row .el-input,
+.el-dialog.mobile-sheet .plot-row .el-input-number {
+  width: 100% !important;
+}
