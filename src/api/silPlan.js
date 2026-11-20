@@ -3,6 +3,8 @@
 import { mockRequest } from './request'
 import { GROW_SUBJECTS, PLOTS } from '@/mock/geo/plot-gen'
 import { REGION_MAP } from '@/mock/common/regions'
+import { CROP_MAP } from '@/mock/common/dict'
+import { TASK_PATH_DETAILS } from '@/mock/gpm/plans'
 import { readSilCropDict } from '@/mock/sil/crops'
 import { fetchStorageSubjects, saveStorageSubject, canManageStorageSubjects, STORAGE_SUBJECT_TYPES } from './silOrdinary'
 
@@ -41,6 +43,9 @@ export const SIL_STORAGE_USAGE = { self: '自用', sell: '出售' }
 export const SIL_DISASTER_STATUS = { pending: { name: '待县级确认', tag: 'warning' }, confirmed: { name: '已纳入补充收储', tag: 'success' } }
 export const SIL_CROP_OPTIONS = () => readSilCropDict().filter(item => item.enabled)
 export const silCropName = code => readSilCropDict().find(item => item.code === code)?.name || code || '—'
+// 粮食计划系统作物（受灾上报地块作物来自粮食计划，不是青贮作物字典）
+export const GRAIN_CROP_OPTIONS = () => ['wheat', 'rice', 'corn', 'soybean'].map(code => CROP_MAP[code]).filter(Boolean)
+export const grainCropName = code => CROP_MAP[String(code || '')]?.name || code || '—'
 
 // ===== 权限与数据范围 =====
 export const canDeclarePlan = role => ['grower', 'county'].includes(role?.code)
@@ -319,41 +324,47 @@ const storageSeeds = () => {
   ]
 }
 
+// 受灾上报种子：按“粮食计划地块”口径（2026-11-20 主人确认：受灾申报主体是地块，粮食计划只用于筛选地块）
 const disasterSeeds = () => {
-  const plans = planSeeds()
-  const filed = plans.find(item => item.id === 'QZ-PLAN-2027-0001')
-  const alfalfa = plans.find(item => item.id === 'QZ-PLAN-2027-0003')
-  const row = (id, plan, index, area, ratio, reason, status, extra = {}) => {
-    const plot = plan.plots[index]
+  const subject = subjectOf('SUB-0001')
+  const plots = plotsOfSubject('SUB-0001')
+  const wheatPlan = TASK_PATH_DETAILS.find(task => task.subjectId === 'SUB-0001' && task.cropType === '小麦')
+  const cornPlan = TASK_PATH_DETAILS.find(task => task.subjectId === 'SUB-0001' && task.cropType === '玉米')
+  const pickPlot = plan => plots.find(plot => grainCropName(plot.crop) === plan?.cropType) || plots[0]
+  const row = (id, plan, plot, ratio, reason, status, extra = {}) => {
+    const area = Math.round(plot.areaMu * ratio)
     return {
       id,
-      planId: plan.id,
-      planNo: plan.filedNo || plan.id,
-      subjectId: plan.subjectId,
-      subjectName: plan.subjectName,
-      subjectType: plan.subjectType || '',
-      owner: plan.owner,
-      phone: plan.phone,
-      regionCode: plan.regionCode,
-      regionName: plan.regionName,
-      plotId: plot.plotId,
+      planId: plan?.id || '',
+      planNo: plan?.planName || '手动填报（无粮食计划）',
+      planSource: plan ? 'grain_plan' : 'manual',
+      subjectId: subject.id,
+      subjectName: subject.name,
+      subjectType: subject.type || '',
+      owner: subject.owner,
+      phone: subject.phone,
+      regionCode: plot.regionCode,
+      regionName: plot.regionName || regionNameOf(plot.regionCode),
+      plotId: plot.id,
       plotName: plot.name,
       crop: plot.crop,
-      variety: plot.variety,
+      cropName: grainCropName(plot.crop),
+      variety: '',
       plotArea: plot.areaMu,
       affectedArea: area,
-      affectedRatio: ratio,
+      affectedRatio: Math.round(ratio * 100),
       reason,
       description: reason,
       attachments: [{ name: '受灾地块现场照片（演示）.jpg', size: '1.2MB' }],
       status,
+      year: plan?.year || 2026,
       submittedAt: '2026-11-17 08:50:00',
       ...extra
     }
   }
   return [
-    row('QZ-DIS-2027-0001', filed, 0, Math.round(filed.plots[0].areaMu * 0.45), 45, '风雹倒伏，计划收割期前受灾', 'pending'),
-    row('QZ-DIS-2027-0002', alfalfa, 0, Math.round(alfalfa.plots[0].areaMu * 0.3), 30, '连续降雨导致苜蓿霉变', 'confirmed', { confirmNo: '皖青贮灾补〔2027〕0001号', confirmedAt: '2026-11-18 10:00:00', confirmedBy: '王芳（县级）' })
+    row('QZ-DIS-2027-0001', wheatPlan, pickPlot(wheatPlan), 0.45, '风雹倒伏，计划收割期前受灾', 'pending'),
+    row('QZ-DIS-2027-0002', cornPlan, pickPlot(cornPlan), 0.3, '连续降雨导致霉变，不适合收粮', 'confirmed', { confirmNo: '皖青贮灾补〔2026〕0001号', confirmedAt: '2026-11-18 10:00:00', confirmedBy: '王芳（县级）' })
   ]
 }
 
@@ -557,45 +568,100 @@ export const auditStorage = (id, action_, opinion, role) => action(() => {
 })
 
 // ===== 受灾作物补充收储上报 =====
+// 口径（2026-11-20 主人确认）：受灾申报主体是地块；地块来自粮食计划系统的种植计划，
+// 计划可选可不选——选中后带出该计划的地块种植数据（地块名称/种植面积/作物，均可修改），
+// 无粮食计划数据时允许手动填写其他地块；计划只用于筛选地块，不再要求青贮备案计划。
+export const fetchGrainSubjects = (role, keyword = '') => mockRequest(() => GROW_SUBJECTS
+  .filter(item => (role?.code === 'grower' ? item.id === role.subjectId : inRegion(item.regionCode, role)))
+  .filter(item => !keyword || `${item.name} ${item.owner} ${item.regionCode}`.includes(keyword))
+  .map(item => ({ ...item, regionName: regionNameOf(item.regionCode), plotCount: plotsOfSubject(item.id).length })), 100, 200)
+
+export const fetchGrainPlanOptions = (role, subjectId = '') => mockRequest(() => {
+  const target = subjectId || (role?.code === 'grower' ? role.subjectId : '')
+  const tasks = TASK_PATH_DETAILS.filter(task => (target ? task.subjectId === target : inRegion(task.countyCode || task.townCode, role)))
+  return tasks.map(task => {
+    const plots = plotsOfSubject(task.subjectId)
+    const matched = plots.filter(plot => grainCropName(plot.crop) === task.cropType)
+    const picked = matched.length ? matched : plots
+    return {
+      id: task.id,
+      planName: task.planName,
+      year: task.year,
+      quarter: task.quarter,
+      cropType: task.cropType,
+      subjectId: task.subjectId,
+      subjectName: task.subjectName,
+      owner: task.owner,
+      townName: task.townName,
+      areaMu: Number(task.taskArea || 0),
+      plots: picked.map(plot => ({
+        plotId: plot.id,
+        plotName: plot.name,
+        areaMu: plot.areaMu,
+        crop: plot.crop,
+        cropName: grainCropName(plot.crop),
+        regionCode: plot.regionCode,
+        regionName: plot.regionName || regionNameOf(plot.regionCode),
+        subjectId: plot.subjectId,
+        subjectName: subjectOf(plot.subjectId)?.name || ''
+      }))
+    }
+  })
+}, 100, 200)
+
 export const fetchDisasters = (filters = {}, role) => mockRequest(() => disasters().filter(row => disasterInScope(row, role)).filter(row => !filters.status || row.status === filters.status).sort((a, b) => String(b.submittedAt || '').localeCompare(String(a.submittedAt || ''))), 100, 200)
 
 export const saveDisaster = (data, role) => action(() => {
   if (!canReportDisaster(role)) throw new Error('仅种植主体或县级代办可上报受灾补充收储')
-  const plan = plans().find(item => item.id === data.planId)
-  if (!plan || plan.status !== 'filed') throw new Error('请选择已备案的种植计划')
-  if (role.code === 'grower' && plan.subjectId !== role.subjectId) throw new Error('仅可上报本主体已备案地块')
-  const plot = plan.plots.find(item => item.plotId === data.plotId)
-  if (!plot) throw new Error('请选择受灾地块')
-  const area = num(data.affectedArea, '受灾面积', true)
-  if (area > Number(plot.areaMu)) throw new Error('受灾面积不能大于地块面积')
+  const subjectId = role.code === 'grower' ? role.subjectId : String(data.subjectId || '')
+  const subject = subjectOf(subjectId)
+  if (!subject) throw new Error('请选择受灾种植主体')
+  if (role.code === 'grower' && subject.id !== role.subjectId) throw new Error('仅可上报本主体地块')
+  const plan = data.planId ? TASK_PATH_DETAILS.find(task => task.id === data.planId) : null
+  if (data.planId && !plan) throw new Error('所选粮食种植计划不存在')
+  const rows = (data.plots || []).filter(row => row && (String(row.plotName || '').trim() || row.plotId))
+  if (!rows.length) throw new Error('请至少选择一个受灾地块')
   if (!String(data.reason || '').trim()) throw new Error('请填写受灾原因')
+  const checked = rows.map(row => {
+    const plotName = String(row.plotName || '').trim()
+    if (!plotName) throw new Error('请填写地块名称')
+    const areaMu = num(row.areaMu, `「${plotName}」种植面积`, true)
+    const affectedArea = num(row.affectedArea, `「${plotName}」受灾面积`, true)
+    if (!row.crop) throw new Error(`请选择「${plotName}」的作物`)
+    if (affectedArea > areaMu) throw new Error(`「${plotName}」受灾面积不能大于种植面积`)
+    return { ...row, plotName, areaMu, affectedArea }
+  })
   const all = disasters()
-  const item = {
-    id: `QZ-DIS-${Date.now()}`,
-    planId: plan.id,
-    planNo: plan.filedNo,
-    subjectId: plan.subjectId,
-    subjectName: plan.subjectName,
-    owner: plan.owner,
-    phone: plan.phone,
-    regionCode: plan.regionCode,
-    regionName: plan.regionName,
-    plotId: plot.plotId,
-    plotName: plot.name,
-    crop: plot.crop,
-    variety: plot.variety,
-    plotArea: plot.areaMu,
-    affectedArea: area,
-    affectedRatio: Math.round((area / Number(plot.areaMu)) * 100),
+  const created = checked.map((row, index) => ({
+    id: `QZ-DIS-${new Date().getFullYear()}-${String(all.length + index + 1).padStart(4, '0')}`,
+    planId: plan?.id || '',
+    planNo: plan?.planName || '手动填报（无粮食计划）',
+    planSource: plan ? 'grain_plan' : 'manual',
+    subjectId: subject.id,
+    subjectName: subject.name,
+    subjectType: subject.type || '',
+    owner: subject.owner,
+    phone: subject.phone,
+    regionCode: row.regionCode || subject.regionCode,
+    regionName: row.regionName || regionNameOf(row.regionCode || subject.regionCode),
+    plotId: row.plotId || `MANUAL-PLOT-${Date.now()}-${index + 1}`,
+    plotName: row.plotName,
+    crop: row.crop,
+    cropName: grainCropName(row.crop),
+    variety: String(row.variety || '').trim(),
+    plotArea: row.areaMu,
+    affectedArea: row.affectedArea,
+    affectedRatio: Math.round((row.affectedArea / row.areaMu) * 100),
     reason: data.reason,
     description: data.reason,
     attachments: data.attachments || [],
     status: 'pending',
+    year: plan?.year || new Date().getFullYear(),
     submittedAt: now(),
     reporter: { name: role.name, unit: role.unit, roleName: role.code === 'county' ? '县级代办' : '种植主体' }
-  }
-  write(KEYS.disasters, [item, ...all])
-  return { success: true, id: item.id }
+  }))
+  write(KEYS.disasters, [...created, ...all])
+  return { success: true, ids: created.map(item => item.id), count: created.length }
 })
 
 export const confirmDisaster = (id, role) => action(() => {
@@ -605,7 +671,7 @@ export const confirmDisaster = (id, role) => action(() => {
   if (!row || !inRegion(row.regionCode, role)) throw new Error('未找到该上报或超出本辖区范围')
   if (row.status !== 'pending') throw new Error('该上报已处理')
   row.status = 'confirmed'
-  const year = plans().find(item => item.id === row.planId)?.year || new Date().getFullYear()
+  const year = row.year || plans().find(item => item.id === row.planId)?.year || new Date().getFullYear()
   row.confirmNo = `皖青贮灾补〔${year}〕${String(all.filter(item => item.status === 'confirmed' && item.id !== row.id).length + 1).padStart(4, '0')}号`
   row.confirmedAt = now()
   row.confirmedBy = `${role.name}（${role.roleName || '县级'}）`

@@ -25,7 +25,7 @@
             <el-button link type="primary" @click="openDetail(item)">查看详情</el-button>
             <el-button v-if="['draft','rejected'].includes(item.status)" link type="primary" @click="openPlanForm(item)">{{ item.status === 'rejected' ? '修改重报' : '继续填写' }}</el-button>
             <el-button v-if="item.status === 'filed'" link type="primary" @click="openProgress(item)">维护进度</el-button>
-            <el-button v-if="item.status === 'filed'" link type="primary" @click="openDisaster(item)">受灾上报</el-button>
+            <el-button link type="primary" @click="openDisaster()">受灾上报</el-button>
           </div>
         </article>
         <el-empty v-if="!loading && !plans.length" description="暂无青贮种植计划，点击右上角申报" :image-size="65" />
@@ -47,11 +47,11 @@
 
     <!-- 受灾上报 -->
     <template v-else>
-      <div class="section-head"><div><h3>受灾补充上报</h3><p>青贮备案地块受灾后上报面积与原因，县级确认后纳入补充收储。</p></div><el-button type="primary" size="small" @click="openDisaster()">上报</el-button></div>
+      <div class="section-head"><div><h3>受灾补充上报</h3><p>按粮食计划的受灾地块上报面积与原因，县级确认后纳入补充收储；无粮食计划可手动填写地块。</p></div><el-button type="primary" size="small" @click="openDisaster()">上报</el-button></div>
       <article v-for="item in disasters" :key="item.id" class="record-card">
         <div class="card-head"><b>{{ item.plotName }}</b><el-tag size="small" :type="SIL_DISASTER_STATUS[item.status]?.tag">{{ SIL_DISASTER_STATUS[item.status]?.name }}</el-tag></div>
-        <small>{{ item.id }} · {{ item.planNo }}</small>
-        <p>{{ silCropName(item.crop) }} / {{ item.variety }} · 受灾 {{ item.affectedArea }} 亩（{{ item.affectedRatio }}%）</p>
+        <small>{{ item.id }} · {{ item.planNo || '手动填报' }}</small>
+        <p>{{ item.cropName || grainCropName(item.crop) }} · 受灾 {{ item.affectedArea }} / {{ item.plotArea }} 亩（{{ item.affectedRatio }}%）</p>
         <p class="crop">{{ item.reason }}</p>
         <p v-if="item.confirmNo" class="crop">补充收储编号 {{ item.confirmNo }}</p>
       </article>
@@ -97,12 +97,36 @@
       <template #footer><el-button @click="progressDialog = false">取消</el-button><el-button type="primary" :loading="saving" @click="submitProgress">保存</el-button></template>
     </el-dialog>
 
-    <!-- 受灾表单 -->
+    <!-- 受灾表单：粮食计划可选，地块可改面积/作物，也可手动添加 -->
     <el-dialog class="mobile-sheet" v-model="disasterDialog" title="受灾补充上报" width="94%">
       <el-form label-position="top">
-        <el-form-item label="备案青贮计划"><el-select v-model="disasterForm.planId" style="width: 100%" @change="disasterForm.plotId = ''"><el-option v-for="plan in filedPlans" :key="plan.id" :label="`${plan.filedNo} · ${plan.subjectName}`" :value="plan.id" /></el-select></el-form-item>
-        <el-form-item label="受灾地块"><el-select v-model="disasterForm.plotId" style="width: 100%"><el-option v-for="plot in disasterPlots" :key="plot.plotId" :label="`${plot.name}（${plot.areaMu} 亩）`" :value="plot.plotId" /></el-select></el-form-item>
-        <el-form-item label="受灾面积（亩）"><el-input-number v-model="disasterForm.affectedArea" :min="0" :precision="1" controls-position="right" style="width: 100%" /></el-form-item>
+        <el-form-item label="粮食种植计划（可选）">
+          <el-select v-model="disasterForm.planId" clearable placeholder="选计划带出地块，不选也可手动填" style="width: 100%" @change="onDisasterPlanChange">
+            <el-option v-for="plan in grainPlans" :key="plan.id" :label="`${plan.planName} · ${plan.cropType}`" :value="plan.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="受灾地块（申报主体是地块）">
+          <div class="plot-list">
+            <div v-for="(row, index) in disasterForm.rows" :key="row.key" class="plot-row" :class="{ checked: row.checked }">
+              <div class="plot-line">
+                <el-checkbox v-model="row.checked">{{ row.manual ? '手动添加' : '粮食计划地块' }}</el-checkbox>
+                <el-tag size="small" effect="plain" :type="row.manual ? 'info' : 'success'">{{ row.manual ? '手动' : '计划' }}</el-tag>
+                <el-button v-if="row.manual" link type="danger" size="small" @click="removeDisasterRow(index)">移除</el-button>
+              </div>
+              <template v-if="row.checked">
+                <label class="plot-field"><span>地块名称</span><el-input v-model="row.plotName" size="small" class="plot-name" placeholder="地块名称" /></label>
+                <div class="plot-grid">
+                  <label class="plot-field"><span>种植面积（亩）</span><el-input-number v-model="row.areaMu" size="small" :min="0" :precision="1" :controls="false" /></label>
+                  <label class="plot-field"><span>作物</span><el-select v-model="row.crop" size="small" placeholder="作物"><el-option v-for="crop in grainCrops" :key="crop.code" :label="crop.name" :value="crop.code" /></el-select></label>
+                </div>
+                <label class="plot-field"><span>受灾面积（亩）</span><el-input-number v-model="row.affectedArea" size="small" :min="0" :precision="1" :controls="false" /></label>
+              </template>
+            </div>
+            <el-empty v-if="!disasterForm.rows.length" description="选择粮食计划带出地块，或手动添加" :image-size="50" />
+          </div>
+          <el-button size="small" class="add-plot" @click="addDisasterRow">+ 添加其他地块</el-button>
+          <p class="sheet-tip">已选 {{ disasterChecked.length }} 块 · 种植 {{ disasterArea }} 亩 · 受灾 {{ disasterAffected }} 亩</p>
+        </el-form-item>
         <el-form-item label="受灾原因"><el-input v-model="disasterForm.reason" type="textarea" :rows="3" maxlength="200" show-word-limit /></el-form-item>
       </el-form>
       <template #footer><el-button @click="disasterDialog = false">取消</el-button><el-button type="primary" :loading="saving" @click="submitDisaster">提交上报</el-button></template>
@@ -118,7 +142,8 @@ import { useUserStore } from '@/stores/user'
 import DeclareDetail from '@/components/sil/DeclareDetail.vue'
 import {
   SIL_PLAN_STATUS, SIL_DISASTER_STATUS, SIL_CROP_OPTIONS, silCropName,
-  fetchPlans, savePlan, fetchSubjectPlots, fetchDisasters, saveDisaster, savePlantingProgress
+  GRAIN_CROP_OPTIONS, grainCropName,
+  fetchPlans, savePlan, fetchSubjectPlots, fetchDisasters, saveDisaster, savePlantingProgress, fetchGrainPlanOptions
 } from '@/api/silPlan'
 
 const router = useRouter()
@@ -150,8 +175,12 @@ const planForm = reactive({ id: '', year: 2027, rows: [], promiseAccepted: false
 const progressDialog = ref(false)
 const progressForm = reactive({ planId: '', sowingDate: '', harvestDate: '', actualArea: null, actualYield: null })
 const disasterDialog = ref(false)
-const disasterForm = reactive({ planId: '', plotId: '', affectedArea: null, reason: '' })
-const disasterPlots = computed(() => filedPlans.value.find(plan => plan.id === disasterForm.planId)?.plots || [])
+const disasterForm = reactive({ planId: '', reason: '', rows: [] })
+const grainPlans = ref([])
+const grainCrops = GRAIN_CROP_OPTIONS()
+const disasterChecked = computed(() => disasterForm.rows.filter(row => row.checked))
+const disasterArea = computed(() => disasterChecked.value.reduce((sum, row) => sum + Number(row.areaMu || 0), 0).toFixed(1))
+const disasterAffected = computed(() => disasterChecked.value.reduce((sum, row) => sum + Number(row.affectedArea || 0), 0).toFixed(1))
 
 const cropText = plan => [...new Set((plan.plots || []).map(plot => `${silCropName(plot.crop)}/${plot.variety || '待补'}`))].join('、')
 
@@ -211,22 +240,63 @@ async function submitProgress() {
   } finally { saving.value = false }
 }
 
-function openDisaster(plan) {
-  disasterForm.planId = plan?.status === 'filed' ? plan.id : ''
-  disasterForm.plotId = ''
-  disasterForm.affectedArea = null
+async function openDisaster() {
+  disasterForm.planId = ''
   disasterForm.reason = ''
+  disasterForm.rows = []
   disasterDialog.value = true
+  try {
+    grainPlans.value = await fetchGrainPlanOptions(role.value, role.value?.subjectId)
+  } catch (error) {
+    grainPlans.value = []
+    ElMessage.warning(error?.message || '粮食计划加载失败，可手动填写地块')
+  }
 }
+// 计划只用于筛选地块：切计划时保留手动地块与已填内容
+function onDisasterPlanChange() {
+  const plan = grainPlans.value.find(item => item.id === disasterForm.planId)
+  const manualRows = disasterForm.rows.filter(row => row.manual)
+  const planRows = (plan?.plots || []).map(plot => {
+    const prev = disasterForm.rows.find(row => row.plotId === plot.plotId)
+    return {
+      key: plot.plotId,
+      plotId: plot.plotId,
+      plotName: prev?.plotName ?? plot.plotName,
+      areaMu: prev?.areaMu ?? plot.areaMu,
+      crop: prev?.crop || plot.crop,
+      affectedArea: prev?.affectedArea ?? null,
+      checked: prev?.checked ?? true,
+      manual: false
+    }
+  })
+  disasterForm.rows = [...planRows, ...manualRows]
+}
+function addDisasterRow() {
+  disasterForm.rows.push({ key: `manual-${Date.now()}-${disasterForm.rows.length}`, plotId: '', plotName: '', areaMu: null, crop: '', affectedArea: null, checked: true, manual: true })
+}
+function removeDisasterRow(index) { if (disasterForm.rows[index]?.manual) disasterForm.rows.splice(index, 1) }
 
 async function submitDisaster() {
-  if (!disasterForm.planId || !disasterForm.plotId) return ElMessage.warning('请选择备案计划与地块')
-  if (!disasterForm.affectedArea || !disasterForm.reason.trim()) return ElMessage.warning('请填写受灾面积和原因')
+  const picked = disasterChecked.value
+  if (!picked.length) return ElMessage.warning('请至少勾选或添加一个受灾地块')
+  for (const row of picked) {
+    if (!String(row.plotName || '').trim()) return ElMessage.warning('请填写地块名称')
+    if (!Number(row.areaMu)) return ElMessage.warning(`请填写「${row.plotName}」的种植面积`)
+    if (!row.crop) return ElMessage.warning(`请选择「${row.plotName}」的作物`)
+    if (!Number(row.affectedArea)) return ElMessage.warning(`请填写「${row.plotName}」的受灾面积`)
+    if (Number(row.affectedArea) > Number(row.areaMu)) return ElMessage.warning(`「${row.plotName}」受灾面积不能大于种植面积`)
+  }
+  if (!disasterForm.reason.trim()) return ElMessage.warning('请填写受灾原因')
   saving.value = true
   try {
-    const result = await saveDisaster({ ...disasterForm }, role.value)
+    const result = await saveDisaster({
+      subjectId: role.value?.subjectId,
+      planId: disasterForm.planId,
+      reason: disasterForm.reason,
+      plots: picked.map(row => ({ plotId: row.plotId, plotName: row.plotName, areaMu: row.areaMu, crop: row.crop, affectedArea: row.affectedArea }))
+    }, role.value)
     if (!result.success) return ElMessage.error(result.message)
-    ElMessage.success('受灾上报已提交')
+    ElMessage.success(result.count > 1 ? `已提交 ${result.count} 条受灾上报` : '受灾上报已提交')
     disasterDialog.value = false
     tab.value = 'disaster'
     load()
@@ -263,4 +333,13 @@ watch(() => role.value.code, () => { tab.value = initialTab(); load() })
 .plot-row.checked { border-color: #2d9d7c; background: #f4fbf8; }
 .plot-row :deep(.el-select), .plot-row :deep(.el-input) { width: 110px; }
 .plot-row :deep(.el-input-number) { width: 110px; }
+.plot-row :deep(.plot-name) { width: 100%; }
+.plot-line { display: flex; align-items: center; gap: 8px; width: 100%; }
+.plot-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; width: 100%; }
+.plot-grid :deep(.el-input-number), .plot-grid :deep(.el-select) { width: 100%; }
+.add-plot { margin-top: 8px; width: 100%; }
+.sheet-tip { font-size: 11px; color: #8a98a7; margin: 8px 0 0; }
+.plot-field { display: flex; flex-direction: column; gap: 4px; width: 100%; min-width: 0; }
+.plot-field > span { font-size: 11px; color: #8a98a7; line-height: 1.2; }
+.plot-field :deep(.el-input-number), .plot-field :deep(.el-select), .plot-field :deep(.el-input) { width: 100%; }
 </style>

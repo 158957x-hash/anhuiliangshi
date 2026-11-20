@@ -3,20 +3,22 @@
     <header class="mobile-header"><button class="back-button" @click="$router.back()">‹</button><div><b>粮食安全综合监管</b><span>{{ userStore.role?.roleName || roleLevel }} · {{ online ? '在线' : '离线' }}</span></div><button class="refresh-button" @click="load">刷新</button></header>
     <p class="demo-note">环节时限与风险规则为演示规则，待业务确认</p>
 
-    <MobileFunctionEntry title="粮食安全工作台" subtitle="按业务任务进入，不把悬浮按钮作为唯一入口" :role-label="roleLevel" note="巡查上报提交后先进入我的巡查记录；研判通过后再进入事件和核查任务流程。" :items="foodEntryItems" @select="handleEntry" />
-
-    <nav class="tab-nav"><button v-for="tab in tabs" :key="tab.key" :class="{ active: activeTab === tab.key }" @click="activeTab = tab.key">{{ tab.label }}</button></nav>
+    <nav class="tab-nav" :style="{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }">
+      <button v-for="tab in tabs" :key="tab.key" :class="{ active: activeTab === tab.key }" @click="switchTab(tab.key)">
+        {{ tab.label }}<em v-if="tab.badge" class="tab-badge">{{ tab.badge > 99 ? '99+' : tab.badge }}</em>
+      </button>
+    </nav>
 
     <template v-if="activeTab === 'overview'">
       <section class="panel"><div class="section-title"><i></i><b>系统态势总览</b><span class="count">{{ events.length }} 条任务</span></div><div class="overview-grid"><button v-for="item in overview" :key="item.key" @click="goTaskFilter(item.key)"><strong>{{ item.count }}</strong><span>{{ item.label }}</span></button></div><p v-if="reminder" class="notice">任务提醒：{{ reminder }}</p></section>
       <section class="panel"><div class="section-title"><i></i><b>风险分布</b></div><div class="risk-bars"><div v-for="item in riskDistribution" :key="item.label"><span>{{ item.label }}</span><b><i :style="{ width: `${item.percent}%` }"></i></b><em>{{ item.count }}</em></div></div></section>
-      <section class="panel"><div class="section-title"><i></i><b>任务提醒</b></div><div class="reminder-box"><strong>{{ pendingCount }}</strong><span>条已派发任务等待处理</span><el-button link type="primary" @click="activeTab = 'tasks'">立即处理</el-button></div></section>
-      <section class="panel"><div class="section-title"><i></i><b>最近任务</b><span class="count">{{ recentTasks.length }} 条</span></div><div v-for="event in recentTasks" :key="event.id" class="task-card" :class="`task-${event.status}`" @click="selectTask(event)"><div class="task-head"><b>{{ event.code }}</b><el-tag size="small" :type="statusType(event.status)">{{ statusName(event.status) }}</el-tag></div><p>{{ event.regionName }} · {{ event.subjectName || '待核实主体' }}</p><div class="task-foot"><span>{{ event.deadline || '截止时间待定' }}</span><span>{{ riskName(event.risk) }} ›</span></div></div><el-empty v-if="!recentTasks.length" description="暂无最近任务" /></section>
+      <section class="panel"><div class="section-title"><i></i><b>任务提醒</b></div><div class="reminder-box"><strong>{{ pendingCount }}</strong><span>条已派发任务等待处理</span><el-button link type="primary" @click="switchTab('tasks')">立即处理</el-button></div></section>
+      <section class="panel"><div class="section-title"><i></i><b>最近任务</b><span class="count">{{ recentTasks.length }} 条</span></div><div v-for="event in recentTasks" :key="event.id" class="task-card" :class="`task-${event.status}`" @click="selectTask(event)"><div class="task-head"><b>{{ event.code }}</b><el-tag size="small" :type="statusType(event.status)">{{ statusName(event.status) }}</el-tag></div><p>{{ event.regionName }} · {{ event.subjectName || '待核实主体' }}</p><div class="task-foot"><span>{{ event.deadline || '截止时间待定' }}</span><span>{{ riskName(event.risk) }} ›</span></div></div><el-empty :image-size="56" v-if="!recentTasks.length" description="暂无最近任务" /></section>
     </template>
 
-    <template v-if="activeTab === 'patrol-records'"><section class="panel"><div class="section-title"><i></i><b>我的巡查记录</b><span class="count">{{ patrolReports.length }} 条</span></div><p class="cache-tip">当前按{{ roleLevel }}组织范围展示网格巡查上报，包含尚未完成省级研判的线索。</p><div v-for="event in patrolReports" :key="event.id" class="task-card rich-task" :class="`task-${event.status}`" @click="selectTask(event)"><div class="task-head"><b>{{ event.code }}</b><el-tag size="small" :type="statusType(event.status)">{{ statusName(event.status) }}</el-tag></div><div class="task-meta"><span>问题：{{ event.desc || '—' }}</span><span>地点：{{ event.regionName || event.location || '—' }}</span><span>关联地块：{{ event.spot?.plotName || '—' }}</span><span>上报时间：{{ event.foundTime || '—' }}</span><span>证据：{{ event.reportAttachments?.length || 0 }} 项</span></div><div class="task-foot"><span>查看上报详情</span><span>›</span></div></div><el-empty v-if="!patrolReports.length" description="暂无巡查上报记录" /></section></template>
+    <template v-if="activeTab === 'mine'"><section class="panel account-panel"><div class="account-row"><div class="account-avatar">{{ (userStore.role?.name || '皖').slice(0, 1) }}</div><div class="account-info"><b>{{ userStore.role?.name || '当前用户' }}</b><span>{{ userStore.role?.roleName || roleLevel }} · {{ userStore.role?.regionName || '辖区待定' }}</span></div><el-tag size="small" type="info" effect="plain">{{ roleLevel }}</el-tag></div></section><section class="panel"><div class="section-title"><i></i><b>我的巡查记录</b><span class="count">{{ patrolReports.length }} 条</span></div><p class="cache-tip">当前按{{ roleLevel }}组织范围展示网格巡查上报，包含尚未完成省级研判的线索。</p><div v-for="event in patrolReports" :key="event.id" class="task-card rich-task" :class="`task-${event.status}`" @click="selectTask(event)"><div class="task-head"><b>{{ event.code }}</b><el-tag size="small" :type="statusType(event.status)">{{ statusName(event.status) }}</el-tag></div><div class="task-meta"><span>问题：{{ event.desc || '—' }}</span><span>地点：{{ event.regionName || event.location || '—' }}</span><span>关联地块：{{ event.spot?.plotName || '—' }}</span><span>上报时间：{{ event.foundTime || '—' }}</span><span>证据：{{ event.reportAttachments?.length || 0 }} 项</span></div><div class="task-foot"><span>查看上报详情</span><span>›</span></div></div><el-empty :image-size="56" v-if="!patrolReports.length" description="暂无巡查上报记录" /></section></template>
 
-    <template v-if="activeTab === 'tasks'"><section ref="taskSection" class="panel"><div class="section-title"><i></i><b>已派发核查任务</b><span class="count">{{ filteredTasks.length }} 条</span></div><div class="filter-tabs"><button v-for="filter in statusTabs" :key="filter.key" :class="{ active: taskFilter === filter.key }" @click="taskFilter = filter.key">{{ filter.label }}</button></div><div v-for="event in filteredTasks" :key="event.id" class="task-card rich-task" :class="`task-${event.status}`" @click="selectTask(event)"><div class="task-head"><b>{{ event.code }}</b><el-tag size="small" :type="statusType(event.status)">{{ statusName(event.status) }}</el-tag></div><p v-if="event.conflictFlag" class="conflict-tip">该任务在其他设备已修改，上传前需合并（演示占位）</p><div class="task-meta"><span>问题：{{ event.desc || '待核实问题' }}</span><span>位置：{{ event.regionName }}</span><span>面积：{{ event.spot?.areaMu || 0 }} 亩</span><span>风险：{{ riskName(event.risk) }}</span><span>截止：{{ event.deadline || '待定' }}</span><span>责任人：{{ event.assignee || event.owner || '待分派' }}</span></div><div class="task-foot"><span>点击查看详情/现场核查</span><span>›</span></div></div><el-empty v-if="!filteredTasks.length" description="暂无符合条件的任务" /></section></template>
+    <template v-if="activeTab === 'tasks'"><section ref="taskSection" class="panel"><div class="section-title"><i></i><b>已派发核查任务</b><span class="count">{{ filteredTasks.length }} 条</span></div><div class="filter-tabs"><button v-for="filter in statusTabs" :key="filter.key" :class="{ active: taskFilter === filter.key }" @click="taskFilter = filter.key">{{ filter.label }}</button></div><div v-for="event in filteredTasks" :key="event.id" class="task-card rich-task" :class="`task-${event.status}`" @click="selectTask(event)"><div class="task-head"><b>{{ event.code }}</b><el-tag size="small" :type="statusType(event.status)">{{ statusName(event.status) }}</el-tag></div><p v-if="event.conflictFlag" class="conflict-tip">该任务在其他设备已修改，上传前需合并（演示占位）</p><div class="task-meta"><span>问题：{{ event.desc || '待核实问题' }}</span><span>位置：{{ event.regionName }}</span><span>面积：{{ event.spot?.areaMu || 0 }} 亩</span><span>风险：{{ riskName(event.risk) }}</span><span>截止：{{ event.deadline || '待定' }}</span><span>责任人：{{ event.assignee || event.owner || '待分派' }}</span></div><div class="task-foot"><span>点击查看详情/现场核查</span><span>›</span></div></div><el-empty :image-size="56" v-if="!filteredTasks.length" description="暂无符合条件的任务" /></section></template>
 
     <!-- 任务详情弹窗（列表+详情按钮，不再在列表下方堆叠详情面板） -->
     <el-dialog v-model="detailVisible" :title="activeTask ? `任务详情 · ${activeTask.code}` : '任务详情'" width="92%" class="scroll-dialog">
@@ -67,11 +69,11 @@
       </template>
     </el-dialog>
 
-    <template v-if="activeTab === 'offline'"><section class="panel"><div class="section-title"><i></i><b>待下载任务</b><span class="count">{{ cachedTasks.length }} 条缓存</span></div><div class="offline-card"><p>将待核查任务下载到本地，无网络也可填写</p><small>最近缓存：{{ cacheTime(cachedTasks) }}</small><el-button size="small" type="primary" @click="downloadTemplates">下载待填报任务</el-button></div></section><section class="panel"><div class="section-title"><i></i><b>离线填报</b><span class="count">{{ cachedReports.length }} 条待上传</span></div><div class="offline-card"><p>已保存的现场核查记录（含现场证据附件）</p><small>上传状态：{{ cachedReports.length ? '待联网批量上传' : '暂无待上传记录' }}</small><div><el-button size="small" @click="openOffline">继续填报</el-button><el-button size="small" type="primary" :loading="uploading" @click="uploadCache">批量上传</el-button></div></div><div v-for="item in cachedReports" :key="item.id" class="cache-row"><span>{{ item.code }} · {{ cacheDate(item.savedAt) }}</span><small>{{ item.uploaded ? '已上传' : '待上传' }} · {{ item.report?.attachments?.length || 0 }}项证据</small></div></section><section class="panel"><div class="section-title"><i></i><b>历史记录</b><el-button link type="primary" @click="historyVisible = true">查看全部</el-button></div><p class="cache-tip">已完成 {{ history.length }} 条现场填报记录</p><div v-for="item in history.slice(0, 3)" :key="item.id + item.time" class="cache-row"><span>{{ item.code }}</span><small>{{ item.time }}</small></div></section></template>
+    <template v-if="activeTab === 'mine'"><div class="group-title">离线中心</div><section class="panel"><div class="section-title"><i></i><b>待下载任务</b><span class="count">{{ cachedTasks.length }} 条缓存</span></div><div class="offline-card"><p>将待核查任务下载到本地，无网络也可填写</p><small>最近缓存：{{ cacheTime(cachedTasks) }}</small><el-button size="small" type="primary" @click="downloadTemplates">下载待填报任务</el-button></div></section><section class="panel"><div class="section-title"><i></i><b>离线填报</b><span class="count">{{ cachedReports.length }} 条待上传</span></div><div class="offline-card"><p>已保存的现场核查记录（含现场证据附件）</p><small>上传状态：{{ cachedReports.length ? '待联网批量上传' : '暂无待上传记录' }}</small><div><el-button size="small" @click="openOffline">继续填报</el-button><el-button size="small" type="primary" :loading="uploading" @click="uploadCache">批量上传</el-button></div></div><div v-for="item in cachedReports" :key="item.id" class="cache-row"><span>{{ item.code }} · {{ cacheDate(item.savedAt) }}</span><small>{{ item.uploaded ? '已上传' : '待上传' }} · {{ item.report?.attachments?.length || 0 }}项证据</small></div></section><section class="panel"><div class="section-title"><i></i><b>历史记录</b><el-button link type="primary" @click="historyVisible = true">查看全部</el-button></div><p class="cache-tip">已完成 {{ history.length }} 条现场填报记录</p><div v-for="item in history.slice(0, 3)" :key="item.id + item.time" class="cache-row"><span>{{ item.code }}</span><small>{{ item.time }}</small></div></section></template>
 
     <template v-if="activeTab === 'audit'">
-      <section v-if="canAudit" class="panel"><div class="section-title"><i></i><b>市级待审核列表</b><span class="count">{{ reviewingTasks.length }} 条</span></div><div v-for="event in reviewingTasks" :key="event.id" class="audit-row"><div><b>{{ event.code }}</b><span>{{ event.regionName }} · {{ event.subjectName || '待核实主体' }}</span></div><div><el-button size="small" @click="selectTask(event)">详情</el-button><el-button size="small" type="success" @click="doAudit(event, 'pass')">审核通过</el-button><el-button size="small" type="danger" plain @click="doAudit(event, 'reject')">打回重核</el-button></div></div><el-empty v-if="!reviewingTasks.length" description="暂无待审核任务" /></section>
-      <section v-if="canAudit" class="panel"><div class="section-title"><i></i><b>市级需复查列表（复核整改情况）</b><span class="count">{{ recheckTasks.length }} 条</span></div><div v-for="event in recheckTasks" :key="event.id" class="audit-row"><div><b>{{ event.code }}</b><span>{{ event.regionName }} · {{ event.subjectName || '待核实主体' }}</span></div><div><el-button size="small" @click="selectTask(event)">整改详情</el-button><el-button size="small" type="success" @click="doRecheck(event, 'pass')">复核通过</el-button><el-button size="small" type="danger" plain @click="doRecheck(event, 'reject')">复核退回整改</el-button></div></div><el-empty v-if="!recheckTasks.length" description="暂无需复查任务" /></section>
+      <section v-if="canAudit" class="panel"><div class="section-title"><i></i><b>市级待审核列表</b><span class="count">{{ reviewingTasks.length }} 条</span></div><div v-for="event in reviewingTasks" :key="event.id" class="audit-row"><div><b>{{ event.code }}</b><span>{{ event.regionName }} · {{ event.subjectName || '待核实主体' }}</span></div><div><el-button size="small" @click="selectTask(event)">详情</el-button><el-button size="small" type="success" @click="doAudit(event, 'pass')">审核通过</el-button><el-button size="small" type="danger" plain @click="doAudit(event, 'reject')">打回重核</el-button></div></div><el-empty :image-size="56" v-if="!reviewingTasks.length" description="暂无待审核任务" /></section>
+      <section v-if="canAudit" class="panel"><div class="section-title"><i></i><b>市级需复查列表（复核整改情况）</b><span class="count">{{ recheckTasks.length }} 条</span></div><div v-for="event in recheckTasks" :key="event.id" class="audit-row"><div><b>{{ event.code }}</b><span>{{ event.regionName }} · {{ event.subjectName || '待核实主体' }}</span></div><div><el-button size="small" @click="selectTask(event)">整改详情</el-button><el-button size="small" type="success" @click="doRecheck(event, 'pass')">复核通过</el-button><el-button size="small" type="danger" plain @click="doRecheck(event, 'reject')">复核退回整改</el-button></div></div><el-empty :image-size="56" v-if="!recheckTasks.length" description="暂无需复查任务" /></section>
       <section v-else-if="isProvince" class="panel"><div class="section-title"><i></i><b>省级随机抽查</b></div><p class="audit-tip">从已核查上报的任务中随机抽取，先查看完整核查详情，再形成抽查结论。</p><el-button type="warning" @click="randomInspect">随机抽查</el-button>
         <div v-if="randomTask" class="random-detail">
           <p><b>{{ randomTask.code }} · {{ randomTask.regionName }}</b><el-tag size="small" :type="statusType(randomTask.status)" style="margin-left:6px">{{ statusName(randomTask.status) }}</el-tag></p>
@@ -87,10 +89,10 @@
         </div>
         <div v-if="randomTask" class="random-form"><p><b>抽查结论登记</b></p><el-form label-position="top"><el-form-item label="抽查结论"><el-select v-model="randomForm.conclusion" style="width:100%"><el-option label="通过" value="通过" /><el-option label="发现问题" value="发现问题" /><el-option label="需补充材料" value="需补充材料" /></el-select></el-form-item><el-form-item label="问题描述"><el-input v-model="randomForm.desc" type="textarea" /></el-form-item><div class="two-col"><el-form-item label="经度"><el-input v-model="randomForm.longitude" /></el-form-item><el-form-item label="纬度"><el-input v-model="randomForm.latitude" /></el-form-item></div></el-form><el-button type="primary" @click="saveInspection">保存抽查记录</el-button></div>
         <div v-for="item in inspections" :key="item.time" class="history-row"><b>{{ item.code }}</b><span>{{ item.conclusion }}</span><small>{{ item.time }}</small></div></section>
-      <section v-else class="panel"><div class="section-title"><i></i><b>核查上报</b></div><p class="audit-tip">当前角色请通过核查任务完成现场填报并上报，提交后由市级统一审核。</p><el-button type="primary" @click="activeTab = 'tasks'">进入核查任务</el-button></section>
+      <section v-else class="panel"><div class="section-title"><i></i><b>核查上报</b></div><p class="audit-tip">当前角色请通过核查任务完成现场填报并上报，提交后由市级统一审核。</p><el-button type="primary" @click="switchTab('tasks')">进入核查任务</el-button></section>
     </template>
 
-    <el-dialog v-model="historyVisible" title="历史填报记录" width="92%" class="scroll-dialog"><div v-for="item in history" :key="item.id + item.time" class="dialog-history"><b>{{ item.code }} · {{ item.conclusion }}</b><p>{{ item.desc || '暂无描述' }}</p><small>{{ item.time }} · 定位 {{ item.gps || (item.longitude && item.latitude ? item.longitude + ', ' + item.latitude : '未采集') }} · 核查人 {{ item.checker || '—' }} · 现场证据 {{ (item.attachments || []).length }} 项</small><EvidenceThumbs v-if="(item.attachments || []).length" :items="item.attachments" :size="48" /></div><el-empty v-if="!history.length" description="暂无历史填报记录" /></el-dialog>
+    <el-dialog v-model="historyVisible" title="历史填报记录" width="92%" class="scroll-dialog"><div v-for="item in history" :key="item.id + item.time" class="dialog-history"><b>{{ item.code }} · {{ item.conclusion }}</b><p>{{ item.desc || '暂无描述' }}</p><small>{{ item.time }} · 定位 {{ item.gps || (item.longitude && item.latitude ? item.longitude + ', ' + item.latitude : '未采集') }} · 核查人 {{ item.checker || '—' }} · 现场证据 {{ (item.attachments || []).length }} 项</small><EvidenceThumbs v-if="(item.attachments || []).length" :items="item.attachments" :size="48" /></div><el-empty :image-size="56" v-if="!history.length" description="暂无历史填报记录" /></el-dialog>
 
     <!-- 网格巡查上报（可研 5.5.3.9.2：基层干部巡查发现割青毁粮/撂荒等问题，必须关联地块） -->
     <el-dialog v-model="patrolVisible" title="粮食安全巡查上报" width="92%" class="scroll-dialog">
@@ -116,7 +118,7 @@
         <el-button type="primary" :loading="patrolSubmitting" @click="submitPatrol">提交巡查上报</el-button>
       </template>
     </el-dialog>
-    <button class="patrol-fab" type="button" aria-label="巡查上报" title="巡查上报" @click="patrolVisible = true">＋</button>
+    <button v-if="activeTab !== 'mine' && canReceive" class="patrol-fab" type="button" aria-label="巡查上报" title="巡查上报" @click="patrolVisible = true">＋ 巡查上报</button>
   </div>
 </template>
 
@@ -125,7 +127,6 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { auditEvent, closeEvent, fetchEvent, fetchEvents, fetchMyPatrolReports, submitCheckReport, submitPatrolReport, submitRectify } from '@/api/fsr'
-import MobileFunctionEntry from '@/components/mobile/MobileFunctionEntry.vue'
 import { EVENT_STATUS, EVENT_STATUS_FLOW, EVENT_TYPES } from '@/mock/common/dict'
 import { EVIDENCE_IMAGES } from '@/mock/common/evidenceImages'
 import { PLOTS } from '@/mock/geo/plot-gen'
@@ -167,14 +168,19 @@ async function submitPatrol() {
 }
 const online = ref(navigator.onLine); const historyVisible = ref(false)
 const activeTab = ref('overview'); const taskFilter = ref('all')
-const tabs = [{ key: 'overview', label: '工作台' }, { key: 'tasks', label: '核查任务' }, { key: 'patrol-records', label: '我的巡查' }, { key: 'offline', label: '离线中心' }, { key: 'audit', label: '审核抽查' }]
-const foodEntryItems = computed(() => [
-  { key: 'tasks', label: '核查任务', description: '现场核查与结果提交', tone: 'blue', badge: pendingCount.value },
-  { key: 'patrol', label: '巡查上报', description: '发现问题线索直报', tone: 'red' },
-  { key: 'patrol-records', label: '我的巡查', description: '查看上报与研判状态', tone: 'green', badge: patrolReports.value.length },
-  { key: 'offline', label: '离线中心', description: '缓存任务与待上传记录', tone: 'orange' },
-  { key: 'audit', label: '审核抽查', description: '按角色显示可用功能', tone: 'purple', visible: ['province', 'city'].includes(userStore.role?.code) }
+// 一级导航：tab 只回答“在哪个空间”，功能入口不再与 tab 重复（用户反馈 2026-11-20）
+// 监管人员（省/市/县/乡）统一为 工作台 / 任务 / 审核抽查（市、省） / 我的
+const auditBadge = computed(() => canAudit.value ? reviewingTasks.value.length + recheckTasks.value.length : 0)
+const tabs = computed(() => [
+  { key: 'overview', label: '工作台' },
+  { key: 'tasks', label: '任务', badge: pendingCount.value },
+  ...(['省级', '市级'].includes(roleLevel.value) ? [{ key: 'audit', label: roleLevel.value === '省级' ? '省级抽查' : '审核复核', badge: auditBadge.value }] : []),
+  { key: 'mine', label: '我的' }
 ])
+function switchTab(key) {
+  if (key === 'audit' && !['省级', '市级'].includes(roleLevel.value)) return
+  activeTab.value = key
+}
 // 县级/乡镇只查看已派发到属地后的任务：待研判、待派发属于省/市前置环节，不进入移动端任务视图。
 const visibleStatuses = computed(() => {
   const code = userStore.role?.code
@@ -220,11 +226,6 @@ const centerText = (e) => e?.spot?.center?.join?.(', ') || e?.checkReport?.gps |
 // 核查表单仅"待核查"显示；"需复查"为市/省复核整改情况的环节（config.js 环节定义），县级不再显示核查表单（用户纠偏 2026-11-12：复查不是再做一遍核查）
 const canCheck = (e) => e?.status === 'checking' && canReceive.value
 const canRectify = (e) => e?.status === 'audited' && canReceive.value
-
-function handleEntry(item) {
-  if (item.key === 'patrol') return (patrolVisible.value = true)
-  activeTab.value = item.key
-}
 
 async function load() {
   const [result, patrolResult] = await Promise.all([fetchEvents(userStore.role, {}), fetchMyPatrolReports(userStore.role)])
@@ -411,7 +412,7 @@ onUnmounted(() => { removeEventListener('online', syncOnline); removeEventListen
 :deep(.scroll-dialog .el-dialog__body){max-height:560px;overflow-y:auto}
 .random-detail{background:#f7faf9;border-radius:8px;padding:10px 12px;margin:10px 0;font-size:13px;line-height:1.9}
 .random-detail p{margin:0}
-.mobile-page{min-height:100%;box-sizing:border-box;background:#f5f7fa;padding:12px 12px 30px;color:#243b5a}
+.mobile-page{min-height:100%;box-sizing:border-box;background:#f5f7fa;padding:12px 12px 96px;color:#243b5a}
 .mobile-header{height:54px;display:grid;grid-template-columns:38px 1fr 48px;align-items:center;text-align:center}
 .mobile-header b{display:block;font-size:18px}
 .mobile-header span{display:block;color:#8a96a8;font-size:11px;margin-top:3px}
@@ -423,9 +424,19 @@ onUnmounted(() => { removeEventListener('online', syncOnline); removeEventListen
 .section-title{display:flex;align-items:center;gap:8px;margin-bottom:13px}
 .section-title i{width:5px;height:19px;background:#2f8c76;border-radius:3px}
 .count{margin-left:auto;color:#98a2b3;font-size:12px}
-.tab-nav{display:flex;gap:4px;overflow:auto;background:#eaf2f4;border-radius:10px;padding:4px;margin-bottom:12px}
-.tab-nav button,.filter-tabs button{border:0;background:transparent;color:#64748b;white-space:nowrap;border-radius:8px;padding:9px 12px;font-size:12px}
+.tab-nav{display:grid;gap:4px;background:#eaf2f4;border-radius:10px;padding:4px;margin-bottom:12px}
+.tab-nav button{position:relative;border:0;background:transparent;color:#64748b;white-space:nowrap;border-radius:8px;padding:10px 6px;font-size:13px}
 .tab-nav button.active,.filter-tabs button.active{background:#fff;color:#2f8c76;box-shadow:0 2px 6px rgba(31,52,73,.08);font-weight:600}
+.tab-badge{position:absolute;top:2px;right:4px;min-width:15px;height:15px;line-height:15px;padding:0 4px;border-radius:8px;background:#e85d75;color:#fff;font-size:10px;font-style:normal;text-align:center}
+.tab-nav button.active .tab-badge{background:#e85d75}
+.group-title{display:flex;align-items:center;gap:6px;color:#5b6b80;font-size:12px;font-weight:600;margin:16px 2px 8px}
+.group-title::before{content:'';width:3px;height:13px;border-radius:2px;background:#8fa4bb}
+.account-panel{padding:12px 14px}
+.account-row{display:flex;align-items:center;gap:10px}
+.account-avatar{width:40px;height:40px;border-radius:50%;background:#2f8c76;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600}
+.account-info{flex:1;min-width:0}
+.account-info b{display:block;font-size:14px}
+.account-info span{display:block;color:#8a96a8;font-size:11px;margin-top:3px}
 .overview-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .overview-grid button{border:0;border-radius:8px;background:#f3f8f7;padding:9px 2px;color:#345}
 .overview-grid strong{display:block;font-size:21px;color:#2f8c76}
@@ -439,9 +450,10 @@ onUnmounted(() => { removeEventListener('online', syncOnline); removeEventListen
 .reminder-box{display:flex;align-items:center;gap:8px;background:#fff8e8;padding:12px;border-radius:8px}
 .reminder-box strong{font-size:24px;color:#d97706}
 .reminder-box span{font-size:12px;color:#64748b;flex:1}
-.patrol-fab{position:fixed;right:22px;bottom:76px;width:54px;height:54px;border:0;border-radius:50%;background:#2f8c76;color:#fff;font-size:32px;line-height:1;box-shadow:0 8px 18px rgba(47,140,118,.35);z-index:20;cursor:pointer}
+.patrol-fab{position:fixed;right:18px;bottom:74px;height:44px;padding:0 16px;border:0;border-radius:22px;background:#2f8c76;color:#fff;font-size:13px;font-weight:600;line-height:1;box-shadow:0 8px 18px rgba(47,140,118,.35);z-index:20;cursor:pointer}
 .patrol-fab:active{transform:scale(.96)}
 .filter-tabs{display:flex;gap:4px;overflow:auto;margin-bottom:8px}
+.filter-tabs button{border:0;background:transparent;color:#64748b;white-space:nowrap;border-radius:8px;padding:9px 12px;font-size:12px}
 .rich-task{padding-bottom:12px}
 .task-meta{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:8px 0;color:#667085;font-size:11px}
 .offline-card{background:#f7fafc;border-radius:8px;padding:12px;font-size:12px}
