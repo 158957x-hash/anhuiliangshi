@@ -3,7 +3,7 @@
     <header class="page-head">
       <div>
         <h2>青贮饲料生产台账</h2>
-        <p>以已备案种植计划和收储备案为底账，由主体补充实际播种、收割与收储执行数据，县、市、省按属地汇总。</p>
+        <p>以已备案种植计划和收储备案为底账，由种植主体、收储主体补充实际播种、收割与收储执行数据；县、市、省按属地汇总查看，不代填。</p>
       </div>
       <div class="head-actions"><el-button @click="exportLedger">导出台账</el-button></div>
     </header>
@@ -112,8 +112,9 @@ const plantingDone = computed(() => planting.value.filter(row => row.progress?.f
 const storageDone = computed(() => storage.value.filter(row => row.execution?.filled).length)
 const currentRows = computed(() => tab.value === 'planting' ? planting.value : storage.value)
 
-const canEdit = row => !!row && (role.value.code === 'county' || (role.value.code === 'grower' && row.subjectId === role.value.subjectId))
-const canEditStorage = row => !!row && (role.value.code === 'county' || (role.value.code === 'storage_subject' && row.storageSubjectId === role.value.storageSubjectId))
+// 台账为监管查看口径：县级（及省市）只看主体填报结果，不提供代填入口
+const canEdit = row => !!row && role.value.code === 'grower' && row.subjectId === role.value.subjectId
+const canEditStorage = row => !!row && role.value.code === 'storage_subject' && row.storageSubjectId === role.value.storageSubjectId
 
 async function load() {
   loading.value = true

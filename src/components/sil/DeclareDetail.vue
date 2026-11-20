@@ -33,10 +33,15 @@
 
     <section v-if="isPlan && (row.plots || []).length" class="dd-block">
       <h4>地块明细（{{ row.plots.length }} 块）</h4>
-      <div class="dd-rows">
-        <div v-for="(plot, index) in row.plots" :key="plot.plotId || index" class="dd-row">
-          <div class="dd-row-head"><b>{{ index + 1 }}. {{ plot.name }}</b><span>{{ fmt(plot.areaMu) }} 亩</span></div>
-          <p>{{ silCropName(plot.crop) }} / {{ plot.variety || '待补' }} · 预计 {{ fmt(plot.expectedYield) }} 吨</p>
+      <div class="dd-table">
+        <div class="dd-tr dd-th">
+          <span>地块名称</span><span>面积（亩）</span><span>作物 / 品种</span><span>预计产量（吨）</span>
+        </div>
+        <div v-for="(plot, index) in row.plots" :key="plot.plotId || index" class="dd-tr">
+          <span><b>{{ index + 1 }}. {{ plot.name }}</b></span>
+          <span>{{ fmt(plot.areaMu) }}</span>
+          <span>{{ silCropName(plot.crop) }} / {{ plot.variety || '待补' }}</span>
+          <span>{{ fmt(plot.expectedYield) }}</span>
         </div>
       </div>
     </section>
@@ -136,6 +141,15 @@ const fmt = value => (value === null || value === undefined || value === '' ? '�
 .dd-row-head span { font-size: 11px; color: #2d7a63; white-space: nowrap; }
 .dd-row p { margin: 4px 0 0; font-size: 11px; color: #7a8b9e; line-height: 1.5; }
 .dd-text { margin: 0; font-size: 12px; color: #5b6b7c; line-height: 1.6; }
+.dd-table { margin-top: 8px; background: #fff; border: 1px solid #e8eef5; border-radius: 6px; overflow: hidden; }
+.dd-tr { display: grid; grid-template-columns: minmax(0, 1.7fr) 78px minmax(0, 1.3fr) 92px; gap: 6px; align-items: center; padding: 6px 9px; font-size: 11px; color: #33475f; border-top: 1px solid #f0f4f8; }
+.dd-tr:first-child { border-top: 0; }
+.dd-tr b { font-size: 12px; font-weight: 600; word-break: break-word; }
+.dd-th { background: #f2f6fa; color: #7a8b9e; font-weight: 600; }
+@media (max-width: 560px) {
+  .dd-tr { grid-template-columns: minmax(0, 1fr) auto; }
+  .dd-th { display: none; }
+}
 .dd-note { margin: 6px 0 0; font-size: 11px; color: #9aa6b2; }
 .dd-result { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 11px; color: #7a8b9e; }
 </style>

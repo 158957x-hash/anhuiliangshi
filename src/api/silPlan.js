@@ -788,7 +788,7 @@ export const savePlantingProgress = (data, role) => action(() => {
   const plan = all.find(item => item.id === (data.id || data.planId))
   if (!plan || plan.status !== 'filed') throw new Error('仅已备案计划可维护生产进度')
   const owner = role.code === 'grower' && plan.subjectId === role.subjectId
-  if (!owner && !canAuditSil(role)) throw new Error('仅种植主体或县级可维护该计划生产进度')
+  if (!owner) throw new Error('生产进度由种植主体自行填报，县级及上级仅查看')
   if (data.actualArea !== undefined && data.actualArea !== null && Number(data.actualArea) > Number(plan.area)) throw new Error('实际收获面积不能大于备案面积')
   plan.progress = {
     sowingDate: data.sowingDate || '',
@@ -805,7 +805,7 @@ export const saveStorageExecution = (data, role) => action(() => {
   const row = all.find(item => item.id === (data.id || data.storageId))
   if (!row || row.status !== 'filed') throw new Error('仅已备案收储可填报实际执行信息')
   const owner = role.code === 'storage_subject' && row.storageSubjectId === role.storageSubjectId
-  if (!owner && !canAuditSil(role)) throw new Error('仅收储主体或县级可填报该收储执行信息')
+  if (!owner) throw new Error('实际收储由收储主体自行登记，县级及上级仅查看')
   if (data.actualWeight === '' || data.actualWeight === null || data.actualWeight === undefined || Number(data.actualWeight) <= 0) throw new Error('实际收储重量必填且须大于 0')
   const actualWeight = Number(data.actualWeight)
   const plansAll = plans()

@@ -93,25 +93,46 @@
       </template>
     </el-drawer>
 
-    <el-drawer v-model="detailVisible" title="受灾补充上报详情" size="min(760px, 96vw)" append-to-body>
+    <el-drawer v-model="detailVisible" title="受灾补充上报详情" size="min(820px, 96vw)" append-to-body>
       <template v-if="current">
-        <el-descriptions :column="2" border>
+        <h3 class="block-title">申报信息</h3>
+        <el-descriptions :column="2" border size="small">
           <el-descriptions-item label="上报编号">{{ current.id }}</el-descriptions-item>
           <el-descriptions-item label="状态"><el-tag size="small" :type="SIL_DISASTER_STATUS[current.status]?.tag">{{ SIL_DISASTER_STATUS[current.status]?.name }}</el-tag></el-descriptions-item>
           <el-descriptions-item label="种植主体">{{ current.subjectName }}</el-descriptions-item>
+          <el-descriptions-item label="属地">{{ current.regionName }}</el-descriptions-item>
           <el-descriptions-item label="联系人">{{ current.owner }} · {{ current.phone || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="上报时间">{{ current.submittedAt }}</el-descriptions-item>
           <el-descriptions-item label="地块来源">{{ current.planSource === 'manual' ? '手动填报（无粮食计划）' : '粮食计划' }}</el-descriptions-item>
-          <el-descriptions-item label="来源计划" :span="2">{{ current.planNo || '手动填报（无粮食计划）' }}</el-descriptions-item>
-          <el-descriptions-item label="地块">{{ current.plotName }}（种植 {{ current.plotArea }} 亩）</el-descriptions-item>
-          <el-descriptions-item label="作物 / 品种">{{ current.cropName || grainCropName(current.crop) }} / {{ current.variety || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="受灾面积">{{ current.affectedArea }} 亩（{{ current.affectedRatio }}%）</el-descriptions-item>
-          <el-descriptions-item label="受灾原因" :span="2">{{ current.reason }}</el-descriptions-item>
-          <el-descriptions-item v-if="current.confirmNo" label="补充收储编号" :span="2">{{ current.confirmNo }}</el-descriptions-item>
-          <el-descriptions-item v-if="current.confirmedAt" label="确认时间" :span="2">{{ current.confirmedAt }} · {{ current.confirmedBy }}</el-descriptions-item>
+          <el-descriptions-item label="来源计划">{{ current.planNo || '手动填报（无粮食计划）' }}</el-descriptions-item>
         </el-descriptions>
+
+        <h3 class="block-title">地块明细（{{ detailPlots.length }} 块）</h3>
+        <el-table :data="detailPlots" border size="small">
+          <el-table-column prop="plotName" label="地块名称" min-width="170" />
+          <el-table-column prop="regionName" label="属地" width="110" />
+          <el-table-column label="种植面积（亩）" width="120" align="right"><template #default="{ row }">{{ row.plotArea }}</template></el-table-column>
+          <el-table-column label="作物" width="90"><template #default="{ row }">{{ row.cropName || grainCropName(row.crop) }}</template></el-table-column>
+          <el-table-column label="受灾面积（亩）" width="120" align="right"><template #default="{ row }">{{ row.affectedArea }}</template></el-table-column>
+          <el-table-column label="受灾比例" width="90" align="right"><template #default="{ row }">{{ ratioOf(row) }}%</template></el-table-column>
+          <el-table-column label="来源" width="100"><template #default="{ row }"><el-tag size="small" :type="row.manual ? 'info' : 'success'" effect="plain">{{ row.manual ? '手动' : '计划' }}</el-tag></template></el-table-column>
+        </el-table>
+        <p class="detail-sum">合计：种植 {{ detailTotal.area }} 亩 · 受灾 {{ detailTotal.affected }} 亩（{{ detailTotal.ratio }}%）</p>
+
+        <h3 class="block-title">受灾原因</h3>
+        <p class="detail-text">{{ current.reason }}</p>
+
         <h3 class="block-title">佐证材料</h3>
         <el-tag v-for="file in current.attachments || []" :key="file.name" class="file-tag">{{ file.name }}</el-tag>
         <el-empty v-if="!(current.attachments || []).length" description="无附件" :image-size="50" />
+
+        <h3 class="block-title">办理结果</h3>
+        <el-descriptions :column="2" border size="small">
+          <el-descriptions-item label="当前状态">{{ SIL_DISASTER_STATUS[current.status]?.name }}</el-descriptions-item>
+          <el-descriptions-item label="补充收储编号">{{ current.confirmNo || '待县级确认后生成' }}</el-descriptions-item>
+          <el-descriptions-item label="确认时间">{{ current.confirmedAt || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="确认人">{{ current.confirmedBy || '—' }}</el-descriptions-item>
+        </el-descriptions>
         <div class="drawer-footer">
           <el-button v-if="current.status === 'pending' && canAudit" type="primary" @click="confirm(current)">确认纳入补充收储</el-button>
           <el-button @click="router.push('/sil/map')">在种植上图查看</el-button>
@@ -157,6 +178,31 @@ const totalArea = computed(() => rows.value.reduce((sum, row) => sum + Number(ro
 const checkedRows = computed(() => form.rows.filter(row => row.checked))
 const checkedArea = computed(() => checkedRows.value.reduce((sum, row) => sum + Number(row.areaMu || 0), 0).toFixed(1))
 const checkedAffected = computed(() => checkedRows.value.reduce((sum, row) => sum + Number(row.affectedArea || 0), 0).toFixed(1))
+
+// 详情以地块明细表展示：一条上报可含多块地，历史单地块记录也统一成表格行
+const detailPlots = computed(() => {
+  const row = current.value
+  if (!row) return []
+  const list = Array.isArray(row.plots) && row.plots.length
+    ? row.plots
+    : [{ plotId: row.plotId, plotName: row.plotName, regionName: row.regionName, plotArea: row.plotArea, crop: row.crop, cropName: row.cropName, affectedArea: row.affectedArea, affectedRatio: row.affectedRatio, manual: row.planSource === 'manual' }]
+  return list.map(item => ({
+    ...item,
+    plotArea: Number(item.plotArea ?? item.areaMu ?? 0),
+    affectedArea: Number(item.affectedArea ?? 0),
+    manual: item.manual ?? item.planSource === 'manual'
+  }))
+})
+const ratioOf = row => {
+  const area = Number(row.plotArea || 0)
+  if (!area) return 0
+  return Math.round((Number(row.affectedArea || 0) / area) * 100)
+}
+const detailTotal = computed(() => {
+  const area = detailPlots.value.reduce((sum, row) => sum + Number(row.plotArea || 0), 0)
+  const affected = detailPlots.value.reduce((sum, row) => sum + Number(row.affectedArea || 0), 0)
+  return { area: area.toFixed(1), affected: affected.toFixed(1), ratio: area ? Math.round((affected / area) * 100) : 0 }
+})
 
 async function load() {
   loading.value = true
@@ -275,6 +321,8 @@ watch(() => role.value?.code, load)
 .plot-head { background: #f5f8fc; font-size: 12px; color: var(--ah-text-muted); }
 .plot-actions { display: flex; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
 .block-title { font-size: 14px; margin: 18px 0 10px; }
+.detail-sum { font-size: 12px; color: var(--ah-text-muted); margin-top: 8px; }
+.detail-text { font-size: 13px; color: var(--ah-text-secondary); line-height: 1.7; background: #f7fafd; border-radius: 6px; padding: 10px 12px; }
 .file-tag { margin: 0 8px 8px 0; }
 .drawer-footer { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 16px; }
 @media (max-width: 1200px) { .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

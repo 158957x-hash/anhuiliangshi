@@ -57,16 +57,17 @@
       </el-tabs>
     </section>
 
-    <el-dialog v-model="auditVisible" :title="auditType === 'plan' ? '种植计划备案审核' : '收储备案审核'" width="560px" append-to-body>
-      <div class="audit-target">
-        <b>{{ auditType === 'plan' ? auditRow?.subjectName : auditRow?.storageSubjectName }}</b>
-        <span>{{ auditType === 'plan' ? `${auditRow?.plots?.length} 块地 · ${auditRow?.area} 亩 · ${auditRow?.year} ${auditRow?.season}` : `${silCropName(auditRow?.crop)} / ${auditRow?.variety} · ${auditRow?.expectedWeight} 吨 · ${auditRow?.price} 元/吨` }}</span>
+    <el-dialog v-model="auditVisible" :title="auditType === 'plan' ? '种植计划备案审核' : '收储备案审核'" width="760px" append-to-body class="audit-dialog">
+      <div class="audit-detail-scroll">
+        <DeclareDetail :row="auditRow || {}" :type="auditType" />
       </div>
-      <el-radio-group v-model="auditAction" class="audit-actions">
-        <el-radio label="pass">审核通过</el-radio>
-        <el-radio label="reject">驳回</el-radio>
-      </el-radio-group>
-      <el-input v-model="auditOpinion" type="textarea" :rows="3" maxlength="200" show-word-limit :placeholder="auditAction === 'pass' ? '审核意见（选填）' : '请填写驳回原因'" />
+      <div class="audit-form">
+        <el-radio-group v-model="auditAction">
+          <el-radio label="pass">审核通过</el-radio>
+          <el-radio label="reject">驳回</el-radio>
+        </el-radio-group>
+        <el-input v-model="auditOpinion" type="textarea" :rows="3" maxlength="200" show-word-limit :placeholder="auditAction === 'pass' ? '审核意见（选填）' : '请填写驳回原因'" />
+      </div>
       <template #footer>
         <el-button @click="auditVisible = false">取消</el-button>
         <el-button type="primary" :loading="saving" @click="submitAudit">提交</el-button>
@@ -74,40 +75,7 @@
     </el-dialog>
 
     <el-drawer v-model="detailVisible" :title="detailType === 'plan' ? '种植计划详情' : '收储申报详情'" size="min(820px, 96vw)" append-to-body>
-      <template v-if="detailRow">
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="申报编号">{{ detailRow.id }}</el-descriptions-item>
-          <el-descriptions-item label="备案编号">{{ detailRow.filedNo || '尚未备案' }}</el-descriptions-item>
-          <el-descriptions-item :label="detailType === 'plan' ? '种植主体' : '收储主体'">{{ detailType === 'plan' ? detailRow.subjectName : detailRow.storageSubjectName }}</el-descriptions-item>
-          <el-descriptions-item label="属地">{{ detailRow.regionName }}</el-descriptions-item>
-          <el-descriptions-item label="状态"><el-tag size="small" :type="SIL_PLAN_STATUS[detailRow.status]?.tag">{{ SIL_PLAN_STATUS[detailRow.status]?.name }}</el-tag></el-descriptions-item>
-          <el-descriptions-item label="提交时间">{{ detailRow.submittedAt || '—' }}</el-descriptions-item>
-          <template v-if="detailType === 'plan'">
-            <el-descriptions-item label="地块 / 面积">{{ detailRow.plots?.length }} 块 · {{ detailRow.area }} 亩</el-descriptions-item>
-            <el-descriptions-item label="预计产量">{{ detailRow.expectedYield }} 吨</el-descriptions-item>
-          </template>
-          <template v-else>
-            <el-descriptions-item label="作物 / 品种">{{ silCropName(detailRow.crop) }} / {{ detailRow.variety }}</el-descriptions-item>
-            <el-descriptions-item label="重量 / 价格">{{ detailRow.expectedWeight }} 吨 · {{ detailRow.price }} 元/吨</el-descriptions-item>
-            <el-descriptions-item label="用途">{{ SIL_STORAGE_USAGE[detailRow.usage] }}</el-descriptions-item>
-            <el-descriptions-item label="合同附件">{{ (detailRow.contractFiles || []).map(file => file.name).join('、') || '—' }}</el-descriptions-item>
-          </template>
-        </el-descriptions>
-        <template v-if="detailType === 'plan'">
-          <h3 class="block-title">备案地块</h3>
-          <el-table :data="detailRow.plots" border size="small">
-            <el-table-column prop="name" label="地块" min-width="160" />
-            <el-table-column label="作物 / 品种" min-width="150"><template #default="{ row }">{{ silCropName(row.crop) }} / {{ row.variety || '—' }}</template></el-table-column>
-            <el-table-column prop="areaMu" label="面积（亩）" width="100" />
-            <el-table-column prop="expectedYield" label="预计产量（吨）" width="130" />
-            <el-table-column label="边界" width="80"><template #default="{ row }">{{ row.geometry ? '已上图' : '缺失' }}</template></el-table-column>
-          </el-table>
-        </template>
-        <h3 class="block-title">办理记录</h3>
-        <el-timeline>
-          <el-timeline-item v-for="(item, index) in detailRow.auditTrail || []" :key="index" :timestamp="item.time"><b>{{ item.action }}</b> · {{ item.user }}<p v-if="item.opinion" class="trail-opinion">{{ item.opinion }}</p></el-timeline-item>
-        </el-timeline>
-      </template>
+      <DeclareDetail v-if="detailRow" :row="detailRow" :type="detailType" />
     </el-drawer>
   </div>
 </template>
@@ -120,6 +88,7 @@ import {
   SIL_PLAN_STATUS, SIL_STORAGE_USAGE, STORAGE_SUBJECT_TYPES, silCropName,
   fetchPlans, fetchStorages, auditPlan, auditStorage
 } from '@/api/silPlan'
+import DeclareDetail from '@/components/sil/DeclareDetail.vue'
 
 const userStore = useUserStore()
 const role = computed(() => userStore.role)
@@ -186,6 +155,8 @@ watch(() => role.value?.code, load)
 .audit-target b, .audit-target span { display: block; }
 .audit-target span { font-size: 12px; color: var(--ah-text-muted); margin-top: 6px; }
 .audit-actions { display: flex; gap: 18px; margin-bottom: 12px; }
+.audit-detail-scroll { max-height: 52vh; overflow-y: auto; padding: 0 8px 12px 0; border-bottom: 1px dashed #e3ebf3; }
+.audit-form { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
 .block-title { font-size: 14px; margin: 18px 0 10px; }
 .trail-opinion { font-size: 12px; color: var(--ah-text-secondary); margin-top: 4px; }
 </style>
